@@ -1,0 +1,14 @@
+{
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/webpack": "^5.28.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongodb": "^6.11.0",
+    "mongoose": "^8.8.4"
+  }
+}

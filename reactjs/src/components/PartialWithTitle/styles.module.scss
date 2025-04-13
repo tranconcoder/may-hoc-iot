@@ -1,0 +1,15 @@
+.partial-container {
+  .title {
+    @include text($titleColor, 2.8rem, 700, 5rem);
+  }
+
+  .line-break {
+    @include size(100%, 0.2rem);
+    background-color: $primaryColor;
+    margin-block: 1rem;
+  }
+
+  .content {
+    padding: 1rem;
+  }
+}

@@ -1,0 +1,20 @@
+FROM ubuntu:22.04 as base
+FROM node:20.18.0 as server
+
+ENV NODE_ENV="production"
+
+WORKDIR /app
+
+COPY . .
+
+# Update system
+RUN apt update
+RUN apt install ffmpeg -y
+
+# Init project
+RUN yarn
+RUN yarn build
+
+EXPOSE 3000
+
+CMD ["yarn", "product"]

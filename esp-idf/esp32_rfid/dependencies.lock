@@ -1,0 +1,125 @@
+dependencies:
+  aes-custom:
+    dependencies: []
+    source:
+      path: /home/tvconss/Workspace/iot-security-subject/esp-idf/components/aes-custom
+      type: local
+    version: '*'
+  common_struct:
+    dependencies: []
+    source:
+      path: /home/tvconss/Workspace/iot-security-subject/esp-idf/components/common_struct
+      type: local
+    version: '*'
+  esp-idf-rc522:
+    dependencies: []
+    source:
+      path: /home/tvconss/Workspace/iot-security-subject/esp-idf/components/esp-idf-rc522
+      type: local
+    version: 2.6.0
+  espressif/cmake_utilities:
+    component_hash: 351350613ceafba240b761b4ea991e0f231ac7a9f59a9ee901f751bddc0bb18f
+    dependencies:
+    - name: idf
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=4.1'
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 0.5.3
+  espressif/esp_modem:
+    component_hash: 681d7c8417ce0f2a11a562c6998b7b379a4847be41d84673c11c0c7a6b00e918
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.1'
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 1.3.0
+  espressif/iot_bridge:
+    component_hash: 852e0d8d26b6c0f985c2196df5f668f014bf32413b03d3ec90ab163a988762e9
+    dependencies:
+    - name: idf
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=5.0'
+    - name: espressif/esp_modem
+      registry_url: https://components.espressif.com
+      require: private
+      rules:
+      - if: target not in [esp32s2, esp32s3]
+      version: 1.*
+    - name: espressif/cmake_utilities
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.*
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 0.11.8
+  espressif/mesh_lite:
+    component_hash: 2adb6346dbaf5354699770a470b0e4fc1de40c3e0bdc33cfc4e313a2478cdae0
+    dependencies:
+    - name: idf
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=5.0'
+    - name: espressif/qrcode
+      registry_url: https://components.espressif.com
+      require: private
+      version: ^0.1.0
+    - name: espressif/iot_bridge
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.11.8
+    - name: espressif/cmake_utilities
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.*
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.0.0
+  espressif/qrcode:
+    component_hash: 3b493771bc5d6ad30cbf87c25bf784aada8a08c941504355b55d6b75518ed7bc
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 0.1.0~2
+  http_client_utils:
+    dependencies: []
+    source:
+      path: /home/tvconss/Workspace/iot-security-subject/esp-idf/components/http_client_utils
+      type: local
+    version: '*'
+  idf:
+    source:
+      type: idf
+    version: 5.2.3
+  setup_diffie_hellman:
+    dependencies: []
+    source:
+      path: /home/tvconss/Workspace/iot-security-subject/esp-idf/esp32_rfid/main/components/setup_diffie_hellman
+      type: local
+    version: '*'
+  setup_rc522:
+    dependencies: []
+    source:
+      path: /home/tvconss/Workspace/iot-security-subject/esp-idf/esp32_rfid/main/components/setup_rc522
+      type: local
+    version: '*'
+direct_dependencies:
+- aes-custom
+- common_struct
+- esp-idf-rc522
+- espressif/mesh_lite
+- http_client_utils
+- idf
+- setup_diffie_hellman
+- setup_rc522
+manifest_hash: d4f3c8ed083080782b4bca918082fc48abe3dc8015abd7debe91401a3b77f6a6
+target: esp32
+version: 2.0.0

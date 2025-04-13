@@ -1,0 +1,25 @@
+<link rel='stylesheet' href='/public/css/cam-client.css' />
+
+<h1>Camera Capture</h1>
+<div class='container'>
+	<div class='video-container'>
+		<video id='video' autoplay></video>
+		<canvas id='canvas' width='640' height='480' style='display: none'></canvas>
+	</div>
+	<div class='controls-container'>
+		<div>
+			<label for='rfid'>RFID:</label>
+			<input type='text' id='rfid' name='rfid' spellcheck='false' />
+			<button id='send'>Send</button>
+		</div>
+		<div>
+			<label for='source'>Select Source:</label>
+			<select id='source'>
+				<option value='esp32cam_security_gate_send_img'>Security Gate</option>
+				<option value='esp32cam_monitor_send_img'>Monitor</option>
+			</select>
+		</div>
+	</div>
+</div>
+
+<script src='/public/scripts/cam-client/main.js'></script>

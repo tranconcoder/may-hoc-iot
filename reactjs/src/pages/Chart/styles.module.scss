@@ -1,0 +1,16 @@
+.chart-container {
+  @include flex(column, center);
+
+  .chart-option {
+    @include size(100%, false);
+    @include flex(row, center);
+
+    > :first-child {
+      @include size(50%, false);
+    }
+
+    > :nth-child(2) {
+      flex: 1;
+    }
+  }
+}

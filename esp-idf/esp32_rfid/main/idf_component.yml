@@ -1,0 +1,23 @@
+dependencies:
+  esp-idf-rc522:
+    path: ../../components/esp-idf-rc522
+  http_client_utils:
+    path: '../../components/http_client_utils'
+  setup_rc522:
+    path: './components/setup_rc522'
+  setup_diffie_hellman:
+    path: './components/setup_diffie_hellman'
+  aes-custom:
+    path: '../../components/aes-custom'
+  common_struct:
+    path: '../../components/common_struct'
+  idf:
+    version: '>=5.0'
+  mesh_lite:
+    version: '*'
+  usb_device:
+    git: https://github.com/espressif/esp-iot-bridge.git
+    path: components/usb/usb_device
+    rules:
+      - if: target in [esp32s2, esp32s3]
+      - if: idf_version < 5.1.4

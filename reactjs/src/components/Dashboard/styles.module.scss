@@ -1,0 +1,13 @@
+.camera-partial {
+  @include flex(row, center);
+  gap: 3rem;
+}
+
+.sensor-partial {
+  @include flex(row, center);
+  gap: 3rem;
+
+  > * {
+    flex: 1;
+  }
+}

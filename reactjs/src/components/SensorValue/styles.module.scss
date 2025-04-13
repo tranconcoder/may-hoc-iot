@@ -1,0 +1,17 @@
+.sensor-value {
+  @include position(relative);
+  @include flexCenter();
+  padding: 5rem;
+  border-radius: 1rem;
+  box-shadow: 0 0 1rem 0 rgba(#000, 0.2);
+  background-image: linear-gradient($primaryColor, $primaryColorBlack);
+
+  .title {
+    @include position(absolute, 2rem, false, false, 2rem);
+    @include text($whiteColor, 2rem, 700);
+  }
+
+  .value {
+    @include text($whiteColor, 3rem, 700);
+  }
+}

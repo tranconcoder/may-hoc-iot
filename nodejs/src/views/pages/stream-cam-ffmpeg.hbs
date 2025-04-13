@@ -1,0 +1,8 @@
+<style>
+	video { width: 100%; height:100%; zoom: 250%}
+</style>
+
+<video id='my-video' controls preload='auto' width='100%' autoplay muted />
+
+<script>const path = "{{getMediaServerOutputPath}}"</script>
+<script type='module' src='/public/scripts/stream-cam-ffmpeg/main.js'></script>

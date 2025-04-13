@@ -1,0 +1,33 @@
+$buttonHeight: 4.6rem;
+
+.button-container {
+  @include size(100%, $buttonHeight);
+  background-color: $primaryColor;
+  text-align: center;
+  border: 0.2rem solid $primaryColor;
+  border-radius: 1rem;
+  transition: all ease 300ms;
+
+  p {
+    @include size(false, 100%);
+    @include text($whiteColor, 1.5rem, 600);
+    @include flexCenter();
+  }
+
+  &:hover {
+    cursor: pointer;
+    background-color: $whiteColor;
+
+    p {
+      @include text($primaryColor);
+    }
+  }
+}
+
+button.button-container {
+  outline: none;
+}
+
+a.button-container {
+  text-decoration: none;
+}
