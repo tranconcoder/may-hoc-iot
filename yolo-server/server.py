@@ -19,6 +19,7 @@ PREVIEW_WINDOW_NAME = 'Vehicle Detection Preview'  # Name of the preview window
 ENABLE_TRACKING = True  # Enable object tracking functionality
 PREVIEW_WINDOW_INIT_DELAY = 2.0  # Delay in seconds before initializing preview window
 PREVIEW_FPS = 30  # Maximum FPS for preview display
+ENABLE_GPU = True  # Enable GPU acceleration if available
 
 # Add tracking-related configurations
 TRAIL_DURATION = 5.0  # Duration in seconds to show vehicle trails
@@ -559,9 +560,29 @@ def load_model():
                 print(f"Warning: Could not set up tracking dependencies: {e}")
                 print("Falling back to detection-only mode.")
 
-        # Load the model
+        # Check GPU availability
+        device = 'cpu'  # Default to CPU
+        if ENABLE_GPU:
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    device = 'cuda'
+                    gpu_name = torch.cuda.get_device_name(0)
+                    print(f"CUDA is available. Using GPU: {gpu_name}")
+                    print(f"CUDA version: {torch.version.cuda}")
+                else:
+                    print("CUDA is not available. Falling back to CPU.")
+            except ImportError:
+                print("PyTorch not properly installed. Falling back to CPU.")
+            except Exception as e:
+                print(f"Error checking GPU: {e}. Falling back to CPU.")
+
+        # Load the model with the selected device
+        print(f"Loading model on device: {device}")
         model = YOLO(MODEL_PATH)
-        print(f"Model loaded successfully! Available classes: {model.names}")
+        model.to(device)
+        print(f"Model loaded successfully! Running on: {device}")
+        print(f"Available classes: {model.names}")
         
         # Print vehicle classes that will be detected
         vehicle_class_ids = [id for id, name in model.names.items() if name in VEHICLE_CLASSES]

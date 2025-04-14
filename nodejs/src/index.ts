@@ -63,7 +63,7 @@ const httpServer = createServer(app); // Renamed for clarity
 const wss = new WebSocketServer({
   server: httpServer, // Attach WebSocket server to the HTTP server
   host: HOST,
-  maxPayload: 256 * 1024, // Example payload limit
+  maxPayload: 102400 * 1024, // Example payload limit
 });
 
 // Initialize Socket.IO Server and attach it to the same HTTP server
