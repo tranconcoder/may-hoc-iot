@@ -25,6 +25,22 @@ ENABLE_GPU = True  # Enable GPU acceleration if available
 TRAIL_DURATION = 5.0  # Duration in seconds to show vehicle trails
 MAX_TRAIL_POINTS = 30  # Maximum number of points to store per trail
 
+# Add counting line configuration
+ENABLE_COUNTING_LINE = True  # Enable the vehicle counting line
+# Default position for counting line (horizontal line in the middle of the frame)
+# This will be adjusted based on actual frame dimensions
+COUNTING_LINE_POSITION = 0.5  # Position of the line as ratio of frame height (0-1)
+# Count in both directions
+BIDIRECTIONAL_COUNTING = True  # Count vehicles in both directions
+# Colors for statistics display
+STATS_COLORS = {
+    "header": (255, 255, 255),  # White for headers
+    "up": (0, 255, 0),          # Green for upward traffic
+    "down": (0, 165, 255),      # Orange for downward traffic
+    "total": (255, 255, 0),     # Yellow for totals
+    "background": (0, 0, 0, 0.5) # Semi-transparent black for text background
+}
+
 # Initialize Socket.IO client
 sio = socketio.Client()
 print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
@@ -43,9 +59,37 @@ detection_results_queue = queue.Queue(maxsize=2)  # Store detection results (not
 # Global variables for tracking
 vehicle_tracks = {}  # Dictionary to store tracking information: {track_id: [positions]}
 
+# Global variables for vehicle counting
+counted_vehicles = {}  # Dictionary to store counted vehicle IDs to avoid double counting
+# Separate counts by direction
+vehicle_counts_up = {vehicle_type: 0 for vehicle_type in VEHICLE_CLASSES}
+vehicle_counts_down = {vehicle_type: 0 for vehicle_type in VEHICLE_CLASSES}
+total_counted_up = 0
+total_counted_down = 0
+
+# Actual counting line coordinates (will be set based on frame dimensions)
+counting_line_y = None
+counting_line_start_x = None
+counting_line_end_x = None
+
+# Function to check if a vehicle has crossed the counting line
+def check_line_crossing(prev_pos, curr_pos, line_y):
+    """Check if a vehicle has crossed the counting line between two positions"""
+    prev_y = prev_pos[1]
+    curr_y = curr_pos[1]
+    
+    # Return direction: 1 for downward, -1 for upward, 0 for no crossing
+    if prev_y <= line_y and curr_y > line_y:
+        return 1  # Downward crossing
+    elif prev_y >= line_y and curr_y < line_y:
+        return -1  # Upward crossing
+    return 0  # No crossing
+
 def process_frames_thread():
     """Thread function to process frames with the model in the background"""
-    global running, model, vehicle_tracks
+    global running, model, vehicle_tracks, counted_vehicles
+    global vehicle_counts_up, vehicle_counts_down, total_counted_up, total_counted_down
+    global counting_line_y, counting_line_start_x, counting_line_end_x
     
     print("Starting frame processing thread")
     
@@ -74,6 +118,13 @@ def process_frames_thread():
             inference_time = (time.time() - start_time) * 1000  # Convert to milliseconds
             
             height, width = frame.shape[:2]
+            
+            # Initialize or update counting line coordinates if needed
+            if ENABLE_COUNTING_LINE and (counting_line_y is None or counting_line_start_x is None or counting_line_end_x is None):
+                counting_line_y = int(height * COUNTING_LINE_POSITION)
+                counting_line_start_x = 0
+                counting_line_end_x = width
+                print(f"Counting line initialized at y={counting_line_y}")
             
             # Process detection results
             detected_objects = []
@@ -127,7 +178,7 @@ def process_frames_thread():
                                 'height': float(rel_y2 - rel_y1)
                             }
                         }
-                        
+
                         # Add track_id if available
                         if track_id is not None:
                             detection_info['track_id'] = track_id
@@ -167,23 +218,58 @@ def process_frames_thread():
                             current_time = time.time()
                             current_tracks[track_id] = {
                                 'position': (center_x, center_y),
-                                'time': current_time
+                                'time': current_time,
+                                'class': class_name
                             }
                             
                         bounding_boxes.append(box_info)
             
-            # Update vehicle tracking history
+            # Update vehicle tracking history and check for line crossings
             current_time = time.time()
+            new_crossings = []  # Track IDs of vehicles that just crossed the line with direction
             
             # Update positions for existing tracks
             for track_id, track_info in current_tracks.items():
+                current_position = track_info['position']
+                current_class = track_info['class']
+                
                 if track_id not in vehicle_tracks:
                     vehicle_tracks[track_id] = []
                 
+                # Check for line crossing if we have previous positions and counting is enabled
+                if ENABLE_COUNTING_LINE and len(vehicle_tracks[track_id]) > 0 and counting_line_y is not None:
+                    prev_position = vehicle_tracks[track_id][-1]['position']
+                    
+                    # Check if and in which direction this vehicle has crossed the line
+                    crossing_direction = check_line_crossing(prev_position, current_position, counting_line_y)
+                    
+                    # If vehicle crossed the line in either direction
+                    if crossing_direction != 0:
+                        # For each track_id, we count once per direction
+                        crossing_key = f"{track_id}_{crossing_direction}"
+                        if crossing_key not in counted_vehicles:
+                            counted_vehicles[crossing_key] = True
+                            
+                            # Update the appropriate counter based on direction
+                            if crossing_direction == 1:  # Downward
+                                vehicle_counts_down[current_class] += 1
+                                total_counted_down += 1
+                                crossing_name = "down"
+                            else:  # Upward
+                                vehicle_counts_up[current_class] += 1
+                                total_counted_up += 1
+                                crossing_name = "up"
+                                
+                            # Add to list of new crossings for highlighting
+                            new_crossings.append((track_id, crossing_direction))
+                            print(f"Vehicle {track_id} ({current_class}) crossed {crossing_name}. " +
+                                  f"Up: {total_counted_up}, Down: {total_counted_down}")
+                
                 # Add new position
                 vehicle_tracks[track_id].append({
-                    'position': track_info['position'],
-                    'time': track_info['time']
+                    'position': current_position,
+                    'time': track_info['time'],
+                    'class': current_class
                 })
                 
                 # Keep only recent points within TRAIL_DURATION
@@ -209,9 +295,15 @@ def process_frames_thread():
                     'width': width,
                     'height': height
                 },
-                'timestamp': timestamp
+                'timestamp': timestamp,
+                'vehicle_count': {
+                    'total_up': total_counted_up,
+                    'total_down': total_counted_down,
+                    'by_type_up': vehicle_counts_up,
+                    'by_type_down': vehicle_counts_down
+                }
             }
-            
+
             # Emit detection results back to the server
             sio.emit('giaothong', response)
             
@@ -229,7 +321,17 @@ def process_frames_thread():
                 'inference_time': inference_time,
                 'vehicle_counts': vehicle_counts,
                 'timestamp': timestamp,
-                'tracks': vehicle_tracks.copy()  # Include tracking data
+                'tracks': vehicle_tracks.copy(),  # Include tracking data
+                'counting_line': {
+                    'y': counting_line_y,
+                    'start_x': counting_line_start_x,
+                    'end_x': counting_line_end_x
+                },
+                'counts_up': vehicle_counts_up.copy(),
+                'total_up': total_counted_up,
+                'counts_down': vehicle_counts_down.copy(),
+                'total_down': total_counted_down,
+                'new_crossings': new_crossings  # List of vehicles that just crossed the line with direction
             }
             
             # Add the detection data to result queue (replace if queue full)
@@ -248,6 +350,19 @@ def process_frames_thread():
             time.sleep(0.1)  # Prevent tight loop if there's an error
     
     print("Frame processing thread stopped")
+
+# Add this utility function for determining optimal text color based on background
+def get_optimal_text_color(bg_color):
+    """Determine whether black or white text will be more readable on a given background color."""
+    # Extract BGR components (OpenCV uses BGR)
+    b, g, r = bg_color
+    
+    # Calculate luminance (perceived brightness)
+    # Using the formula: 0.299*R + 0.587*G + 0.114*B
+    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    
+    # Use white text on dark backgrounds, black text on light backgrounds
+    return (0, 0, 0) if luminance > 128 else (255, 255, 255)
 
 def draw_overlay(frame, detection_data):
     """Draw bounding boxes and info overlay on a frame"""
@@ -293,21 +408,37 @@ def draw_overlay(frame, detection_data):
         if track_id is not None:
             label += f" ID:{track_id}"
         
-        # Get text size - FIX: This line was commented out in the original
+        # Get text size
         (label_width, label_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
         
         # Draw label background
         cv2.rectangle(overlay, (x1, y1 - 25), (x1 + label_width, y1), color, -1)
         
-        # Draw label text
-        cv2.putText(overlay, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        # Choose optimal text color for readability on this background
+        text_color = get_optimal_text_color(color)
+        
+        # Draw label text with adaptive color
+        cv2.putText(overlay, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 2)
         
         # Draw center point if it exists
         if 'center' in box:
             center_x, center_y = box['center']
             cv2.circle(overlay, (center_x, center_y), 4, (0, 0, 255), -1)  # Red dot for center
     
-    # Draw detection summary text
+    # Create a semi-transparent black background for summary stats
+    stats_bg_color = (30, 30, 30)
+    stats_text_color = (220, 220, 220)  # Light gray text for stats
+    
+    # Draw semi-transparent background for text areas
+    stats_height = 200  # Approximate height needed for stats
+    stats_width = 300   # Width for stats area
+    stats_overlay = overlay.copy()
+    cv2.rectangle(stats_overlay, (5, 50), (stats_width, 50 + stats_height), stats_bg_color, -1)
+    
+    # Apply alpha blending for semi-transparency
+    alpha = 0.7
+    cv2.addWeighted(stats_overlay, alpha, overlay, 1 - alpha, 0, overlay)
+    
     y_pos = 70  # Start position for summary text
     
     # Show inference time
@@ -317,7 +448,7 @@ def draw_overlay(frame, detection_data):
         (10, y_pos),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.7,
-        (0, 255, 255),
+        stats_text_color,
         2
     )
     y_pos += 30
@@ -330,36 +461,136 @@ def draw_overlay(frame, detection_data):
         (10, y_pos),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.7,
-        (0, 255, 255),
+        stats_text_color,
         2
     )
     y_pos += 30
     
-    # Show count for each vehicle type
+    # Show count for each vehicle type with vehicle-specific colors
     for v_type, count in detection_data['vehicle_counts'].items():
         if count > 0:
+            # Choose color based on vehicle type for better visualization
+            if v_type == 'car':
+                type_color = (0, 255, 0)  # Green for cars
+            elif v_type == 'truck':
+                type_color = (0, 0, 255)  # Blue for trucks
+            elif v_type == 'bus':
+                type_color = (255, 0, 0)  # Red for buses
+            elif v_type == 'motorcycle':
+                type_color = (255, 255, 0)  # Yellow for motorcycles
+            elif v_type == 'bicycle':
+                type_color = (255, 0, 255)  # Purple for bicycles
+            else:
+                type_color = stats_text_color
+                
+            # Use adaptive text color based on the vehicle type color
+            text_color = get_optimal_text_color(type_color)
+            
+            # Draw vehicle count with color-coded background
+            count_text = f"{v_type}s: {count}"
+            (text_width, text_height), _ = cv2.getTextSize(count_text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+            
+            # Draw colored background for each vehicle type
+            cv2.rectangle(overlay, (10, y_pos - 20), (10 + text_width, y_pos + 5), type_color, -1)
+            
+            # Draw text with adaptive color
             cv2.putText(
                 overlay,
-                f"{v_type}s: {count}",
+                count_text,
                 (10, y_pos),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.7,
-                (0, 255, 255),
+                text_color,
                 2
             )
             y_pos += 30
     
     # Add tracking information text
-    y_pos += 30
+    y_pos += 10
     cv2.putText(
         overlay,
         f"Tracking: {len(detection_data.get('tracks', {}))} objects",
         (10, y_pos),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.7,
-        (0, 255, 255),
+        stats_text_color,
         2
     )
+    
+    # Draw counting line if enabled
+    if ENABLE_COUNTING_LINE and 'counting_line' in detection_data:
+        line_y = detection_data['counting_line']['y']
+        start_x = detection_data['counting_line']['start_x']
+        end_x = detection_data['counting_line']['end_x']
+        
+        # Draw the counting line with a bright color
+        line_color = (0, 255, 255)  # Yellow line
+        cv2.line(overlay, (start_x, line_y), (end_x, line_y), line_color, 2)
+        
+        # Add counters for each direction with direction-specific colors
+        if 'total_up' in detection_data and 'total_down' in detection_data:
+            # Background for counters
+            counter_bg = overlay.copy()
+            counter_width = 180
+            counter_height = 80
+            
+            # Up counter (right side)
+            up_bg_color = STATS_COLORS["up"]
+            up_text_color = get_optimal_text_color(up_bg_color)
+            up_x = end_x - counter_width - 20
+            up_y = line_y - counter_height - 20
+            
+            cv2.rectangle(counter_bg, (up_x, up_y), (up_x + counter_width, up_y + counter_height), up_bg_color, -1)
+            cv2.addWeighted(counter_bg, 0.7, overlay, 0.3, 0, overlay)
+            
+            # Up count text
+            cv2.putText(
+                overlay,
+                "▲ UP COUNT",
+                (up_x + 10, up_y + 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                up_text_color,
+                2
+            )
+            cv2.putText(
+                overlay,
+                f"{detection_data['total_up']}",
+                (up_x + 10, up_y + 65),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1.2,
+                up_text_color,
+                2
+            )
+            
+            # Down counter (left side)
+            down_bg_color = STATS_COLORS["down"]
+            down_text_color = get_optimal_text_color(down_bg_color)
+            down_x = start_x + 20
+            down_y = line_y + 20
+            
+            cv2.rectangle(counter_bg, (down_x, down_y), (down_x + counter_width, down_y + counter_height), down_bg_color, -1)
+            cv2.addWeighted(counter_bg, 0.7, overlay, 0.3, 0, overlay)
+            
+            # Down count text
+            cv2.putText(
+                overlay,
+                "▼ DOWN COUNT",
+                (down_x + 10, down_y + 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                down_text_color,
+                2
+            )
+            cv2.putText(
+                overlay,
+                f"{detection_data['total_down']}",
+                (down_x + 10, down_y + 65),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1.2,
+                down_text_color,
+                2
+            )
     
     return overlay
 
@@ -431,7 +662,7 @@ def display_updater():
                             (display_img.shape[1] - 150, 30),
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.7,
-                            (0, 255, 255),
+                            STATS_COLORS["header"],
                             2
                         )
                         
@@ -448,7 +679,7 @@ def display_updater():
                             (10, 30),
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.7,
-                            (0, 255, 255),
+                            STATS_COLORS["header"],
                             2
                         )
                         
