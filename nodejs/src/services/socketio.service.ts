@@ -38,8 +38,6 @@ export function runSocketIOService(server: Server): SocketIOServer {
       // Forward vehicle detection data to all clients with original event name
       socket.broadcast.emit("giaothong", data);
 
-      console.log("Car detection data", data);
-
       await carDetectionModel.create(data).then((res) => {
         console.log("Car detection created successfully", res);
       }).catch((err) => {
