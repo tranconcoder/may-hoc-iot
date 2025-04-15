@@ -37,6 +37,7 @@ import { randomIntFromInterval } from './utils/number.util';
 import cors from 'cors';
 import { Server as SocketIOServer } from "socket.io"; // Import Socket.IO Server
 import { createServer } from "http"; // Import createServer from http
+import { runSocketIOService } from './services/socketio.service';
 
 // Constants
 const { HOST, PORT } = envConfig;
@@ -66,41 +67,7 @@ const wss = new WebSocketServer({
   maxPayload: 102400 * 1024, // Example payload limit
 });
 
-// Initialize Socket.IO Server and attach it to the same HTTP server
-const io = new SocketIOServer(httpServer, {
-  cors: {
-    origin: "*", // Allow all origins for simplicity, adjust in production
-    methods: ["GET", "POST"],
-  },
-  transports: ["websocket"],
-  // Optional: Increase maxHttpBufferSize if sending large base64 images frequently
-  // maxHttpBufferSize: 1e8 // 100 MB
-});
 
-// Socket.IO Connection Logic
-io.on("connection", (socket) => {
-  console.log(`Socket.IO Client connected: ${socket.id}`);
-
-  socket.on("giaothong", (data: any) => {
-    console.log(`GIAOTHONG:::::::::::::::::::::: Received traffic data via Socket.IO from ${socket.id}`);
-    console.log(data)
-  });
-
-  // Listen for detection results from Python client
-  socket.on("dentinhieu", (data: any) => {
-    console.log(
-      `Received detection results via Socket.IO from ${socket.id}:`,
-      data
-    );
-    // Here you can process the detection results (e.g., save to DB, forward elsewhere)
-  });
-
-  socket.on("disconnect", () => {
-    console.log(`Socket.IO Client disconnected: ${socket.id}`);
-  });
-});
-
-io.listen(3001);
 
 //
 // SESSION
@@ -113,6 +80,11 @@ const sessionOptions: SessionOptions = {
 };
 
 app.use(session(sessionOptions));
+
+//
+// SOCKET.IO
+//
+const io = runSocketIOService(httpServer);
 
 //
 // CORS

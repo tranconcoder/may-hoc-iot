@@ -1,0 +1,207 @@
+:root {
+    --primary-color: #333;
+    --secondary-color: #4CAF50;
+    --accent-color: #FF9800;
+    --text-color: #f5f5f5;
+    --background-color: #212121;
+    --panel-background: #2c2c2c;
+    --traffic-sign-color: #4CAF50;
+    --vehicle-color: #FF9800;
+    --connected-color: #4CAF50;
+    --disconnected-color: #f44336;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #444;
+    margin-bottom: 20px;
+}
+
+h1 {
+    font-size: 24px;
+}
+
+h2 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: var(--text-color);
+    border-bottom: 1px solid #444;
+    padding-bottom: 5px;
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+}
+
+#status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--disconnected-color);
+    margin-right: 8px;
+}
+
+.main-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.preview-container {
+    flex: 1 1 65%;
+    position: relative;
+    background-color: #000;
+    min-height: 480px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+#preview-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.overlay-info {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    padding: 5px;
+    font-size: 14px;
+    color: var(--text-color);
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.7);
+}
+
+#status-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 18px;
+    color: var(--text-color);
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 10px 20px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stats-panel {
+    flex: 1 1 30%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.stats-section {
+    background-color: var(--panel-background);
+    padding: 15px;
+    border-radius: 5px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.detailed-stats {
+    margin-top: 15px;
+}
+
+.traffic-sign {
+    color: var(--traffic-sign-color);
+}
+
+.vehicle {
+    color: var(--vehicle-color);
+}
+
+.detection-log {
+    background-color: var(--panel-background);
+    padding: 15px;
+    border-radius: 5px;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+#log-container {
+    height: 200px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 12px;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+}
+
+.log-entry {
+    margin-bottom: 5px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed #444;
+}
+
+.log-entry:last-child {
+    border-bottom: none;
+}
+
+.stat-item .label {
+    font-weight: 600;
+}
+
+.detailed-stat-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    padding: 3px 5px;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* Vehicle type colors */
+.car-color { background-color: rgba(0, 255, 0, 0.2); }
+.truck-color { background-color: rgba(0, 0, 255, 0.2); }
+.bus-color { background-color: rgba(255, 0, 0, 0.2); }
+.motorcycle-color { background-color: rgba(255, 255, 0, 0.2); }
+.bicycle-color { background-color: rgba(255, 0, 255, 0.2); }
+
+/* Sign type colors will be generated dynamically using HSL in JS */
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .main-content {
+        flex-direction: column;
+    }
+    
+    .preview-container {
+        min-height: 360px;
+    }
+}

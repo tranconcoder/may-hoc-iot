@@ -1,20 +1,20 @@
 {
-	"files.associations": {
-		"*.embeddedhtml": "html",
-		"*.js": "javascript",
-		"esp_websocket_client.h": "c",
-		"setup_esp_websocket_client.h": "c",
-		"setup_esp32_cam.h": "c",
-		"setup_rc522.h": "c",
-		"config_http_client.h": "c",
-		"esp_event.h": "c",
-		"esp32cam_security_gate.h": "c",
-		"esp_netif.h": "c",
-		"setup_diffie_hellman.h": "c",
-		"*.inc": "cpp",
-		"bignum.h": "c",
-		"aes-custom.h": "c",
-		"http_client_utils.h": "c"
-	},
-	"liveServer.settings.port": 5501
+  "files.associations": {
+    "*.embeddedhtml": "html",
+    "*.js": "javascript",
+    "esp_websocket_client.h": "c",
+    "setup_esp_websocket_client.h": "c",
+    "setup_esp32_cam.h": "c",
+    "setup_rc522.h": "c",
+    "config_http_client.h": "c",
+    "esp_event.h": "c",
+    "esp32cam_security_gate.h": "c",
+    "esp_netif.h": "c",
+    "setup_diffie_hellman.h": "c",
+    "*.inc": "cpp",
+    "bignum.h": "c",
+    "aes-custom.h": "c",
+    "http_client_utils.h": "c"
+  },
+  "liveServer.settings.port": 5502
 }

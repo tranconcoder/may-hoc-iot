@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Detection Preview</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>IoT Detection Preview</h1>
+            <div class="connection-status">
+                <span id="status-indicator"></span>
+                <span id="status-text">Disconnected</span>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="preview-container">
+                <canvas id="preview-canvas"></canvas>
+                <div class="overlay-info">
+                    <div id="timestamp"></div>
+                    <div id="fps"></div>
+                </div>
+                <div id="status-message">Waiting for connection...</div>
+            </div>
+
+            <div class="stats-panel">
+                <div class="stats-section">
+                    <h2>Traffic Signs</h2>
+                    <div id="traffic-sign-stats">
+                        <div class="stat-item">
+                            <span class="label">Total signs:</span>
+                            <span class="value" id="total-signs">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="label">Detection time:</span>
+                            <span class="value" id="sign-detection-time">0 ms</span>
+                        </div>
+                        <div id="sign-counts" class="detailed-stats"></div>
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <h2>Vehicles</h2>
+                    <div id="vehicle-stats">
+                        <div class="stat-item">
+                            <span class="label">Total vehicles:</span>
+                            <span class="value" id="total-vehicles">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="label">Detection time:</span>
+                            <span class="value" id="vehicle-detection-time">0 ms</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="label">Count UP:</span>
+                            <span class="value" id="vehicles-up">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="label">Count DOWN:</span>
+                            <span class="value" id="vehicles-down">0</span>
+                        </div>
+                        <div id="vehicle-counts" class="detailed-stats"></div>
+                    </div>
+                </div>
+
+                <div class="detection-log">
+                    <h2>Detection Log</h2>
+                    <div id="log-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
