@@ -15,5 +15,6 @@
 		"bignum.h": "c",
 		"aes-custom.h": "c",
 		"http_client_utils.h": "c"
-	}
+	},
+	"liveServer.settings.port": 5501
 }
