@@ -81,6 +81,11 @@ const io = new SocketIOServer(httpServer, {
 io.on("connection", (socket) => {
   console.log(`Socket.IO Client connected: ${socket.id}`);
 
+  socket.on("giaothong", (data: any) => {
+    console.log(`GIAOTHONG:::::::::::::::::::::: Received traffic data via Socket.IO from ${socket.id}`);
+    console.log(data)
+  });
+
   // Listen for detection results from Python client
   socket.on("dentinhieu", (data: any) => {
     console.log(

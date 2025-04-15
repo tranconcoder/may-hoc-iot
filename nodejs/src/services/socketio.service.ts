@@ -10,17 +10,25 @@ let ioInstance: SocketIOServer | null = null;
 export function runSocketIOService(io: SocketIOServer): void {
   ioInstance = io; // Store the instance
 
+  io.on("giaothong", (data: any) => {
+    console.log("GIAOTHONG___IO :::::::::::::::::::::: Received traffic data via Socket.IO:", data);
+  });
+
   io.on("connection", (socket: Socket) => {
-    console.log(`Socket.IO Client connected: ${socket.id}`);
+    console.log(`SOCKET.IO CLIENT CONNECTED: ${socket.id}`);
+
+    socket.on("message", (data: any) => {
+      console.log("MESSAGE :::::::::::::::::::::: Received message via Socket.IO:", data);
+    });
 
     // Listen for detection results from Python client
     socket.on("dentinhieu", (data: any) => {
-      console.log(`Received detection results via Socket.IO from ${socket.id}:`, data);
+      console.log(`DENTINHIEU:::::::::::::::::::::: Received detection results via Socket.IO from ${socket.id}:`, data);
       // Process detection results here if needed
     });
 
     socket.on("giaothong", (data: any) => {
-        console.log(`Received traffic data via Socket.IO from ${socket.id}`);
+        console.log(`GIAOTHONG:::::::::::::::::::::: Received traffic data via Socket.IO from ${socket.id}`);
         
         // Process traffic detection results
         if (data.detections && Array.isArray(data.detections)) {

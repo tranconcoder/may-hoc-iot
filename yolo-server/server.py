@@ -13,7 +13,7 @@ import queue
 MODEL_PATH = 'yolo11n.pt'  # Using your existing model
 CONFIDENCE_THRESHOLD = 0.4  # Detection confidence threshold
 VEHICLE_CLASSES = ['car', 'truck', 'bus', 'motorcycle', 'bicycle']  # Vehicle classes in COCO dataset
-SOCKETIO_SERVER_URL = 'http://192.168.1.17:3001'
+SOCKETIO_SERVER_URL = 'http://192.168.38.32:3001'
 ENABLE_PREVIEW = True  # Enable preview window to show detection results
 PREVIEW_WINDOW_NAME = 'Vehicle Detection Preview'  # Name of the preview window
 ENABLE_TRACKING = True  # Enable object tracking functionality
@@ -848,6 +848,7 @@ def disconnect():
     print("Disconnected from Socket.IO server")
     global running
     running = False
+
 
 @sio.on('image')
 def on_image(data):
