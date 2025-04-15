@@ -22,10 +22,6 @@ import * as ffmpegService from './services/ffmpeg.service';
 // Morgan
 import morgan from 'morgan';
 
-// Mongoose
-import connectDb from './config/database/mongoose.config';
-import { EnvironmentModel } from './config/database/schema/environment.schema';
-
 // Error handler
 import handleError from './utils/handleError.util';
 
@@ -38,6 +34,7 @@ import cors from 'cors';
 import { Server as SocketIOServer } from "socket.io"; // Import Socket.IO Server
 import { createServer } from "http"; // Import createServer from http
 import { runSocketIOService } from './services/socketio.service';
+import DBCore from './core/db.core';
 
 // Constants
 const { HOST, PORT } = envConfig;
@@ -116,6 +113,11 @@ const setupExHbs = new SetupHandlebars(app);
 setupExHbs.setup();
 
 //
+// DATABASE
+//
+DBCore.getInstance().connect();
+
+//
 // HANDLE ROUTE
 //
 handleRoute(app);
@@ -141,22 +143,6 @@ httpServer.listen(PORT, HOST, () => {
   console.log(
     `Server (with WebSocket and Socket.IO) is running on http://${HOST}:${PORT}`
   );
-});
-
-//
-// MONGOOSE
-//
-connectDb()
-	.then(() => {
-		console.log('Connected to database!');
-	})
-	.catch(() => {
-		console.log('Connect fail to database!');
-	});
-
-EnvironmentModel.create({
-	temp: randomIntFromInterval(0, 100),
-	humidity: randomIntFromInterval(0, 100),
 });
 
 export { wss, httpServer, HOST, PORT, io }; // Export io and the httpServer

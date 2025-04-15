@@ -1,5 +1,7 @@
 import type { Server } from "http";
 import { Server as SocketIOServer, Socket } from "socket.io";
+import carDetectionModel from "../models/carDetection.model";
+import trafficLightModel from "../models/trafficLight.model";
 
 /**
  * Initializes and runs the Socket.IO connection logic.
@@ -17,64 +19,32 @@ export function runSocketIOService(server: Server): SocketIOServer {
     console.log(`SOCKET.IO CLIENT CONNECTED: ${socket.id}`);
 
     socket.on("message", (data: any) => {
-      console.log(
-        "MESSAGE :::::::::::::::::::::: Received message via Socket.IO:",
-        data
-      );
-      // Forward message to all clients
       socket.broadcast.emit("message", data);
     });
 
     // Listen for detection results from Python client
-    socket.on("dentinhieu", (data: any) => {
-      console.log(
-        `DENTINHIEU:::::::::::::::::::::: Received detection results via Socket.IO from ${socket.id}:`,
-        data
-      );
-
+    socket.on("dentinhieu", async (data: any) => {
       // Forward traffic sign detection data to all clients (including sender)
       socket.broadcast.emit("dentinhieu", data);
+
+      await trafficLightModel.create(data).then((res) => {
+        console.log("Traffic light detection created successfully", res);
+      }).catch((err) => {
+        console.log("Traffic light detection creation failed", err);
+      });
     });
 
-    socket.on("giaothong", (data: any) => {
-      console.log(
-        `GIAOTHONG:::::::::::::::::::::: Received traffic data via Socket.IO from ${socket.id}`
-      );
+    socket.on("giaothong", async(data: any) => {
+      // Forward vehicle detection data to all clients with original event name
+      socket.broadcast.emit("giaothong", data);
 
-      // Process traffic detection results
-      if (data.detections && Array.isArray(data.detections)) {
-        const vehicleCount = data.detections.length;
-        console.log(
-          `Detected ${vehicleCount} vehicles with inference time: ${data.inference_time?.toFixed(
-            2
-          )}ms`
-        );
+      console.log("Car detection data", data);
 
-        // Count vehicles by type
-        const vehicleCounts = data.detections.reduce(
-          (acc: Record<string, number>, detection: any) => {
-            const vehicleType = detection.class;
-            acc[vehicleType] = (acc[vehicleType] || 0) + 1;
-            return acc;
-          },
-          {}
-        );
-
-        console.log("Vehicle counts by type:", vehicleCounts);
-
-        // Forward vehicle detection data to all clients with original event name
-        socket.broadcast.emit("giaothong", data);
-
-        // Note: We keep this for backward compatibility with existing web clients
-        // In the future, consider standardizing on just the 'giaothong' event
-        io.emit("trafficUpdate", {
-          vehicleCount,
-          vehicleCounts,
-          detections: data.detections,
-          timestamp: data.timestamp || Date.now(),
-          inferenceTime: data.inference_time,
-        });
-      }
+      await carDetectionModel.create(data).then((res) => {
+        console.log("Car detection created successfully", res);
+      }).catch((err) => {
+        console.log("Car detection creation failed", err);
+      });
     });
 
     socket.on("disconnect", () => {
