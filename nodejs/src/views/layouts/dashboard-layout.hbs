@@ -1,0 +1,148 @@
+{{! filepath: /home/tranv/Workspace/mh-iot-new/nodejs/src/views/layouts/dashboard-layout.hbs }}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hệ Thống Quản Lý Giao Thông</title>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Dashboard CSS -->
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+  <div class="dashboard-wrapper">
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand">
+          <div class="sidebar-logo">
+            <i class="fas fa-traffic-light"></i>
+          </div>
+          <div class="sidebar-title">TrafficManager</div>
+        </div>
+      </div>
+      
+      <div class="sidebar-content">
+        <div class="nav-section">
+          <div class="nav-title">Trang chính</div>
+          <ul class="nav-menu">
+            <li class="nav-item">
+              <a href="/views/dashboard" class="nav-link {{#if isHome}}active{{/if}}">
+                <i class="fas fa-home nav-icon"></i>
+                <span>Trang chủ</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/views/dashboard/statistics" class="nav-link {{#if isStatistics}}active{{/if}}">
+                <i class="fas fa-chart-line nav-icon"></i>
+                <span>Thống kê giao thông</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/views/dashboard/cameras" class="nav-link {{#if isCameras}}active{{/if}}">
+                <i class="fas fa-video nav-icon"></i>
+                <span>Camera giám sát</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/views/dashboard/map" class="nav-link {{#if isMap}}active{{/if}}">
+                <i class="fas fa-map-marked-alt nav-icon"></i>
+                <span>Bản đồ giao thông</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+        
+        <div class="nav-section">
+          <div class="nav-title">Quản lý</div>
+          <ul class="nav-menu">
+            <li class="nav-item">
+              <a href="/views/dashboard/traffic-lights" class="nav-link {{#if isTrafficLights}}active{{/if}}">
+                <i class="fas fa-traffic-light nav-icon"></i>
+                <span>Đèn giao thông</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/views/dashboard/violations" class="nav-link {{#if isViolations}}active{{/if}}">
+                <i class="fas fa-exclamation-triangle nav-icon"></i>
+                <span>Vi phạm giao thông</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/views/dashboard/reports" class="nav-link {{#if isReports}}active{{/if}}">
+                <i class="fas fa-file-alt nav-icon"></i>
+                <span>Báo cáo</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+        
+        <div class="nav-section">
+          <div class="nav-title">Hệ thống</div>
+          <ul class="nav-menu">
+            <li class="nav-item">
+              <a href="/views/dashboard/settings" class="nav-link {{#if isSettings}}active{{/if}}">
+                <i class="fas fa-cog nav-icon"></i>
+                <span>Cài đặt</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/views/dashboard/users" class="nav-link {{#if isUsers}}active{{/if}}">
+                <i class="fas fa-users nav-icon"></i>
+                <span>Người dùng</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/logout" class="nav-link">
+                <i class="fas fa-sign-out-alt nav-icon"></i>
+                <span>Đăng xuất</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <h1 class="dashboard-title">{{pageTitle}}</h1>
+        
+        <div class="dashboard-actions">
+          <button class="action-button notification-badge">
+            <i class="fas fa-bell"></i>
+          </button>
+          
+          <button class="action-button">
+            <i class="fas fa-moon"></i>
+          </button>
+          
+          <div class="user-profile">
+            <div class="profile-avatar">
+              <i class="fas fa-user"></i>
+            </div>
+            <div class="profile-name">Admin</div>
+          </div>
+        </div>
+      </header>
+      
+      <div class="dashboard-content">
+        {{{body}}}
+      </div>
+    </main>
+  </div>
+  
+  <!-- JavaScript Libraries -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Custom JavaScript -->
+  <script src="/scripts/dashboard.js"></script>
+</body>
+</html>

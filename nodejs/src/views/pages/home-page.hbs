@@ -1,3 +1,307 @@
-<link rel='stylesheet' href='/public/css/home-page.css' />
+{{! filepath: /home/tranv/Workspace/mh-iot-new/nodejs/src/views/pages/home-page.hbs }}
+<div class="content-header">
+  <h1 class="page-title">Tổng quan về lưu lượng giao thông</h1>
+  <div class="date-time">
+    <i class="far fa-calendar-alt"></i>
+    <span id="current-date"></span>
+  </div>
+</div>
 
-<h1>Hello trang chu</h1>
+<!-- Stats Cards -->
+<div class="row mb-4">
+  <div class="col-lg-3 col-md-6 mb-3">
+    <div class="card h-100 border-0 shadow-sm">
+      <div class="card-body d-flex align-items-center">
+        <div class="flex-shrink-0 rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+          <i class="fas fa-car text-primary fa-2x"></i>
+        </div>
+        <div>
+          <h6 class="text-muted mb-1">Tổng phương tiện</h6>
+          <h3 class="mb-0 counter">24,521</h3>
+          <small class="text-success"><i class="fas fa-arrow-up"></i> 12% so với tuần trước</small>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6 mb-3">
+    <div class="card h-100 border-0 shadow-sm">
+      <div class="card-body d-flex align-items-center">
+        <div class="flex-shrink-0 rounded-circle bg-success bg-opacity-10 p-3 me-3">
+          <i class="fas fa-video text-success fa-2x"></i>
+        </div>
+        <div>
+          <h6 class="text-muted mb-1">Camera hoạt động</h6>
+          <h3 class="mb-0 counter">15/18</h3>
+          <small class="text-muted">3 camera đang bảo trì</small>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6 mb-3">
+    <div class="card h-100 border-0 shadow-sm">
+      <div class="card-body d-flex align-items-center">
+        <div class="flex-shrink-0 rounded-circle bg-warning bg-opacity-10 p-3 me-3">
+          <i class="fas fa-exclamation-triangle text-warning fa-2x"></i>
+        </div>
+        <div>
+          <h6 class="text-muted mb-1">Cảnh báo tắc nghẽn</h6>
+          <h3 class="mb-0 counter">3</h3>
+          <small class="text-danger"><i class="fas fa-arrow-up"></i> 2 so với hôm qua</small>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6 mb-3">
+    <div class="card h-100 border-0 shadow-sm">
+      <div class="card-body d-flex align-items-center">
+        <div class="flex-shrink-0 rounded-circle bg-info bg-opacity-10 p-3 me-3">
+          <i class="fas fa-traffic-light text-info fa-2x"></i>
+        </div>
+        <div>
+          <h6 class="text-muted mb-1">Đèn giao thông</h6>
+          <h3 class="mb-0 counter">42/45</h3>
+          <small class="text-success">93% hoạt động bình thường</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content Sections -->
+<div class="row">
+  <!-- Traffic Flow Chart -->
+  <div class="col-lg-8 mb-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Lưu lượng giao thông theo thời gian</h5>
+        <div class="dropdown">
+          <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+            Hôm nay
+          </button>
+          <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+            <li><a class="dropdown-item" href="#">Hôm nay</a></li>
+            <li><a class="dropdown-item" href="#">Tuần này</a></li>
+            <li><a class="dropdown-item" href="#">Tháng này</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="card-body">
+        <canvas id="trafficFlowChart" height="250"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Traffic Distribution -->
+  <div class="col-lg-4 mb-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white">
+        <h5 class="mb-0">Phân bố phương tiện</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="vehicleDistributionChart" height="250"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Camera Feeds -->
+  <div class="col-lg-8 mb-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Camera giám sát chính</h5>
+        <a href="/cameras" class="btn btn-sm btn-primary">Xem tất cả</a>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <div class="position-relative">
+              <div class="camera-feed rounded overflow-hidden">
+                <img src="https://via.placeholder.com/400x225" class="img-fluid" alt="Camera Feed 1">
+                <div class="camera-overlay">
+                  <span class="badge bg-danger"><i class="fas fa-circle"></i> TRỰC TIẾP</span>
+                </div>
+              </div>
+              <div class="camera-info p-2">
+                <div class="d-flex justify-content-between">
+                  <span>Ngã tư Nguyễn Huệ - Lê Lợi</span>
+                  <span class="text-muted">Cam 01</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="position-relative">
+              <div class="camera-feed rounded overflow-hidden">
+                <img src="https://via.placeholder.com/400x225" class="img-fluid" alt="Camera Feed 2">
+                <div class="camera-overlay">
+                  <span class="badge bg-danger"><i class="fas fa-circle"></i> TRỰC TIẾP</span>
+                </div>
+              </div>
+              <div class="camera-info p-2">
+                <div class="d-flex justify-content-between">
+                  <span>Đường Lê Duẩn</span>
+                  <span class="text-muted">Cam 03</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Recent Alerts -->
+  <div class="col-lg-4 mb-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white">
+        <h5 class="mb-0">Cảnh báo gần đây</h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+          <a href="#" class="list-group-item list-group-item-action py-3">
+            <div class="d-flex w-100 justify-content-between">
+              <h6 class="mb-1 text-danger">Tắc nghẽn giao thông</h6>
+              <small class="text-muted">10 phút trước</small>
+            </div>
+            <p class="mb-1 small">Phát hiện tắc nghẽn tại đường Lê Duẩn, đoạn gần ngã tư Lê Duẩn - Nam Kỳ Khởi Nghĩa</p>
+            <small class="text-muted">Camera 03</small>
+          </a>
+          <a href="#" class="list-group-item list-group-item-action py-3">
+            <div class="d-flex w-100 justify-content-between">
+              <h6 class="mb-1 text-warning">Mật độ giao thông cao</h6>
+              <small class="text-muted">25 phút trước</small>
+            </div>
+            <p class="mb-1 small">Mật độ giao thông tăng cao tại ngã tư Nguyễn Huệ - Lê Lợi</p>
+            <small class="text-muted">Camera 01</small>
+          </a>
+          <a href="#" class="list-group-item list-group-item-action py-3">
+            <div class="d-flex w-100 justify-content-between">
+              <h6 class="mb-1 text-danger">Đèn giao thông không hoạt động</h6>
+              <small class="text-muted">1 giờ trước</small>
+            </div>
+            <p class="mb-1 small">Đèn giao thông tại ngã tư Điện Biên Phủ - 3/2 không hoạt động</p>
+            <small class="text-muted">Camera 08</small>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Traffic Density Map -->
+  <div class="col-12 mb-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white">
+        <h5 class="mb-0">Bản đồ mật độ giao thông</h5>
+      </div>
+      <div class="card-body">
+        <div id="trafficMap" style="height: 400px;">
+          <!-- This would be replaced with an actual interactive map -->
+          <img src="https://via.placeholder.com/1200x400" class="img-fluid rounded" alt="Traffic Map">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Set current date
+  document.getElementById('current-date').textContent = new Date().toLocaleDateString('vi-VN', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  // Traffic Flow Chart
+  const trafficCtx = document.getElementById('trafficFlowChart').getContext('2d');
+  new Chart(trafficCtx, {
+    type: 'line',
+    data: {
+      labels: ['6:00', '8:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'],
+      datasets: [{
+        label: 'Số lượng xe',
+        data: [320, 1200, 780, 620, 500, 890, 1500, 1100, 400],
+        borderColor: '#3498db',
+        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: {
+            drawBorder: false
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          }
+        }
+      }
+    }
+  });
+
+  // Vehicle Distribution Chart
+  const distributionCtx = document.getElementById('vehicleDistributionChart').getContext('2d');
+  new Chart(distributionCtx, {
+    type: 'pie',
+    data: {
+      labels: ['Xe máy', 'Ô tô', 'Xe buýt', 'Xe tải', 'Khác'],
+      datasets: [{
+        data: [65, 20, 5, 8, 2],
+        backgroundColor: [
+          '#3498db',
+          '#2ecc71',
+          '#f1c40f',
+          '#e74c3c',
+          '#9b59b6'
+        ],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
+  });
+</script>
+
+<style>
+  .camera-feed {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  
+  .camera-overlay {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+  }
+  
+  .camera-info {
+    background-color: rgba(255,255,255,0.9);
+    border-radius: 0 0 8px 8px;
+  }
+  
+  .counter {
+    font-weight: 600;
+  }
+</style>
