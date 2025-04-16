@@ -105,54 +105,8 @@
 </div>
 
 <div class="row">
-  <!-- Camera Feeds -->
-  <div class="col-lg-8 mb-4">
-    <div class="card border-0 shadow-sm">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Camera giám sát chính</h5>
-        <a href="/cameras" class="btn btn-sm btn-primary">Xem tất cả</a>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <div class="position-relative">
-              <div class="camera-feed rounded overflow-hidden">
-                <img src="https://via.placeholder.com/400x225" class="img-fluid" alt="Camera Feed 1">
-                <div class="camera-overlay">
-                  <span class="badge bg-danger"><i class="fas fa-circle"></i> TRỰC TIẾP</span>
-                </div>
-              </div>
-              <div class="camera-info p-2">
-                <div class="d-flex justify-content-between">
-                  <span>Ngã tư Nguyễn Huệ - Lê Lợi</span>
-                  <span class="text-muted">Cam 01</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-6 mb-3">
-            <div class="position-relative">
-              <div class="camera-feed rounded overflow-hidden">
-                <img src="https://via.placeholder.com/400x225" class="img-fluid" alt="Camera Feed 2">
-                <div class="camera-overlay">
-                  <span class="badge bg-danger"><i class="fas fa-circle"></i> TRỰC TIẾP</span>
-                </div>
-              </div>
-              <div class="camera-info p-2">
-                <div class="d-flex justify-content-between">
-                  <span>Đường Lê Duẩn</span>
-                  <span class="text-muted">Cam 03</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  
   <!-- Recent Alerts -->
-  <div class="col-lg-4 mb-4">
+  <div class="col-lg-12 mb-4">
     <div class="card border-0 shadow-sm h-100">
       <div class="card-header bg-white">
         <h5 class="mb-0">Cảnh báo gần đây</h5>
@@ -189,22 +143,7 @@
   </div>
 </div>
 
-<div class="row">
-  <!-- Traffic Density Map -->
-  <div class="col-12 mb-4">
-    <div class="card border-0 shadow-sm">
-      <div class="card-header bg-white">
-        <h5 class="mb-0">Bản đồ mật độ giao thông</h5>
-      </div>
-      <div class="card-body">
-        <div id="trafficMap" style="height: 400px;">
-          <!-- This would be replaced with an actual interactive map -->
-          <img src="https://via.placeholder.com/1200x400" class="img-fluid rounded" alt="Traffic Map">
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- Map section removed as requested -->
 
 <script>
   // Set current date
@@ -220,33 +159,100 @@
   new Chart(trafficCtx, {
     type: 'line',
     data: {
-      labels: ['6:00', '8:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'],
-      datasets: [{
-        label: 'Số lượng xe',
-        data: [320, 1200, 780, 620, 500, 890, 1500, 1100, 400],
-        borderColor: '#3498db',
-        backgroundColor: 'rgba(52, 152, 219, 0.1)',
-        tension: 0.4,
-        fill: true
-      }]
+      labels: ['6:00', '7:00', '8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'],
+      datasets: [
+        {
+          label: 'Xe máy',
+          data: [220, 450, 860, 730, 480, 350, 320, 280, 310, 350, 490, 680, 950, 720, 520, 380, 280],
+          borderColor: '#3498db',
+          backgroundColor: 'rgba(52, 152, 219, 0.05)',
+          borderWidth: 2,
+          tension: 0.3,
+          fill: true
+        },
+        {
+          label: 'Ô tô',
+          data: [80, 150, 280, 240, 150, 120, 180, 140, 130, 120, 240, 360, 480, 320, 250, 180, 100],
+          borderColor: '#2ecc71',
+          backgroundColor: 'rgba(46, 204, 113, 0.05)',
+          borderWidth: 2,
+          tension: 0.3,
+          fill: true
+        },
+        {
+          label: 'Xe tải/Xe buýt',
+          data: [20, 40, 60, 50, 40, 30, 40, 30, 30, 40, 60, 70, 70, 60, 40, 30, 20],
+          borderColor: '#f1c40f',
+          backgroundColor: 'rgba(241, 196, 15, 0.05)',
+          borderWidth: 2,
+          tension: 0.3,
+          fill: true
+        }
+      ]
     },
     options: {
       maintainAspectRatio: false,
+      responsive: true,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
       plugins: {
         legend: {
-          display: false
+          display: true,
+          position: 'top',
+          labels: {
+            usePointStyle: true,
+            padding: 15,
+            font: {
+              size: 12
+            }
+          }
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            footer: function(tooltipItems) {
+              let sum = 0;
+              tooltipItems.forEach(function(tooltipItem) {
+                sum += tooltipItem.parsed.y;
+              });
+              return 'Tổng: ' + sum;
+            }
+          }
         }
       },
       scales: {
         y: {
           beginAtZero: true,
           grid: {
+            color: 'rgba(0, 0, 0, 0.05)',
             drawBorder: false
+          },
+          ticks: {
+            callback: function(value) {
+              return value + ' xe';
+            }
+          },
+          title: {
+            display: true,
+            text: 'Số lượng phương tiện',
+            font: {
+              size: 12
+            }
           }
         },
         x: {
           grid: {
             display: false
+          },
+          title: {
+            display: true,
+            text: 'Thời gian',
+            font: {
+              size: 12
+            }
           }
         }
       }

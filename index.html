@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Giám sát Cảm biến IoT</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .sensor-card {
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .sensor-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .current-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .sensor-icon {
+            font-size: 2rem;
+            margin-right: 10px;
+        }
+        .chart-container {
+            height: 300px;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">Hệ thống IoT</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1 class="mb-4">Bảng điều khiển cảm biến</h1>
+        
+        <div class="row">
+            <!-- DHT Sensors Section -->
+            <div class="col-md-6">
+                <div class="card sensor-card">
+                    <div class="card-header bg-info text-white">
+                        <h3>Cảm biến DHT</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Temperature -->
+                            <div class="col-md-6 text-center">
+                                <h4>Nhiệt độ</h4>
+                                <div class="d-flex justify-content-center align-items-center">
+                                    <span class="sensor-icon text-danger">🌡️</span>
+                                    <span id="temperature-value" class="current-value">25.5</span>
+                                    <span class="fs-4">°C</span>
+                                </div>
+                            </div>
+                            <!-- Humidity -->
+                            <div class="col-md-6 text-center">
+                                <h4>Độ ẩm</h4>
+                                <div class="d-flex justify-content-center align-items-center">
+                                    <span class="sensor-icon text-primary">💧</span>
+                                    <span id="humidity-value" class="current-value">65</span>
+                                    <span class="fs-4">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Light Sensor Section -->
+            <div class="col-md-6">
+                <div class="card sensor-card">
+                    <div class="card-header bg-warning text-dark">
+                        <h3>Cảm biến Ánh sáng</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center">
+                            <h4>Cường độ ánh sáng</h4>
+                            <div class="d-flex justify-content-center align-items-center">
+                                <span class="sensor-icon text-warning">☀️</span>
+                                <span id="light-value" class="current-value">450</span>
+                                <span class="fs-4">lux</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts Section -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card sensor-card">
+                    <div class="card-header bg-info text-white">
+                        <h3>Biểu đồ Nhiệt độ và Độ ẩm</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="dhtChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card sensor-card">
+                    <div class="card-header bg-warning text-dark">
+                        <h3>Biểu đồ Ánh sáng</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="lightChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Status Section -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h3>Trạng thái hệ thống</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h5>Trạng thái kết nối: <span class="badge bg-success">Đã kết nối</span></h5>
+                            </div>
+                            <div>
+                                <h5>Cập nhật lần cuối: <span id="last-update">00:00:00</span></h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize charts
+        const dhtCtx = document.getElementById('dhtChart').getContext('2d');
+        const lightCtx = document.getElementById('lightChart').getContext('2d');
+        
+        // Demo data
+        const timeLabels = Array.from({length: 10}, (_, i) => {
+            const time = new Date();
+            time.setMinutes(time.getMinutes() - (9 - i));
+            return time.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+        });
+        
+        // Demo temperature and humidity data
+        const temperatureData = [24.5, 24.8, 25.0, 25.2, 25.5, 25.7, 25.6, 25.4, 25.3, 25.5];
+        const humidityData = [60, 62, 64, 65, 63, 64, 65, 67, 66, 65];
+        
+        // Demo light data
+        const lightData = [380, 400, 420, 450, 470, 460, 450, 440, 445, 450];
+        
+        // Create DHT chart
+        const dhtChart = new Chart(dhtCtx, {
+            type: 'line',
+            data: {
+                labels: timeLabels,
+                datasets: [
+                    {
+                        label: 'Nhiệt độ (°C)',
+                        data: temperatureData,
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Độ ẩm (%)',
+                        data: humidityData,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Nhiệt độ (°C)'
+                        },
+                        min: 15,
+                        max: 35
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Độ ẩm (%)'
+                        },
+                        min: 0,
+                        max: 100,
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Create Light chart
+        const lightChart = new Chart(lightCtx, {
+            type: 'line',
+            data: {
+                labels: timeLabels,
+                datasets: [{
+                    label: 'Cường độ ánh sáng (lux)',
+                    data: lightData,
+                    backgroundColor: 'rgba(255, 205, 86, 0.2)',
+                    borderColor: 'rgba(255, 205, 86, 1)',
+                    borderWidth: 2,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Cường độ ánh sáng (lux)'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Simulate real-time data updates
+        function updateSensorData() {
+            // Generate random data variations
+            const newTemp = temperatureData[temperatureData.length - 1] + (Math.random() - 0.5);
+            const newHumidity = Math.min(100, Math.max(0, humidityData[humidityData.length - 1] + (Math.random() - 0.5) * 3));
+            const newLight = Math.max(0, lightData[lightData.length - 1] + (Math.random() - 0.5) * 30);
+            
+            // Update displayed values
+            document.getElementById('temperature-value').textContent = newTemp.toFixed(1);
+            document.getElementById('humidity-value').textContent = Math.round(newHumidity);
+            document.getElementById('light-value').textContent = Math.round(newLight);
+            
+            // Update time label
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+            
+            // Update charts
+            timeLabels.shift();
+            timeLabels.push(timeStr);
+            
+            temperatureData.shift();
+            temperatureData.push(newTemp);
+            
+            humidityData.shift();
+            humidityData.push(newHumidity);
+            
+            lightData.shift();
+            lightData.push(newLight);
+            
+            dhtChart.update();
+            lightChart.update();
+            
+            // Update last update time
+            document.getElementById('last-update').textContent = now.toLocaleTimeString('vi-VN');
+        }
+        
+        // Initial last update time
+        document.getElementById('last-update').textContent = new Date().toLocaleTimeString('vi-VN');
+        
+        // Update data every 3 seconds
+        setInterval(updateSensorData, 3000);
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
