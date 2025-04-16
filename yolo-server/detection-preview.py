@@ -30,11 +30,12 @@ COLORS = {
 }
 
 # Initialize Socket.IO client
-sio = socketio.Client()
+sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=10)
 print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
 
 # Global variables
 running = True
+connected = False
 latest_frame = None
 latest_traffic_sign_data = None
 latest_vehicle_data = None
@@ -590,15 +591,41 @@ def display_updater():
 # Socket.IO event handlers
 @sio.event
 def connect():
+    global connected
+    connected = True
     print(f"Successfully connected to Socket.IO server: {SOCKETIO_SERVER_URL}")
     print("Waiting for 'image', 'dentinhieu', and 'giaothong' events...")
 
 @sio.event
-def disconnect():
-    print("Disconnected from Socket.IO server")
-    global running
-    running = False
+def connect_error(error):
+    print(f"Connection error: {error}")
 
+@sio.event
+def disconnect():
+    global connected
+    connected = False
+    print("Disconnected from Socket.IO server")
+    print("Will attempt to reconnect automatically...")
+
+# Function to handle connection management
+def maintain_connection():
+    global connected, running
+    
+    while running:
+        try:
+            if not connected:
+                try:
+                    print(f"Attempting to connect to Socket.IO server at {SOCKETIO_SERVER_URL}...")
+                    sio.connect(SOCKETIO_SERVER_URL, transports=['websocket'])
+                except Exception as e:
+                    print(f"Failed to connect: {e}")
+                    time.sleep(5)  # Wait before retry
+            time.sleep(1)  # Check connection status periodically
+        except Exception as e:
+            print(f"Connection manager error: {e}")
+            time.sleep(1)
+
+# Socket.IO message handlers
 @sio.on('image')
 def on_image(data):
     global latest_frame, frame_timestamp
@@ -706,13 +733,10 @@ def on_vehicle_detection(data):
 def main():
     global running
     
-    # Connect to Socket.IO server
-    try:
-        print(f"Connecting to Socket.IO server at {SOCKETIO_SERVER_URL}")
-        sio.connect(SOCKETIO_SERVER_URL, transports=['websocket'])
-    except Exception as e:
-        print(f"Failed to connect to Socket.IO server: {e}")
-        return
+    # Start connection manager thread
+    connection_thread = threading.Thread(target=maintain_connection, daemon=True)
+    connection_thread.start()
+    print("Connection manager started")
     
     # Start display thread
     display_thread = threading.Thread(target=display_updater, daemon=True)

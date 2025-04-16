@@ -6,352 +6,470 @@ const FRAME_RATE_LIMIT = 30; // Max frames per second to process
 // Canvas setup
 const canvas = document.getElementById('preview-canvas');
 const ctx = canvas.getContext('2d');
+const carCanvas = document.getElementById("car-canvas");
+const carCtx = carCanvas.getContext("2d");
 
 // State variables
 let socket;
 let connected = false;
 let latestImage = null;
+let latestCarImage = null;
 let latestTrafficSignData = null;
 let latestVehicleData = null;
 let frameCount = 0;
+let carFrameCount = 0;
 let lastFrameTime = 0;
+let lastCarFrameTime = 0;
 let currentFps = 0;
 let colorMap = new Map(); // For consistent colors based on class names
 
 // DOM elements
-const statusIndicator = document.getElementById('status-indicator');
-const statusText = document.getElementById('status-text');
-const statusMessage = document.getElementById('status-message');
-const timestampDisplay = document.getElementById('timestamp');
-const fpsDisplay = document.getElementById('fps');
-const totalSignsDisplay = document.getElementById('total-signs');
-const signDetectionTimeDisplay = document.getElementById('sign-detection-time');
-const signCountsDisplay = document.getElementById('sign-counts');
-const totalVehiclesDisplay = document.getElementById('total-vehicles');
-const vehicleDetectionTimeDisplay = document.getElementById('vehicle-detection-time');
-const vehiclesUpDisplay = document.getElementById('vehicles-up');
-const vehiclesDownDisplay = document.getElementById('vehicles-down');
-const vehicleCountsDisplay = document.getElementById('vehicle-counts');
-const logContainer = document.getElementById('log-container');
+const statusIndicator = document.getElementById("status-indicator");
+const statusText = document.getElementById("status-text");
+const statusMessage = document.getElementById("status-message");
+const carStatusMessage = document.getElementById("car-status-message");
+const timestampDisplay = document.getElementById("timestamp");
+const fpsDisplay = document.getElementById("fps");
+const carTimestampDisplay = document.getElementById("car-timestamp");
+const totalSignsDisplay = document.getElementById("total-signs");
+const signDetectionTimeDisplay = document.getElementById("sign-detection-time");
+const signCountsDisplay = document.getElementById("sign-counts");
+const totalVehiclesDisplay = document.getElementById("total-vehicles");
+const vehicleDetectionTimeDisplay = document.getElementById(
+  "vehicle-detection-time"
+);
+const vehiclesUpDisplay = document.getElementById("vehicles-up");
+const vehiclesDownDisplay = document.getElementById("vehicles-down");
+const vehicleCountsDisplay = document.getElementById("vehicle-counts");
+const logContainer = document.getElementById("log-container");
 
 // Initialize the web app
 function init() {
-    // Set initial canvas size
+  // Set initial canvas size
+  resizeCanvas();
+  resizeCarCanvas();
+  window.addEventListener("resize", () => {
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    
-    // Connect to Socket.IO server
-    connectToServer();
-    
-    // Start the render loop
-    requestAnimationFrame(renderLoop);
-    
-    // Add event log
-    addLogEntry('Application initialized, connecting to server...');
+    resizeCarCanvas();
+  });
+
+  // Connect to Socket.IO server
+  connectToServer();
+
+  // Start the render loop
+  requestAnimationFrame(renderLoop);
+
+  // Add event log
+  addLogEntry("Application initialized, connecting to server...");
 }
 
 // Connect to Socket.IO server
 function connectToServer() {
-    try {
-        socket = io(SOCKETIO_SERVER_URL, {
-            transports: ['websocket'],
-            reconnection: true,
-            reconnectionAttempts: 10,
-            reconnectionDelay: 1000
-        });
-        
-        // Socket.IO event handlers
-        socket.on('connect', () => {
-            connected = true;
-            updateConnectionStatus(true);
-            addLogEntry('Connected to server');
-        });
-        
-        socket.on('disconnect', () => {
-            connected = false;
-            updateConnectionStatus(false);
-            addLogEntry('Disconnected from server');
-        });
-        
-        socket.on('connect_error', (error) => {
-            connected = false;
-            updateConnectionStatus(false);
-            addLogEntry(`Connection error: ${error.message}`);
-        });
-        
-        // Image data handler
-        socket.on('image', handleImageData);
-        
-        // Traffic sign detection handler
-        socket.on('dentinhieu', handleTrafficSignData);
-        
-        // Vehicle detection handler
-        socket.on('giaothong', handleVehicleData);
-        
-    } catch (error) {
-        addLogEntry(`Error initializing Socket.IO: ${error.message}`);
-    }
+  try {
+    socket = io(SOCKETIO_SERVER_URL, {
+      transports: ["websocket"],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+    });
+
+    // Socket.IO event handlers
+    socket.on("connect", () => {
+      connected = true;
+      updateConnectionStatus(true);
+      addLogEntry("Connected to server");
+    });
+
+    socket.on("disconnect", () => {
+      connected = false;
+      updateConnectionStatus(false);
+      addLogEntry("Disconnected from server");
+    });
+
+    socket.on("connect_error", (error) => {
+      connected = false;
+      updateConnectionStatus(false);
+      addLogEntry(`Connection error: ${error.message}`);
+    });
+
+    // Image data handler
+    socket.on("image", handleImageData);
+
+    // Traffic sign detection handler
+    socket.on("dentinhieu", handleTrafficSignData);
+
+    // Vehicle detection handler
+    socket.on("giaothong", handleVehicleData);
+
+    // Car image handler
+    socket.on("car", handleCarImageData);
+  } catch (error) {
+    addLogEntry(`Error initializing Socket.IO: ${error.message}`);
+  }
 }
 
 // Update the connection status UI
 function updateConnectionStatus(isConnected) {
-    if (isConnected) {
-        statusIndicator.style.backgroundColor = 'var(--connected-color)';
-        statusText.textContent = 'Connected';
-        statusMessage.style.display = 'none';
-    } else {
-        statusIndicator.style.backgroundColor = 'var(--disconnected-color)';
-        statusText.textContent = 'Disconnected';
-        statusMessage.style.display = 'flex';
-        statusMessage.textContent = 'Waiting for connection...';
-    }
+  if (isConnected) {
+    statusIndicator.style.backgroundColor = "var(--connected-color)";
+    statusText.textContent = "Connected";
+    statusMessage.style.display = "none";
+  } else {
+    statusIndicator.style.backgroundColor = "var(--disconnected-color)";
+    statusText.textContent = "Disconnected";
+    statusMessage.style.display = "flex";
+    statusMessage.textContent = "Waiting for connection...";
+    carStatusMessage.style.display = "flex";
+    carStatusMessage.textContent = "Waiting for connection...";
+  }
 }
 
-// Resize canvas to fit container
+// Resize main canvas to fit container
 function resizeCanvas() {
-    const container = canvas.parentElement;
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
-    
-    // Redraw if we have data
-    if (latestImage) {
-        drawScene();
-    }
+  const container = canvas.parentElement;
+  canvas.width = container.clientWidth;
+  canvas.height = container.clientHeight;
+
+  // Redraw if we have data
+  if (latestImage) {
+    drawScene();
+  }
+}
+
+// Resize car canvas to fit container
+function resizeCarCanvas() {
+  const container = carCanvas.parentElement;
+  carCanvas.width = container.clientWidth;
+  carCanvas.height = container.clientHeight;
+
+  // Redraw if we have data
+  if (latestCarImage) {
+    drawCarImage();
+  }
 }
 
 // Add entry to the log display
 function addLogEntry(message) {
-    const timestamp = new Date().toLocaleTimeString();
-    const entry = document.createElement('div');
-    entry.className = 'log-entry';
-    entry.textContent = `[${timestamp}] ${message}`;
-    
-    logContainer.appendChild(entry);
-    
-    // Limit the number of log entries
-    while (logContainer.children.length > MAX_LOG_ENTRIES) {
-        logContainer.removeChild(logContainer.firstChild);
-    }
-    
-    // Auto-scroll to bottom
-    logContainer.scrollTop = logContainer.scrollHeight;
+  const timestamp = new Date().toLocaleTimeString();
+  const entry = document.createElement("div");
+  entry.className = "log-entry";
+  entry.textContent = `[${timestamp}] ${message}`;
+
+  logContainer.appendChild(entry);
+
+  // Limit the number of log entries
+  while (logContainer.children.length > MAX_LOG_ENTRIES) {
+    logContainer.removeChild(logContainer.firstChild);
+  }
+
+  // Auto-scroll to bottom
+  logContainer.scrollTop = logContainer.scrollHeight;
 }
 
 // Handle image data from Socket.IO
 function handleImageData(data) {
-    try {
-        const now = performance.now();
-        
-        // Throttle frame processing to our frame rate limit
-        if (now - lastFrameTime < (1000 / FRAME_RATE_LIMIT)) {
-            return;
-        }
-        
-        lastFrameTime = now;
-        
-        // Convert image data
-        let imageBytes;
-        if (typeof data === 'string') {
-            // If it's base64 encoded
-            imageBytes = atob(data);
-        } else if (data instanceof ArrayBuffer) {
-            // If it's already a binary array
-            imageBytes = new Uint8Array(data);
-        } else if (data.image) {
-            // If it's in an object with image key
-            if (typeof data.image === 'string') {
-                imageBytes = atob(data.image);
-            } else {
-                imageBytes = new Uint8Array(data.image);
-            }
-        }
-        
-        if (imageBytes) {
-            // Create blob and convert to image
-            const blob = new Blob([imageBytes], { type: 'image/jpeg' });
-            const imageUrl = URL.createObjectURL(blob);
-            
-            const img = new Image();
-            img.onload = function() {
-                latestImage = img;
-                URL.revokeObjectURL(imageUrl); // Clean up
-                
-                // Update timestamp
-                const now = new Date();
-                timestampDisplay.textContent = now.toLocaleTimeString();
-                
-                // Update FPS counter
-                frameCount++;
-                const elapsed = (performance.now() - lastFrameTime) / 1000;
-                if (elapsed >= 1.0) {
-                    currentFps = Math.round(frameCount / elapsed);
-                    frameCount = 0;
-                    lastFrameTime = performance.now();
-                }
-                fpsDisplay.textContent = `FPS: ${currentFps}`;
-                
-                // No need to explicitly call drawScene() here as renderLoop handles it
-            };
-            img.src = imageUrl;
-        }
-    } catch (error) {
-        addLogEntry(`Error processing image: ${error.message}`);
+  try {
+    const now = performance.now();
+
+    // Throttle frame processing to our frame rate limit
+    if (now - lastFrameTime < 1000 / FRAME_RATE_LIMIT) {
+      return;
     }
+
+    lastFrameTime = now;
+
+    // Convert image data
+    let imageBytes;
+    if (typeof data === "string") {
+      // If it's base64 encoded
+      imageBytes = atob(data);
+    } else if (data instanceof ArrayBuffer) {
+      // If it's already a binary array
+      imageBytes = new Uint8Array(data);
+    } else if (data.image) {
+      // If it's in an object with image key
+      if (typeof data.image === "string") {
+        imageBytes = atob(data.image);
+      } else {
+        imageBytes = new Uint8Array(data.image);
+      }
+    }
+
+    if (imageBytes) {
+      // Create blob and convert to image
+      const blob = new Blob([imageBytes], { type: "image/jpeg" });
+      const imageUrl = URL.createObjectURL(blob);
+
+      const img = new Image();
+      img.onload = function () {
+        latestImage = img;
+        URL.revokeObjectURL(imageUrl); // Clean up
+
+        // Update timestamp
+        const now = new Date();
+        timestampDisplay.textContent = now.toLocaleTimeString();
+
+        // Update FPS counter
+        frameCount++;
+        const elapsed = (performance.now() - lastFrameTime) / 1000;
+        if (elapsed >= 1.0) {
+          currentFps = Math.round(frameCount / elapsed);
+          frameCount = 0;
+          lastFrameTime = performance.now();
+        }
+        fpsDisplay.textContent = `FPS: ${currentFps}`;
+
+        // No need to explicitly call drawScene() here as renderLoop handles it
+      };
+      img.src = imageUrl;
+    }
+  } catch (error) {
+    addLogEntry(`Error processing image: ${error.message}`);
+  }
+}
+
+// Handle car image data from Socket.IO
+function handleCarImageData(data) {
+  try {
+    // Convert image data
+    let imageBytes;
+    if (typeof data === "string") {
+      // If it's base64 encoded
+      imageBytes = atob(data);
+    } else if (data instanceof ArrayBuffer) {
+      // If it's already a binary array
+      imageBytes = new Uint8Array(data);
+    }
+
+    if (imageBytes) {
+      // Create blob and convert to image
+      const blob = new Blob([imageBytes], { type: "image/jpeg" });
+      const imageUrl = URL.createObjectURL(blob);
+
+      const img = new Image();
+      img.onload = function () {
+        latestCarImage = img;
+        URL.revokeObjectURL(imageUrl); // Clean up
+
+        // Update timestamp
+        const now = new Date();
+        if (carTimestampDisplay) {
+          carTimestampDisplay.textContent = now.toLocaleTimeString();
+        }
+
+        // Hide waiting message
+        if (carStatusMessage) {
+          carStatusMessage.style.display = "none";
+        }
+
+        // Draw car image
+        drawCarImage();
+
+        // Log car image event
+        addLogEntry("Received car detection image");
+      };
+      img.src = imageUrl;
+    }
+  } catch (error) {
+    addLogEntry(`Error processing car image: ${error.message}`);
+  }
 }
 
 // Handle traffic sign detection data
 function handleTrafficSignData(data) {
-    latestTrafficSignData = data;
-    
-    try {
-        // Update UI with traffic sign data
-        if (data.detections && Array.isArray(data.detections)) {
-            const signCount = data.detections.length;
-            totalSignsDisplay.textContent = signCount;
-            
-            if (data.inference_time) {
-                signDetectionTimeDisplay.textContent = `${data.inference_time.toFixed(1)} ms`;
-            }
-            
-            // Update sign counts
-            signCountsDisplay.innerHTML = '';
-            if (data.sign_counts) {
-                Object.entries(data.sign_counts).forEach(([type, count]) => {
-                    // Generate a color based on the sign type
-                    let color = getColorForClass(type);
-                    
-                    const signItem = document.createElement('div');
-                    signItem.className = 'detailed-stat-item';
-                    signItem.style.backgroundColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.2)`;
-                    signItem.innerHTML = `
+  latestTrafficSignData = data;
+
+  try {
+    // Update UI with traffic sign data
+    if (data.detections && Array.isArray(data.detections)) {
+      const signCount = data.detections.length;
+      totalSignsDisplay.textContent = signCount;
+
+      if (data.inference_time) {
+        signDetectionTimeDisplay.textContent = `${data.inference_time.toFixed(
+          1
+        )} ms`;
+      }
+
+      // Update sign counts
+      signCountsDisplay.innerHTML = "";
+      if (data.sign_counts) {
+        Object.entries(data.sign_counts).forEach(([type, count]) => {
+          // Generate a color based on the sign type
+          let color = getColorForClass(type);
+
+          const signItem = document.createElement("div");
+          signItem.className = "detailed-stat-item";
+          signItem.style.backgroundColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.2)`;
+          signItem.innerHTML = `
                         <span class="label">${type}:</span>
                         <span class="value">${count}</span>
                     `;
-                    signCountsDisplay.appendChild(signItem);
-                });
-            }
-            
-            addLogEntry(`Received ${signCount} traffic sign detections`);
-        }
-    } catch (error) {
-        addLogEntry(`Error processing traffic sign data: ${error.message}`);
+          signCountsDisplay.appendChild(signItem);
+        });
+      }
+
+      addLogEntry(`Received ${signCount} traffic sign detections`);
     }
+  } catch (error) {
+    addLogEntry(`Error processing traffic sign data: ${error.message}`);
+  }
 }
 
 // Handle vehicle detection data
 function handleVehicleData(data) {
-    latestVehicleData = data;
-    
-    try {
-        // Update UI with vehicle data
-        if (data.detections && Array.isArray(data.detections)) {
-            const vehicleCount = data.detections.length;
-            totalVehiclesDisplay.textContent = vehicleCount;
-            
-            if (data.inference_time) {
-                vehicleDetectionTimeDisplay.textContent = `${data.inference_time.toFixed(1)} ms`;
-            }
-            
-            // Update vehicle counts
-            if (data.vehicle_count) {
-                vehiclesUpDisplay.textContent = data.vehicle_count.total_up || 0;
-                vehiclesDownDisplay.textContent = data.vehicle_count.total_down || 0;
-                
-                // Update vehicle counts by type
-                vehicleCountsDisplay.innerHTML = '';
-                if (data.vehicle_count.current) {
-                    Object.entries(data.vehicle_count.current).forEach(([type, count]) => {
-                        if (count > 0) {
-                            const vehicleItem = document.createElement('div');
-                            vehicleItem.className = `detailed-stat-item ${type}-color`;
-                            vehicleItem.innerHTML = `
+  latestVehicleData = data;
+
+  try {
+    // Update UI with vehicle data
+    if (data.detections && Array.isArray(data.detections)) {
+      const vehicleCount = data.detections.length;
+      totalVehiclesDisplay.textContent = vehicleCount;
+
+      if (data.inference_time) {
+        vehicleDetectionTimeDisplay.textContent = `${data.inference_time.toFixed(
+          1
+        )} ms`;
+      }
+
+      // Update vehicle counts
+      if (data.vehicle_count) {
+        vehiclesUpDisplay.textContent = data.vehicle_count.total_up || 0;
+        vehiclesDownDisplay.textContent = data.vehicle_count.total_down || 0;
+
+        // Update vehicle counts by type
+        vehicleCountsDisplay.innerHTML = "";
+        if (data.vehicle_count.current) {
+          Object.entries(data.vehicle_count.current).forEach(
+            ([type, count]) => {
+              if (count > 0) {
+                const vehicleItem = document.createElement("div");
+                vehicleItem.className = `detailed-stat-item ${type}-color`;
+                vehicleItem.innerHTML = `
                                 <span class="label">${type}s:</span>
                                 <span class="value">${count}</span>
                             `;
-                            vehicleCountsDisplay.appendChild(vehicleItem);
-                        }
-                    });
-                }
+                vehicleCountsDisplay.appendChild(vehicleItem);
+              }
             }
-            
-            addLogEntry(`Received ${vehicleCount} vehicle detections`);
+          );
         }
-    } catch (error) {
-        addLogEntry(`Error processing vehicle data: ${error.message}`);
+      }
+
+      addLogEntry(`Received ${vehicleCount} vehicle detections`);
     }
+  } catch (error) {
+    addLogEntry(`Error processing vehicle data: ${error.message}`);
+  }
 }
 
 // Get a consistent color for a class name
 function getColorForClass(className) {
-    if (!colorMap.has(className)) {
-        // Generate a hash from the class name
-        let hash = 0;
-        for (let i = 0; i < className.length; i++) {
-            hash = className.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        
-        // Convert to RGB color
-        const r = (hash & 0xFF);
-        const g = ((hash >> 8) & 0xFF);
-        const b = ((hash >> 16) & 0xFF);
-        
-        colorMap.set(className, { r, g, b });
+  if (!colorMap.has(className)) {
+    // Generate a hash from the class name
+    let hash = 0;
+    for (let i = 0; i < className.length; i++) {
+      hash = className.charCodeAt(i) + ((hash << 5) - hash);
     }
-    
-    return colorMap.get(className);
+
+    // Convert to RGB color
+    const r = hash & 0xff;
+    const g = (hash >> 8) & 0xff;
+    const b = (hash >> 16) & 0xff;
+
+    colorMap.set(className, { r, g, b });
+  }
+
+  return colorMap.get(className);
 }
 
 // Main render loop
 function renderLoop() {
-    drawScene();
-    requestAnimationFrame(renderLoop);
+  drawScene();
+  requestAnimationFrame(renderLoop);
 }
 
-// Draw the scene with all overlays
+// Draw the main scene with all overlays
 function drawScene() {
-    if (!ctx) return;
-    
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Check if we have an image to display
-    if (!latestImage) {
-        drawWaitingMessage("Waiting for image data...");
-        return;
-    }
-    
-    // Calculate aspect ratio to maintain image proportions
-    const imageAspect = latestImage.width / latestImage.height;
-    const canvasAspect = canvas.width / canvas.height;
-    
-    let drawWidth, drawHeight, offsetX, offsetY;
-    
-    if (imageAspect > canvasAspect) {
-        // Image is wider than canvas (relative to heights)
-        drawWidth = canvas.width;
-        drawHeight = canvas.width / imageAspect;
-        offsetX = 0;
-        offsetY = (canvas.height - drawHeight) / 2;
-    } else {
-        // Image is taller than canvas (relative to widths)
-        drawHeight = canvas.height;
-        drawWidth = canvas.height * imageAspect;
-        offsetX = (canvas.width - drawWidth) / 2;
-        offsetY = 0;
-    }
-    
-    // Draw the base image
-    ctx.drawImage(latestImage, offsetX, offsetY, drawWidth, drawHeight);
-    
-    // Draw traffic sign detection overlays
-    if (latestTrafficSignData && latestTrafficSignData.detections) {
-        drawTrafficSignOverlays(offsetX, offsetY, drawWidth, drawHeight);
-    }
-    
-    // Draw vehicle detection overlays
-    if (latestVehicleData && latestVehicleData.detections) {
-        drawVehicleOverlays(offsetX, offsetY, drawWidth, drawHeight);
-    }
+  if (!ctx) return;
+
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Check if we have an image to display
+  if (!latestImage) {
+    drawWaitingMessage("Waiting for image data...");
+    return;
+  }
+
+  // Calculate aspect ratio to maintain image proportions
+  const imageAspect = latestImage.width / latestImage.height;
+  const canvasAspect = canvas.width / canvas.height;
+
+  let drawWidth, drawHeight, offsetX, offsetY;
+
+  if (imageAspect > canvasAspect) {
+    // Image is wider than canvas (relative to heights)
+    drawWidth = canvas.width;
+    drawHeight = canvas.width / imageAspect;
+    offsetX = 0;
+    offsetY = (canvas.height - drawHeight) / 2;
+  } else {
+    // Image is taller than canvas (relative to widths)
+    drawHeight = canvas.height;
+    drawWidth = canvas.height * imageAspect;
+    offsetX = (canvas.width - drawWidth) / 2;
+    offsetY = 0;
+  }
+
+  // Draw the base image
+  ctx.drawImage(latestImage, offsetX, offsetY, drawWidth, drawHeight);
+
+  // Draw traffic sign detection overlays
+  if (latestTrafficSignData && latestTrafficSignData.detections) {
+    drawTrafficSignOverlays(offsetX, offsetY, drawWidth, drawHeight);
+  }
+
+  // Draw vehicle detection overlays
+  if (latestVehicleData && latestVehicleData.detections) {
+    drawVehicleOverlays(offsetX, offsetY, drawWidth, drawHeight);
+  }
+}
+
+// Draw the car image
+function drawCarImage() {
+  if (!carCtx || !latestCarImage) return;
+
+  // Clear canvas
+  carCtx.clearRect(0, 0, carCanvas.width, carCanvas.height);
+
+  // Calculate aspect ratio to maintain image proportions
+  const imageAspect = latestCarImage.width / latestCarImage.height;
+  const canvasAspect = carCanvas.width / carCanvas.height;
+
+  let drawWidth, drawHeight, offsetX, offsetY;
+
+  if (imageAspect > canvasAspect) {
+    // Image is wider than canvas (relative to heights)
+    drawWidth = carCanvas.width;
+    drawHeight = carCanvas.width / imageAspect;
+    offsetX = 0;
+    offsetY = (carCanvas.height - drawHeight) / 2;
+  } else {
+    // Image is taller than canvas (relative to widths)
+    drawHeight = carCanvas.height;
+    drawWidth = carCanvas.height * imageAspect;
+    offsetX = (carCanvas.width - drawWidth) / 2;
+    offsetY = 0;
+  }
+
+  // Draw the car image
+  carCtx.drawImage(latestCarImage, offsetX, offsetY, drawWidth, drawHeight);
+
+  // Add a border/highlight to make it clear this is a detected car
+  carCtx.strokeStyle = "var(--vehicle-color)";
+  carCtx.lineWidth = 2;
+  carCtx.strokeRect(offsetX, offsetY, drawWidth, drawHeight);
 }
 
 // Draw waiting message when no image is available

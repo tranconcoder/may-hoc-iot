@@ -31,15 +31,19 @@ BIDIRECTIONAL_COUNTING = True  # Count vehicles in both directions
 # Vehicle cropping configuration
 ENABLE_VEHICLE_CROPPING = True  # Enable vehicle image cropping feature
 CROP_EMIT_INTERVAL = 1.0  # Minimum interval (seconds) between emissions for the same vehicle
-CROP_IMAGE_QUALITY = 85  # JPEG quality for cropped images (0-100)
+CROP_IMAGE_QUALITY = 85  # JPEG quality for cropped images (1-100)
 CROP_MAX_SIZE = 300  # Maximum dimension for cropped images
 
+# License plate detection configuration
+ENABLE_LICENSE_PLATE_DETECTION = True  # Enable license plate detection
+
 # Initialize Socket.IO client
-sio = socketio.Client()
+sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=5000)
 print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
 
 # Global variables
 running = True
+connected = False  # Track connection status
 model = None
 last_frame_time = 0
 MAX_FPS = 20  # Maximum frames per second
@@ -119,12 +123,21 @@ def crop_vehicle_image(frame, bbox, vehicle_id, vehicle_class):
     # Return the buffer value directly (not base64 encoded)
     buffer_value = buffer.getvalue()
     
-    return {
+    vehicle_data = {
         'vehicle_id': vehicle_id,
         'class': vehicle_class,
         'image_data': buffer_value,  # Raw buffer instead of base64
         'timestamp': time.time()
     }
+    
+    # Process the vehicle data to detect license plate if enabled
+    if ENABLE_LICENSE_PLATE_DETECTION:
+        try:
+            vehicle_data = detect_license_plate_from_car_event(vehicle_data)
+        except Exception as e:
+            print(f"Error during license plate detection: {e}")
+    
+    return vehicle_data
 
 def process_frames_thread():
     """Thread function to process frames with the model in the background"""
@@ -448,14 +461,21 @@ def load_model():
 
 @sio.event
 def connect():
+    global connected
+    connected = True
     print(f"Successfully connected to Socket.IO server: {SOCKETIO_SERVER_URL}")
     print("Waiting for 'image' events...")
 
 @sio.event
+def connect_error(error):
+    print(f"Connection error: {error}")
+
+@sio.event
 def disconnect():
+    global connected
+    connected = False
     print("Disconnected from Socket.IO server")
-    global running
-    running = False
+    print("Will attempt to reconnect automatically...")
 
 @sio.on('image')
 def on_image(data):
@@ -516,6 +536,24 @@ def on_image(data):
         # Send error response
         sio.emit('giaothong', {'error': str(e)})
 
+def maintain_connection():
+    """Thread to manage Socket.IO connection and auto-reconnect"""
+    global connected, running
+    
+    while running:
+        try:
+            if not connected:
+                try:
+                    print(f"Attempting to connect to Socket.IO server at {SOCKETIO_SERVER_URL}...")
+                    sio.connect(SOCKETIO_SERVER_URL, transports=['websocket'], wait=False)
+                except Exception as e:
+                    print(f"Failed to connect: {e}")
+                    time.sleep(5)  # Wait before retry
+            time.sleep(1)  # Check connection status periodically
+        except Exception as e:
+            print(f"Connection manager error: {e}")
+            time.sleep(1)
+
 def main():
     global running
     
@@ -524,13 +562,10 @@ def main():
         print("Failed to load model. Exiting...")
         return
     
-    # Connect to Socket.IO server
-    try:
-        print(f"Connecting to Socket.IO server at {SOCKETIO_SERVER_URL}")
-        sio.connect(SOCKETIO_SERVER_URL, transports=['websocket'])
-    except Exception as e:
-        print(f"Failed to connect to Socket.IO server: {e}")
-        return
+    # Start connection manager thread
+    connection_thread = threading.Thread(target=maintain_connection, daemon=True)
+    connection_thread.start()
+    print("Connection manager started")
     
     # Keep the main thread running
     try:
@@ -539,8 +574,12 @@ def main():
     except KeyboardInterrupt:
         print("Interrupted by user. Shutting down...")
     finally:
-        if sio.connected:
-            sio.disconnect()
+        running = False
+        try:
+            if sio.connected:
+                sio.disconnect()
+        except Exception as e:
+            print(f"Error during disconnect: {e}")
         print("Server stopped.")
 
 if __name__ == "__main__":
