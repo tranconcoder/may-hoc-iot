@@ -253,10 +253,17 @@
         // WebSocket connection
         const wsUrl = 'ws://172.28.31.150:3000?source=esp32cam_security_gate_send_img';
         let socket = null;
+        let reconnectAttempts = 0;
+        let maxReconnectAttempts = Infinity; // Vô hạn số lần thử kết nối lại
+        let reconnectInterval = 1000; // 1 giây ban đầu
+        let maxReconnectInterval = 30000; // Tối đa 30 giây
+        let reconnectTimeoutId = null;
+        let isConnecting = false;
         
         // Recording state
         let mediaStream = null;
         let isRecording = false;
+        let wasRecording = false; // Đánh dấu trạng thái ghi hình trước khi mất kết nối
         let frameCount = 0;
         let fps = 0;
         let lastFpsUpdate = Date.now();
@@ -274,6 +281,9 @@
         
         // Connect to WebSocket server
         function connectWebSocket() {
+            if (isConnecting) return;
+            
+            isConnecting = true;
             try {
                 socket = new WebSocket(wsUrl);
                 
@@ -282,6 +292,18 @@
                     status.style.color = 'green';
                     addLog('WebSocket connection established');
                     startBtn.disabled = false;
+                    
+                    // Reset reconnect parameters on successful connection
+                    reconnectAttempts = 0;
+                    reconnectInterval = 1000;
+                    isConnecting = false;
+                    
+                    // Tự động bắt đầu lại việc ghi hình nếu trước đó đang ghi
+                    if (wasRecording) {
+                        addLog('Auto-resuming screen capture after reconnection');
+                        setTimeout(() => startCapture(), 500); // Chờ 500ms để đảm bảo kết nối ổn định
+                        wasRecording = false; // Đặt lại trạng thái
+                    }
                 };
                 
                 socket.onclose = (event) => {
@@ -289,7 +311,15 @@
                     status.style.color = 'red';
                     addLog(`WebSocket connection closed: ${event.reason}`);
                     startBtn.disabled = true;
+                    
+                    // Lưu trạng thái ghi hình trước khi dừng
+                    wasRecording = isRecording;
+                    
                     stopCapture();
+                    isConnecting = false;
+                    
+                    // Schedule reconnection
+                    scheduleReconnect();
                 };
                 
                 socket.onerror = (error) => {
@@ -297,6 +327,7 @@
                     status.style.color = 'red';
                     addLog('WebSocket error occurred');
                     console.error('WebSocket error:', error);
+                    isConnecting = false;
                 };
                 
                 return true;
@@ -305,8 +336,33 @@
                 status.style.color = 'red';
                 addLog(`Connection error: ${error.message}`);
                 console.error('Connection error:', error);
+                isConnecting = false;
+                
+                // Schedule reconnection on error
+                scheduleReconnect();
                 return false;
             }
+        }
+        
+        // Schedule reconnection with exponential backoff
+        function scheduleReconnect() {
+            if (reconnectTimeoutId) {
+                clearTimeout(reconnectTimeoutId);
+            }
+            
+            reconnectAttempts++;
+            // Exponential backoff with jitter to avoid reconnection storms
+            const jitter = Math.random() * 0.5 + 0.5; // Random value between 0.5 and 1
+            const timeout = Math.min(reconnectInterval * jitter, maxReconnectInterval);
+            
+            addLog(`Scheduling reconnection attempt ${reconnectAttempts} in ${Math.round(timeout/1000)} seconds...`);
+            
+            reconnectTimeoutId = setTimeout(() => {
+                addLog(`Attempting to reconnect (attempt ${reconnectAttempts})...`);
+                connectWebSocket();
+                // Increase interval for next attempt (exponential backoff)
+                reconnectInterval = Math.min(reconnectInterval * 1.5, maxReconnectInterval);
+            }, timeout);
         }
         
         // Start screen capture
