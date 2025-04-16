@@ -2,9 +2,14 @@ import { Router } from 'express';
 
 const viewsRouter = Router();
 
-viewsRouter.get('/cam-client', (_, res) => {
-	res.render('pages/cam-client');
+viewsRouter.get('/capture', (_, res) => {
+	res.render('pages/capture');
 });
+
+viewsRouter.get('/preview', (_, res) => {
+	res.render('pages/preview');
+});
+
 viewsRouter.get('/stream-cam-ffmpeg', (_, res) => {
 	res.render('pages/stream-cam-ffmpeg');
 });
