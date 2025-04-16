@@ -9,7 +9,7 @@ import io
 from PIL import Image
 
 # --- Configuration ---
-SOCKETIO_SERVER_URL = 'ws://192.168.38.32:3001'
+SOCKETIO_SERVER_URL = 'ws://172.28.31.150:3001'
 PREVIEW_WINDOW_NAME = 'Combined Detection Preview'
 PREVIEW_FPS = 30  # Maximum FPS for preview display
 MAX_FRAMES_BUFFER = 3  # Maximum number of frames to buffer

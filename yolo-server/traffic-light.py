@@ -12,7 +12,7 @@ from PIL import Image
 # --- Configuration ---
 MODEL_PATH = "./models/mhiot-dentinhieu-best-new-nano.pt"  # Path to YOLOv11 model
 CONFIDENCE_THRESHOLD = 0.4  # Detection confidence threshold
-SOCKETIO_SERVER_URL = 'ws://192.168.38.32:3001'
+SOCKETIO_SERVER_URL = 'ws://172.28.31.150:3001'
 ENABLE_GPU = True  # Enable GPU acceleration if available
 
 # Initialize Socket.IO client

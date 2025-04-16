@@ -13,7 +13,7 @@ import queue
 MODEL_PATH = 'yolo11n.pt'  # Using your existing model
 CONFIDENCE_THRESHOLD = 0.4  # Detection confidence threshold
 VEHICLE_CLASSES = ['car', 'truck', 'bus', 'motorcycle', 'bicycle']  # Vehicle classes in COCO dataset
-SOCKETIO_SERVER_URL = 'http://192.168.38.32:3001'
+SOCKETIO_SERVER_URL = 'http://172.28.31.150:3001'
 ENABLE_TRACKING = True  # Enable object tracking functionality
 ENABLE_GPU = True  # Enable GPU acceleration if available
 
