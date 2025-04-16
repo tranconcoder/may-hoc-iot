@@ -45,6 +45,11 @@ export function runSocketIOService(server: Server): SocketIOServer {
       });
     });
 
+    socket.on("car", (data: any) => {
+      // Forward vehicle detection data to all clients (including sender)
+      console.log(data);
+    });
+
     socket.on("disconnect", () => {
       console.log(`Socket.IO Client disconnected: ${socket.id}`);
     });

@@ -28,6 +28,12 @@ COUNTING_LINE_POSITION = 0.5  # Position of the line as ratio of frame height (0
 # Count in both directions
 BIDIRECTIONAL_COUNTING = True  # Count vehicles in both directions
 
+# Vehicle cropping configuration
+ENABLE_VEHICLE_CROPPING = True  # Enable vehicle image cropping feature
+CROP_EMIT_INTERVAL = 1.0  # Minimum interval (seconds) between emissions for the same vehicle
+CROP_IMAGE_QUALITY = 85  # JPEG quality for cropped images (0-100)
+CROP_MAX_SIZE = 300  # Maximum dimension for cropped images
+
 # Initialize Socket.IO client
 sio = socketio.Client()
 print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
@@ -70,11 +76,62 @@ def check_line_crossing(prev_pos, curr_pos, line_y):
         return -1  # Upward crossing
     return 0  # No crossing
 
+# Global variables for vehicle image cropping
+last_vehicle_crop_times = {}  # Store last emission time for each vehicle ID
+
+def crop_vehicle_image(frame, bbox, vehicle_id, vehicle_class):
+    """Crop a vehicle image from the frame using bounding box coordinates"""
+    # Extract bounding box coordinates
+    x1, y1, x2, y2 = map(int, bbox)
+    
+    # Add some padding to the bounding box (10% on each side)
+    h, w = frame.shape[:2]
+    padding_x = int((x2 - x1) * 0.1)
+    padding_y = int((y2 - y1) * 0.1)
+    
+    # Apply padding with bounds checking
+    x1 = max(0, x1 - padding_x)
+    y1 = max(0, y1 - padding_y)
+    x2 = min(w, x2 + padding_x)
+    y2 = min(h, y2 + padding_y)
+    
+    # Crop the image
+    cropped_img = frame[y1:y2, x1:x2]
+    
+    # Resize if the cropped image is too large
+    height, width = cropped_img.shape[:2]
+    if width > CROP_MAX_SIZE or height > CROP_MAX_SIZE:
+        scale = CROP_MAX_SIZE / max(width, height)
+        new_width = int(width * scale)
+        new_height = int(height * scale)
+        cropped_img = cv2.resize(cropped_img, (new_width, new_height))
+    
+    # Convert to RGB for PIL
+    cropped_img_rgb = cv2.cvtColor(cropped_img, cv2.COLOR_BGR2RGB)
+    
+    # Convert to PIL Image
+    pil_img = Image.fromarray(cropped_img_rgb)
+    
+    # Convert to JPEG buffer
+    buffer = io.BytesIO()
+    pil_img.save(buffer, format="JPEG", quality=CROP_IMAGE_QUALITY)
+    
+    # Return the buffer value directly (not base64 encoded)
+    buffer_value = buffer.getvalue()
+    
+    return {
+        'vehicle_id': vehicle_id,
+        'class': vehicle_class,
+        'image_data': buffer_value,  # Raw buffer instead of base64
+        'timestamp': time.time()
+    }
+
 def process_frames_thread():
     """Thread function to process frames with the model in the background"""
     global running, model, vehicle_tracks, counted_vehicles
     global vehicle_counts_up, vehicle_counts_down, total_counted_up, total_counted_down
     global counting_line_y, counting_line_start_x, counting_line_end_x
+    global last_vehicle_crop_times
     
     print("Starting frame processing thread")
     
@@ -180,6 +237,31 @@ def process_frames_thread():
                                 'time': current_time,
                                 'class': class_name
                             }
+                            
+                            # Emit cropped vehicle image if enabled and it's time to emit
+                            if ENABLE_VEHICLE_CROPPING:
+                                current_time = time.time()
+                                if (track_id not in last_vehicle_crop_times or 
+                                    current_time - last_vehicle_crop_times.get(track_id, 0) >= CROP_EMIT_INTERVAL):
+                                    
+                                    # Crop and emit vehicle image
+                                    try:
+                                        vehicle_img_data = crop_vehicle_image(
+                                            frame, 
+                                            [x1, y1, x2, y2], 
+                                            track_id, 
+                                            class_name
+                                        )
+                                        
+                                        # Emit the vehicle image with its ID (raw buffer)
+                                        sio.emit('car', vehicle_img_data)
+                                        
+                                        # Update the last emission time for this vehicle
+                                        last_vehicle_crop_times[track_id] = current_time
+                                        
+                                        print(f"Emitted cropped image for {class_name} ID: {track_id}")
+                                    except Exception as e:
+                                        print(f"Error cropping/emitting vehicle image: {e}")
             
             # Update vehicle tracking history and check for line crossings
             current_time = time.time()
