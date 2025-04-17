@@ -1,0 +1,136 @@
+body {
+    font-family: Arial, sans-serif;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+
+h1 {
+    color: #333;
+    text-align: center;
+}
+
+.container {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.video-container {
+    margin: 20px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+video, canvas {
+    width: 100%;
+    display: block;
+}
+
+canvas {
+    display: none; /* Hidden by default, used for processing */
+}
+
+canvas#processingCanvas {
+    display: none; /* Hidden processing canvas */
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    background-color: #4CAF50;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+button.stop {
+    background-color: #f44336;
+}
+
+button.stop:hover {
+    background-color: #d32f2f;
+}
+
+.status {
+    margin-top: 10px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.log {
+    margin-top: 20px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+.frame-counter {
+    text-align: center;
+    margin: 10px 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.settings {
+    margin: 15px 0;
+    text-align: center;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+.settings-group {
+    margin: 5px 10px;
+    padding: 10px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.settings label {
+    margin-right: 5px;
+    display: inline-block;
+    font-weight: bold;
+}
+
+.settings select {
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+.settings-title {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #555;
+    text-align: center;
+}

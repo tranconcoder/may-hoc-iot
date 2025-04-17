@@ -34,9 +34,6 @@ CROP_EMIT_INTERVAL = 1.0  # Minimum interval (seconds) between emissions for the
 CROP_IMAGE_QUALITY = 85  # JPEG quality for cropped images (1-100)
 CROP_MAX_SIZE = 300  # Maximum dimension for cropped images
 
-# License plate detection configuration
-ENABLE_LICENSE_PLATE_DETECTION = True  # Enable license plate detection
-
 # Initialize Socket.IO client
 sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=5000)
 print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
@@ -129,13 +126,6 @@ def crop_vehicle_image(frame, bbox, vehicle_id, vehicle_class):
         'image_data': buffer_value,  # Raw buffer instead of base64
         'timestamp': time.time()
     }
-    
-    # Process the vehicle data to detect license plate if enabled
-    if ENABLE_LICENSE_PLATE_DETECTION:
-        try:
-            vehicle_data = detect_license_plate_from_car_event(vehicle_data)
-        except Exception as e:
-            print(f"Error during license plate detection: {e}")
     
     return vehicle_data
 

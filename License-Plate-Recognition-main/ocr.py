@@ -25,13 +25,8 @@ yolo_license_plate.conf = 0.60
 
 
 #enter image path here
-# Use absolute path to ensure the image is found
-img_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_image/119.jpg")
-print(f"Attempting to read image from: {img_file}")
+img_file = "test_image/119.jpg"
 img = cv2.imread(img_file)
-if img is None:
-    print(f"Error: Could not read image from {img_file}. Check if file exists and is not corrupted.")
-    exit(1)
 plates = yolo_LP_detect(img, size=640)
 
 
@@ -71,12 +66,5 @@ img = Image.open(img_file)
 basewidth = 500
 wpercent = (basewidth/float(img.size[0]))
 hsize = int((float(img.size[1])*float(wpercent)))
-# ANTIALIAS is deprecated, use Resampling.LANCZOS instead
-try:
-    # For newer Pillow versions (9.0.0+)
-    from PIL import Image
-    img = img.resize((basewidth,hsize), Image.Resampling.LANCZOS)
-except AttributeError:
-    # For older Pillow versions
-    img = img.resize((basewidth,hsize), Image.LANCZOS)
+img = img.resize((basewidth,hsize), Image.ANTIALIAS)
 display(img)
