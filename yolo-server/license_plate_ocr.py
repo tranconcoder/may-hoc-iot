@@ -13,14 +13,13 @@ import socketio
 import time
 import threading
 import queue
-import base64
 
 # --------- GLOBAL CONSTANTS ---------
 # Get the absolute path to the model files
 MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
 DETECTOR_PATH = os.path.join(MODEL_DIR, 'LP_detector.pt')
 OCR_PATH = os.path.join(MODEL_DIR, 'LP_ocr.pt')
-CONFIDENCE_THRESHOLD = 0.60  # Model confidence threshold
+CONFIDENCE_THRESHOLD = 0.30  # Model confidence threshold
 
 # Socket.IO configuration
 SOCKETIO_SERVER_URL = 'http://172.28.31.150:3001'  # Same server as in server.py
@@ -171,12 +170,23 @@ def recognize_license_plate(image_path=None, image_array=None):
     Returns:
         A set of detected license plate numbers
     """
-    # Load YOLO models using the global constants
-    yolo_LP_detect = torch.hub.load('yolov5', 'custom', path=DETECTOR_PATH, force_reload=True, source='local')
-    yolo_license_plate = torch.hub.load('yolov5', 'custom', path=OCR_PATH, force_reload=True, source='local')
+    # Temporarily redirect stdout to suppress YOLOv5 loading messages
+    import sys
+    import os
+    original_stdout = sys.stdout
+    sys.stdout = open(os.devnull, 'w')
     
-    # Set model confidence threshold
-    yolo_license_plate.conf = CONFIDENCE_THRESHOLD
+    try:
+        # Load YOLO models using the global constants with verbose=False
+        yolo_LP_detect = torch.hub.load('yolov5', 'custom', path=DETECTOR_PATH, force_reload=True, source='local', verbose=False)
+        yolo_license_plate = torch.hub.load('yolov5', 'custom', path=OCR_PATH, force_reload=True, source='local', verbose=False)
+        
+        # Set model confidence threshold
+        yolo_license_plate.conf = CONFIDENCE_THRESHOLD
+    finally:
+        # Restore stdout
+        sys.stdout.close()
+        sys.stdout = original_stdout
     
     # Read the image
     if image_path is not None:
@@ -372,12 +382,23 @@ def process_license_plates_thread():
     
     print("Starting license plate OCR thread")
     
-    # Load YOLO models for OCR
-    yolo_LP_detect = torch.hub.load('yolov5', 'custom', path=DETECTOR_PATH, force_reload=True, source='local')
-    yolo_license_plate = torch.hub.load('yolov5', 'custom', path=OCR_PATH, force_reload=True, source='local')
+    # Temporarily redirect stdout to suppress YOLOv5 loading messages
+    import sys
+    import os
+    original_stdout = sys.stdout
+    sys.stdout = open(os.devnull, 'w')
     
-    # Set model confidence threshold
-    yolo_license_plate.conf = CONFIDENCE_THRESHOLD
+    try:
+        # Load YOLO models for OCR with verbose=False
+        yolo_LP_detect = torch.hub.load('yolov5', 'custom', path=DETECTOR_PATH, force_reload=True, source='local', verbose=False)
+        yolo_license_plate = torch.hub.load('yolov5', 'custom', path=OCR_PATH, force_reload=True, source='local', verbose=False)
+        
+        # Set model confidence threshold
+        yolo_license_plate.conf = CONFIDENCE_THRESHOLD
+    finally:
+        # Restore stdout
+        sys.stdout.close()
+        sys.stdout = original_stdout
     
     while running:
         try:
@@ -439,10 +460,27 @@ def process_license_plates_thread():
             # Emit license plate OCR results using 'license_plate_ocr' event
             sio.emit('license_plate_ocr', response)
             
-            # Print detection summary
-            plate_text = ", ".join(license_plates) if license_plates else "UNKNOWN"
-            print(f"Vehicle {vehicle_id}: License plate recognized: {plate_text}, inference time: {inference_time:.2f}ms")
-            print(f"Emitted 'license_plate_ocr' event with license plate data")
+            # Print detection summary with improved formatting
+            if license_plates:
+                plate_text = ", ".join(license_plates)
+                print(f"\n{'='*60}")
+                print(f"✅ BIỂN SỐ XE NHẬN DIỆN THÀNH CÔNG")
+                print(f"{'='*60}")
+                print(f"🚗 Vehicle ID: {vehicle_id}")
+                print(f"🔢 License Plate: {plate_text}")
+                print(f"⏱️ Thời gian xử lý: {inference_time:.2f}ms")
+                print(f"🕒 Thời gian: {time.strftime('%H:%M:%S %d-%m-%Y', time.localtime())}")
+                print(f"{'='*60}")
+            else:
+                print(f"\n{'='*60}")
+                print(f"❌ KHÔNG THỂ NHẬN DIỆN BIỂN SỐ XE")
+                print(f"{'='*60}")
+                print(f"🚗 Vehicle ID: {vehicle_id}")
+                print(f"⏱️ Thời gian xử lý: {inference_time:.2f}ms")
+                print(f"🕒 Thời gian: {time.strftime('%H:%M:%S %d-%m-%Y', time.localtime())}")
+                print(f"{'='*60}")
+            
+            print(f"📤 Đã gửi dữ liệu qua event 'license_plate_ocr'")
             
         except Exception as e:
             print(f"Error in license plate OCR thread: {e}")
