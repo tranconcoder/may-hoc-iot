@@ -90,7 +90,7 @@ def emit_license_plate_detection(vehicle_id, vehicle_class, plate_img, confidenc
         }
         
         # Emit the license plate detection information
-        sio.emit('license_plate_detected', detection_data)
+        sio.emit('license_plate', detection_data)
         
         print(f"Emitted 'license_plate_detected' event for vehicle {vehicle_id} ({vehicle_class}) - Confidence: {confidence:.2f}")
         return True

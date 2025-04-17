@@ -9,6 +9,11 @@ import math
 import numpy as np
 import os
 import io
+import socketio
+import time
+import threading
+import queue
+import base64
 
 # --------- GLOBAL CONSTANTS ---------
 # Get the absolute path to the model files
@@ -16,6 +21,19 @@ MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
 DETECTOR_PATH = os.path.join(MODEL_DIR, 'LP_detector.pt')
 OCR_PATH = os.path.join(MODEL_DIR, 'LP_ocr.pt')
 CONFIDENCE_THRESHOLD = 0.60  # Model confidence threshold
+
+# Socket.IO configuration
+SOCKETIO_SERVER_URL = 'http://172.28.31.150:3001'  # Same server as in server.py
+MAX_FPS = 20  # Maximum frames per second to process
+
+# Initialize Socket.IO client
+sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=5000)
+print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
+
+# Global variables
+running = True
+last_processing_time = 0
+plate_queue = queue.Queue(maxsize=5)  # Queue for license plate processing
 
 # --------- UTILITY FUNCTIONS (from utils_rotate.py) ---------
 
@@ -300,27 +318,189 @@ def detect_license_plate_from_car_event(vehicle_data):
         
     return vehicle_data
 
+# --------- SOCKETIO EVENT HANDLERS AND PROCESSING ---------
+
+@sio.event
+def connect():
+    """Handler for connection event"""
+    print(f"Successfully connected to Socket.IO server: {SOCKETIO_SERVER_URL}")
+    print("Waiting for 'license_plate' events with vehicle images...")
+
+@sio.event
+def disconnect():
+    """Handler for disconnection event"""
+    print("Disconnected from Socket.IO server")
+    global running
+    running = False
+
+@sio.on('license_plate')
+def on_license_plate(data):
+    """
+    Handler for receiving license plate detection events
+    Args:
+        data: Dictionary containing license plate data with image
+    """
+    global last_processing_time
+    
+    # Limit processing rate to avoid overload
+    current_time = time.time()
+    if current_time - last_processing_time < 1.0/MAX_FPS:
+        return  # Skip this frame to maintain reasonable frame rate
+    
+    last_processing_time = current_time
+    
+    try:
+        # Check if we have a valid license plate event with image data
+        if not isinstance(data, dict):
+            print("Warning: Received license_plate event with invalid data format")
+            return
+        
+        # Add to processing queue
+        try:
+            plate_queue.put(data, block=False)
+            print(f"Added license plate image to processing queue")
+        except queue.Full:
+            # If queue is full, just discard this data
+            pass
+    
+    except Exception as e:
+        print(f"Error handling license_plate event: {e}")
+
+def process_license_plates_thread():
+    """Background thread to process license plate images"""
+    global running
+    
+    print("Starting license plate OCR thread")
+    
+    # Load YOLO models for OCR
+    yolo_LP_detect = torch.hub.load('yolov5', 'custom', path=DETECTOR_PATH, force_reload=True, source='local')
+    yolo_license_plate = torch.hub.load('yolov5', 'custom', path=OCR_PATH, force_reload=True, source='local')
+    
+    # Set model confidence threshold
+    yolo_license_plate.conf = CONFIDENCE_THRESHOLD
+    
+    while running:
+        try:
+            # Try to get a plate event from the queue, non-blocking
+            try:
+                plate_data = plate_queue.get(block=False)
+                if plate_data is None:
+                    time.sleep(0.01)
+                    continue
+            except queue.Empty:
+                time.sleep(0.01)
+                continue
+            
+            # Extract data from the plate event
+            vehicle_id = plate_data.get('vehicle_id', 'unknown')
+            image_data = plate_data.get('image_data')
+            original_data = plate_data  # Keep original data to include in response
+            
+            if not image_data:
+                continue  # Skip if missing required data
+            
+            # Convert buffer to image
+            try:
+                # Convert bytes to numpy array
+                nparr = np.frombuffer(image_data, np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                
+                if img is None:
+                    print(f"Error: Could not decode image for plate")
+                    continue
+            except Exception as e:
+                print(f"Error decoding image: {e}")
+                continue
+            
+            # Start timing for inference
+            start_time = time.time()
+            
+            # Detect and recognize license plates
+            license_plates, marked_img = recognize_license_plate(image_array=img)
+            
+            # Calculate inference time
+            inference_time = (time.time() - start_time) * 1000  # ms
+            
+            # Prepare response with recognition results and include the original data
+            response = {
+                'vehicle_id': vehicle_id,
+                'timestamp': time.time(),
+                'inference_time': inference_time,
+                'license_plates': list(license_plates) if license_plates else ["UNKNOWN"],
+                'recognized_image': None,  # Will be populated below
+                'original_data': original_data  # Include original data for reference
+            }
+            
+            # Encode the marked image with license plate boxes
+            if marked_img is not None:
+                _, buffer = cv2.imencode('.jpg', marked_img)
+                response['recognized_image'] = buffer.tobytes()
+            
+            # Emit license plate OCR results using 'license_plate_ocr' event
+            sio.emit('license_plate_ocr', response)
+            
+            # Print detection summary
+            plate_text = ", ".join(license_plates) if license_plates else "UNKNOWN"
+            print(f"Vehicle {vehicle_id}: License plate recognized: {plate_text}, inference time: {inference_time:.2f}ms")
+            print(f"Emitted 'license_plate_ocr' event with license plate data")
+            
+        except Exception as e:
+            print(f"Error in license plate OCR thread: {e}")
+            time.sleep(0.1)  # Prevent tight loop if there's an error
+    
+    print("License plate OCR thread stopped")
+
 # --------- MAIN FUNCTION (Entry Point) ---------
 
 def main():
     """Main function for running the script directly"""
-    # Use the first command-line argument as image path if provided, otherwise use default
+    global running
+    
     import sys
     
-    if len(sys.argv) > 1:
-        img_file = sys.argv[1]
+    # Check for command-line arguments to run in traditional mode (single image)
+    if len(sys.argv) > 1 and sys.argv[1] == '--image':
+        if len(sys.argv) > 2:
+            img_file = sys.argv[2]
+        else:
+            # Default image path
+            img_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_image/119.jpg")
+        
+        # Recognize license plates
+        license_plates, img = recognize_license_plate(image_path=img_file)
+        
+        # Print the results
+        print(license_plates)
+        
+        # Display the image
+        display_image(img_file, img)
     else:
-        # Default image path
-        img_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_image/119.jpg")
-    
-    # Recognize license plates
-    license_plates, img = recognize_license_plate(image_path=img_file)
-    
-    # Print the results
-    print(license_plates)
-    
-    # Display the image
-    display_image(img_file, img)
+        # Run in SocketIO mode
+        print("Starting license plate OCR service with SocketIO...")
+        
+        # Start the processing thread
+        processing_thread = threading.Thread(target=process_license_plates_thread, daemon=True)
+        processing_thread.start()
+        print("License plate OCR thread started")
+        
+        # Connect to Socket.IO server
+        try:
+            print(f"Connecting to Socket.IO server at {SOCKETIO_SERVER_URL}")
+            sio.connect(SOCKETIO_SERVER_URL, transports=['websocket'])
+        except Exception as e:
+            print(f"Failed to connect to Socket.IO server: {e}")
+            return
+        
+        # Keep the main thread running
+        try:
+            while running:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("Interrupted by user. Shutting down...")
+        finally:
+            if sio.connected:
+                sio.disconnect()
+            print("License plate OCR service stopped.")
 
 if __name__ == "__main__":
     main()
