@@ -72,6 +72,32 @@ def load_model():
         print(f"Failed to load model: {e}")
         return False
 
+def emit_license_plate_detection(vehicle_id, vehicle_class, plate_img, confidence, bbox):
+    """Emit license plate detection information via socket.io instead of displaying in a window"""
+    try:
+        # Convert the plate image to buffer for sending
+        _, plate_buffer = cv2.imencode('.jpg', plate_img)
+        plate_data = plate_buffer.tobytes()
+        
+        # Create payload for the socket event
+        detection_data = {
+            'vehicle_id': vehicle_id,
+            'vehicle_class': vehicle_class,
+            'confidence': float(confidence),
+            'bbox': bbox,
+            'image_data': plate_data,
+            'timestamp': time.time()
+        }
+        
+        # Emit the license plate detection information
+        sio.emit('license_plate_detected', detection_data)
+        
+        print(f"Emitted 'license_plate_detected' event for vehicle {vehicle_id} ({vehicle_class}) - Confidence: {confidence:.2f}")
+        return True
+    except Exception as e:
+        print(f"Error emitting license plate detection: {e}")
+        return False
+
 def process_license_plates_thread():
     """Background thread to process vehicle images for license plates"""
     global running, model
@@ -117,6 +143,9 @@ def process_license_plates_thread():
                 print(f"Error decoding image: {e}")
                 continue
             
+            # Create a copy of the original image for visualization
+            original_img = img.copy()
+            
             # Process the frame with YOLO for license plate detection
             start_time = time.time()
             results = model(img, verbose=False)
@@ -144,8 +173,16 @@ def process_license_plates_thread():
                         rel_x2 = x2 / width
                         rel_y2 = y2 / height
                         
+                        # Draw bounding box on the original image
+                        cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                        
+                        # Add confidence text
+                        conf_text = f"{confidence:.2f}"
+                        cv2.putText(img, conf_text, (x1, y1-10), 
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                        
                         # Crop the license plate
-                        plate_img = img[y1:y2, x1:x2]
+                        plate_img = original_img[y1:y2, x1:x2]
                         
                         # Convert to buffer for sending
                         _, buffer = cv2.imencode('.jpg', plate_img)
@@ -166,8 +203,12 @@ def process_license_plates_thread():
                         }
                         
                         license_plates.append(plate_info)
+                        
+                        # Emit license plate detection instead of displaying in a window
+                        bbox_data = plate_info['bbox']
+                        emit_license_plate_detection(vehicle_id, vehicle_class, plate_img, confidence, bbox_data)
             
-            # Prepare response with detection results
+            # Prepare response with detection results and include the original vehicle image
             response = {
                 'vehicle_id': vehicle_id,
                 'vehicle_class': vehicle_class,
@@ -177,7 +218,8 @@ def process_license_plates_thread():
                 'image_dimensions': {
                     'width': width,
                     'height': height
-                }
+                },
+                'vehicle_image': image_data  # Include the original vehicle image data
             }
             
             # Emit license plate detection results using 'license_plate' event

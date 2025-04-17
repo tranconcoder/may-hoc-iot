@@ -16,7 +16,7 @@ SOCKETIO_SERVER_URL = 'ws://172.28.31.150:3001'
 ENABLE_GPU = True  # Enable GPU acceleration if available
 
 # Initialize Socket.IO client
-sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=5000, logger=True, engineio_logger=True)
+sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=5000)
 print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
 
 # Global variables
@@ -70,6 +70,8 @@ def process_frames_thread():
             # Traffic sign counts by type
             sign_counts = {}
             
+            has_detections = False  # Flag to track if any objects were detected
+            
             for result in results:
                 boxes = result.boxes
                 for box in boxes:
@@ -78,6 +80,7 @@ def process_frames_thread():
                     
                     # Check if the detected object meets confidence threshold
                     if confidence >= CONFIDENCE_THRESHOLD:
+                        has_detections = True
                         # Get bounding box coordinates
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
                         
@@ -110,6 +113,12 @@ def process_frames_thread():
                         }
                         
                         detected_signs.append(detection_info)
+            
+            # Print message whether objects were detected or not
+            if has_detections:
+                print(f"Traffic Sign Detection: {len(detected_signs)} signs detected")
+            else:
+                print("Traffic Sign Detection: No traffic signs detected in this frame")
             
             # Prepare response with detection results
             response = {

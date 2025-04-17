@@ -55,13 +55,19 @@ export function runSocketIOService(server: Server): SocketIOServer {
       // Forward vehicle detection data to all clients (including sender)
       console.log(data);
 
-      socket.broadcast.emit("car", data.image_data);
+      socket.broadcast.emit("car", data);
     });
 
     socket.on("license_plate", (data: any) => {
       // Forward license plate detection data to all clients (including sender)
       console.log(data);
       socket.broadcast.emit("license_plate", data);
+    });
+
+    socket.on("license_plate_ocr", (data: any) => {
+      // Forward license plate detection data to all clients (including sender)
+      console.log(data);
+      socket.broadcast.emit("license_plate_detect", data);
     });
 
     socket.on("disconnect", () => {
