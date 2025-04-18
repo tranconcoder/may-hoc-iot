@@ -1,3 +1,4 @@
+import _ from "lodash"
 import cameraModel from "../models/camera.model"
 import crypto from 'crypto'
 
@@ -5,16 +6,17 @@ export default new class CameraService {
     async create(
         camera_name: string,
         camera_location: string,
-        camera_status: boolean,
     ) {
         const apiKey = crypto.randomBytes(32).toString('hex')
 
-        return await cameraModel.create({
+        const result = await cameraModel.create({
             camera_name,
             camera_location,
-            camera_status,
+            camera_status: true,
             camera_api_key: apiKey,
         })
+
+        return _.omit(result, "camera_api_key");
     }
 
 

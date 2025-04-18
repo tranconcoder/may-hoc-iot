@@ -1,6 +1,6 @@
 const WEBSOCKET_URL = '172.28.31.150:3000';
-const API_KEY = '1234567890';
-const CAMERA_ID = 'esp32cam_security_gate_send_img';
+const API_KEY = '0e1f4b7dc39c63e9dbbfbf5afc2e50f9deb625507cada47b203117c82362d1d2';
+const CAMERA_ID = '68027ecbc11ceedc95d734df';
 
 // DOM Elements
 let startBtn, stopBtn, status, video, canvas, processingCanvas, log, frameCounter;
@@ -9,7 +9,7 @@ let sourceTypeSelect; // Thêm biến cho việc chọn nguồn ghi hình
 
 // WebSocket connection
 let socket = null;
-let wsUrl = `ws://${WEBSOCKET_URL}?id=${CAMERA_ID}&api_key=${API_KEY}`;
+let wsUrl = `ws://${WEBSOCKET_URL}?cameraId=${CAMERA_ID}&apiKey=${API_KEY}`;
 let reconnectAttempts = 0;
 let maxReconnectAttempts = Infinity; // Vô hạn số lần thử kết nối lại
 let reconnectInterval = 1000; // 1 giây ban đầu

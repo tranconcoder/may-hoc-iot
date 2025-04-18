@@ -29,6 +29,11 @@ export default function runWebsocketService(wss: WebSocketServer, HOST: string, 
       const cameraId = query.cameraId as string;
       const apiKey = query.apiKey as string;
 
+      console.log({
+        cameraId,
+        apiKey
+      })
+
       /* ------------------------ Check cameraId and apiKey ----------------------- */
       if (!cameraId || !apiKey) {
         return ws.close();
@@ -45,24 +50,6 @@ export default function runWebsocketService(wss: WebSocketServer, HOST: string, 
 
         io.of(`/${cameraId}`).emit("image", buffer);
       });
-
-      switch (ws.source) {
-        case WebSocketSourceEnum.ESP32CAM_SECURITY_GATE_SEND_IMG:
-          ws.on("message", async function message(buffer: Buffer) {
-            websocketAnalytics.transferData(buffer.length, 1);
-            readStreamEsp32CamSecurityGateImg.push(buffer); // Keep if needed
-
-            // Emit the raw buffer via Socket.IO
-            io.emit("image", buffer); // Emit raw buffer
-            console.log('Emitted raw image buffer via Socket.IO'); // Optional: for debugging
-          });
-          break;
-
-        case WebSocketSourceEnum.INVALID_SOURCE:
-        default:
-          console.log("Source is not valid!");
-          ws.close();
-      }
     }
   );
 

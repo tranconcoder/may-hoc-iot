@@ -11,17 +11,17 @@ viewsRouter.get("/preview", viewController.previewPage);
 
 viewsRouter.get("/dashboard", viewController.dashboardPage);
 
-viewsRouter.get("/dashboard/cameras", viewController.cameraManagementPage);
+viewsRouter.get("/cameras", viewController.cameraManagementPage);
 
-viewsRouter.get("/dashboard/cameras/add", (_, res) => {
-  res.render("pages/add-camera", { 
-    layout: "traffic-dashboard", 
-    pageTitle: "Thêm Camera Mới"
+viewsRouter.get("/cameras/add", (_, res) => {
+  res.render("pages/add-camera", {
+    layout: "traffic-dashboard",
+    pageTitle: "Thêm Camera Mới",
   });
 });
 
 // Route xem chi tiết camera
-viewsRouter.get("/dashboard/cameras/:cameraId", (req, res) => {
+viewsRouter.get("/cameras/:cameraId", (req, res) => {
   const { cameraId } = req.params;
   // Ở đây sau này sẽ lấy thông tin camera theo ID từ database
   // Hiện tại sẽ giả lập một camera để hiển thị
@@ -32,13 +32,13 @@ viewsRouter.get("/dashboard/cameras/:cameraId", (req, res) => {
     ipAddress: "192.168.1.100",
     streamUrl: "http://example.com/stream",
     status: "active",
-    statusText: "Đang hoạt động"
+    statusText: "Đang hoạt động",
   };
-  
-  res.render("pages/camera-view", { 
-    layout: "traffic-dashboard", 
+
+  res.render("pages/camera-view", {
+    layout: "traffic-dashboard",
     pageTitle: `Camera ${cameraId}`,
-    camera 
+    camera,
   });
 });
 

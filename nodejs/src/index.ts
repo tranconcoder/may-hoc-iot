@@ -100,6 +100,8 @@ app.use(bodyParser.json());
 // STATIC FILES
 //
 app.use("/public", express.static(path.join(__dirname, "../public")));
+app.use("/css", express.static(path.join(__dirname, "../public/css")));
+app.use("/scripts", express.static(path.join(__dirname, "../public/scripts")));
 
 //
 // HANDLEBARS

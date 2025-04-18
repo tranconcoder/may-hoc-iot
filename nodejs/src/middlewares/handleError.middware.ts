@@ -1,9 +1,13 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
 
 export const catchError = (
-    cb: (req: Request, res: Response, next: NextFunction) => Promise<void>
+    cb: (req: Request, res: Response, next: NextFunction) => Promise<void> | void
 ): RequestHandler => {
-    return (req, res, next) => {
-        cb(req, res, next).catch(next);
+    return async (req, res, next) => {
+        try {
+            await cb(req, res, next)
+        } catch (error) {
+            next(error)
+        }
     };
 };
