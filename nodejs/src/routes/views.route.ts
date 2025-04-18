@@ -1,32 +1,22 @@
+import viewController from '@/controllers/view.controlelr';
 import { Router } from 'express';
 
 const viewsRouter = Router();
 
-viewsRouter.get("/", (_, res) => {
-  res.render("pages/home-page", { layout: "traffic-dashboard" });
-});
+viewsRouter.get("/", viewController.homePage);
 
-viewsRouter.get("/capture", (_, res) => {
-  res.render("pages/capture");
-});
+viewsRouter.get("/capture", viewController.capturePage);
 
-viewsRouter.get("/preview", (_, res) => {
-  res.render("pages/preview");
-});
+viewsRouter.get("/preview", viewController.previewPage);
 
-// Thêm routes cho dashboard
-viewsRouter.get("/dashboard", (_, res) => {
-  res.render("pages/home-page", { layout: "dashboard-layout", isHome: true });
-});
+viewsRouter.get("/dashboard", viewController.dashboardPage);
 
-// Route quản lý camera
-viewsRouter.get("/dashboard/cameras", (_, res) => {
-  // Mặc định chưa có dữ liệu camera
-  const cameras = [];
-  res.render("pages/camera-management", { 
+viewsRouter.get("/dashboard/cameras", viewController.cameraManagementPage);
+
+viewsRouter.get("/dashboard/cameras/add", (_, res) => {
+  res.render("pages/add-camera", { 
     layout: "traffic-dashboard", 
-    pageTitle: "Quản lý Camera",
-    cameras 
+    pageTitle: "Thêm Camera Mới"
   });
 });
 
