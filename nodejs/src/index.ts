@@ -9,7 +9,6 @@ import path from 'path';
 import SetupHandlebars from './services/handlebars.service';
 
 // Https server
-import { createServer as createHttpsServer } from 'https';
 import fs from 'fs';
 
 // Websocket Server
@@ -26,12 +25,10 @@ import morgan from 'morgan';
 import handleError from './utils/handleError.util';
 
 // Environments
-import { envConfig } from './config';
-import { randomIntFromInterval } from './utils/number.util';
+import { envConfig } from "./config";
 
 // Secure
-import cors from 'cors';
-import { Server as SocketIOServer } from "socket.io"; // Import Socket.IO Server
+import cors from "cors";
 import { createServer } from "http"; // Import createServer from http
 import { runSocketIOService } from './services/socketio.service';
 import DBCore from './core/db.core';

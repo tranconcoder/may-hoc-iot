@@ -20,7 +20,7 @@ ENABLE_GPU = True  # Enable GPU acceleration if available
 
 # Detection configuration
 CONFIDENCE_THRESHOLD = 0.4  # License plate detection confidence threshold
-MAX_FPS = 20  # Maximum frames per second to process
+MAX_FPS = 90  # Maximum frames per second to process
 
 # Initialize Socket.IO client
 sio = socketio.Client()

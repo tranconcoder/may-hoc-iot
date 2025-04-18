@@ -233,18 +233,27 @@ function handleCarImageData(data) {
   try {
     // Convert image data
     let imageBytes;
-    if (typeof data === "string") {
+
+    if (typeof data.image_data === "string") {
       // If it's base64 encoded
-      imageBytes = atob(data);
-    } else if (data instanceof ArrayBuffer) {
+      imageBytes = atob(data.image_data);
+    } else if (data.image_data instanceof ArrayBuffer) {
       // If it's already a binary array
-      imageBytes = new Uint8Array(data);
+      imageBytes = new Uint8Array(data.image_data);
+    } else if (data.image_data && data.image_data.image) {
+      if (typeof data.image_data.image === "string") {
+        imageBytes = atob(data.image_data.image);
+      } else {
+        imageBytes = new Uint8Array(data.image_data.image);
+      }
     }
 
     if (imageBytes) {
       // Create blob and convert to image
       const blob = new Blob([imageBytes], { type: "image/jpeg" });
       const imageUrl = URL.createObjectURL(blob);
+
+      console.log("Car image URL:", imageUrl); // Debugging line
 
       const img = new Image();
       img.onload = function () {

@@ -21,9 +21,16 @@ DETECTOR_PATH = os.path.join(MODEL_DIR, 'LP_detector.pt')
 OCR_PATH = os.path.join(MODEL_DIR, 'LP_ocr.pt')
 CONFIDENCE_THRESHOLD = 0.30  # Model confidence threshold
 
+# Image processing configuration
+INPUT_SIZE = 640  # Input size for the model (smaller = faster, but less accurate)
+SAVE_CROPS = False  # Set to False to avoid saving crop.jpg each time (speeds up processing)
+USE_HALF_PRECISION = True  # Use FP16 precision for inference if GPU is available
+ENABLE_GPU = True  # Enable GPU acceleration if available
+
 # Socket.IO configuration
 SOCKETIO_SERVER_URL = 'http://172.28.31.150:3001'  # Same server as in server.py
 MAX_FPS = 20  # Maximum frames per second to process
+QUEUE_SIZE = 5  # Size of processing queue
 
 # Initialize Socket.IO client
 sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=5000)
@@ -32,7 +39,11 @@ print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
 # Global variables
 running = True
 last_processing_time = 0
-plate_queue = queue.Queue(maxsize=5)  # Queue for license plate processing
+plate_queue = queue.Queue(maxsize=QUEUE_SIZE)  # Queue for license plate processing
+
+# Cached models (loaded once and reused)
+yolo_LP_detect = None
+yolo_license_plate = None
 
 # --------- UTILITY FUNCTIONS (from utils_rotate.py) ---------
 
@@ -160,6 +171,61 @@ def read_plate(yolo_license_plate, im):
 
 # --------- MAIN LICENSE PLATE RECOGNITION CODE (from ocr.py) ---------
 
+def load_models():
+    """
+    Load YOLO models once and cache them for future use
+    Returns:
+        Detector model and OCR model
+    """
+    global yolo_LP_detect, yolo_license_plate
+    
+    # Check if models are already loaded
+    if yolo_LP_detect is not None and yolo_license_plate is not None:
+        return yolo_LP_detect, yolo_license_plate
+    
+    # Temporarily redirect stdout to suppress YOLOv5 loading messages
+    import sys
+    import os
+    original_stdout = sys.stdout
+    sys.stdout = open(os.devnull, 'w')
+    
+    try:
+        print("Loading license plate detection models (first time)...")
+        # Configure device
+        device = 'cpu'
+        if ENABLE_GPU:
+            try:
+                if torch.cuda.is_available():
+                    device = 'cuda'
+                    gpu_name = torch.cuda.get_device_name(0)
+                    print(f"CUDA is available. Using GPU: {gpu_name}")
+                else:
+                    print("CUDA is not available. Using CPU.")
+            except Exception as e:
+                print(f"Error checking GPU: {e}. Using CPU.")
+        
+        # Load YOLO models using the global constants with verbose=False
+        yolo_LP_detect = torch.hub.load('yolov5', 'custom', path=DETECTOR_PATH, force_reload=False, source='local', verbose=False)
+        yolo_license_plate = torch.hub.load('yolov5', 'custom', path=OCR_PATH, force_reload=False, source='local', verbose=False)
+        
+        # Move models to appropriate device
+        yolo_LP_detect.to(device)
+        yolo_license_plate.to(device)
+        
+        # Use half precision for faster inference if using GPU and enabled
+        if device == 'cuda' and USE_HALF_PRECISION:
+            yolo_LP_detect = yolo_LP_detect.half()
+            yolo_license_plate = yolo_license_plate.half()
+        
+        # Set model confidence threshold
+        yolo_license_plate.conf = CONFIDENCE_THRESHOLD
+    finally:
+        # Restore stdout
+        sys.stdout.close()
+        sys.stdout = original_stdout
+    
+    return yolo_LP_detect, yolo_license_plate
+
 def recognize_license_plate(image_path=None, image_array=None):
     """
     Recognize license plates from either an image path or image array
@@ -170,23 +236,10 @@ def recognize_license_plate(image_path=None, image_array=None):
     Returns:
         A set of detected license plate numbers
     """
-    # Temporarily redirect stdout to suppress YOLOv5 loading messages
-    import sys
-    import os
-    original_stdout = sys.stdout
-    sys.stdout = open(os.devnull, 'w')
+    global yolo_LP_detect, yolo_license_plate
     
-    try:
-        # Load YOLO models using the global constants with verbose=False
-        yolo_LP_detect = torch.hub.load('yolov5', 'custom', path=DETECTOR_PATH, force_reload=True, source='local', verbose=False)
-        yolo_license_plate = torch.hub.load('yolov5', 'custom', path=OCR_PATH, force_reload=True, source='local', verbose=False)
-        
-        # Set model confidence threshold
-        yolo_license_plate.conf = CONFIDENCE_THRESHOLD
-    finally:
-        # Restore stdout
-        sys.stdout.close()
-        sys.stdout = original_stdout
+    # Get cached or load models
+    yolo_LP_detect, yolo_license_plate = load_models()
     
     # Read the image
     if image_path is not None:
@@ -194,15 +247,26 @@ def recognize_license_plate(image_path=None, image_array=None):
         img = cv2.imread(image_path)
         if img is None:
             print(f"Error: Could not read image from {image_path}. Check if file exists and is not corrupted.")
-            return set()
+            return set(), None
     elif image_array is not None:
         img = image_array
     else:
         print("Error: Either image_path or image_array must be provided.")
-        return set()
+        return set(), None
     
-    # Detect license plates
-    plates = yolo_LP_detect(img, size=640)
+    # Resize image if it's too large (for faster processing)
+    h, w = img.shape[:2]
+    if max(h, w) > 1920:  # If the image is larger than Full HD
+        scale = 1920 / max(h, w)
+        new_w = int(w * scale)
+        new_h = int(h * scale)
+        img = cv2.resize(img, (new_w, new_h))
+    
+    # Create a copy for visualization
+    vis_img = img.copy()
+    
+    # Detect license plates with optimized size
+    plates = yolo_LP_detect(img, size=INPUT_SIZE)
     
     # Process detection results
     list_plates = plates.pandas().xyxy[0].values.tolist()
@@ -210,36 +274,64 @@ def recognize_license_plate(image_path=None, image_array=None):
     
     if len(list_plates) == 0:
         # If no license plate detected, try to read directly from the image
-        lp = read_plate(yolo_license_plate, img)
-        if lp != "unknown":
-            list_read_plates.add(lp)
+        # Only do this for smaller images to avoid processing time on large images
+        if max(h, w) <= 1280:
+            lp = read_plate(yolo_license_plate, img)
+            if lp != "unknown":
+                list_read_plates.add(lp)
     else:
         # Process each detected license plate
         for plate in list_plates:
+            # Only process if confidence is above threshold
+            confidence = float(plate[4])
+            if confidence < CONFIDENCE_THRESHOLD:
+                continue
+                
             flag = 0
             x = int(plate[0])  # xmin
             y = int(plate[1])  # ymin
             w = int(plate[2] - plate[0])  # xmax - xmin
             h = int(plate[3] - plate[1])  # ymax - ymin  
             
+            # Ensure crop coordinates are within image boundaries
+            x = max(0, x)
+            y = max(0, y)
+            w = min(w, img.shape[1] - x)
+            h = min(h, img.shape[0] - y)
+            
+            # Skip if crop dimensions are too small
+            if w < 20 or h < 10:
+                continue
+            
             # Crop the license plate
             crop_img = img[y:y+h, x:x+w]
             
-            # Draw rectangle around the license plate on the original image
-            cv2.rectangle(img, (int(plate[0]), int(plate[1])), (int(plate[2]), int(plate[3])), color=(0, 0, 225), thickness=2)
+            # Draw rectangle around the license plate on the visualization image
+            cv2.rectangle(vis_img, (int(plate[0]), int(plate[1])), (int(plate[2]), int(plate[3])), color=(0, 0, 225), thickness=2)
             
-            # Save the cropped image (for debugging)
-            crop_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "crop.jpg")
-            cv2.imwrite(crop_file, crop_img)
+            # Save the cropped image (for debugging) - only if enabled
+            if SAVE_CROPS:
+                crop_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "crop.jpg")
+                cv2.imwrite(crop_file, crop_img)
             
-            # Read the license plate text
+            # Optimize the deskew process - try fewer orientations for speed
+            # First try without deskew, which is fastest
+            lp = read_plate(yolo_license_plate, crop_img)
+            if lp != "unknown":
+                list_read_plates.add(lp)
+                # Add confidence and position information to the plate
+                cv2.putText(vis_img, lp, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
+                continue
+            
+            # If not successful, try deskew with fewer combinations for better speed
             for cc in range(0, 2):
-                for ct in range(0, 2):
-                    lp = read_plate(yolo_license_plate, deskew(crop_img, cc, ct))
-                    if lp != "unknown":
-                        list_read_plates.add(lp)
-                        flag = 1
-                        break
+                lp = read_plate(yolo_license_plate, deskew(crop_img, cc, 0))
+                if lp != "unknown":
+                    list_read_plates.add(lp)
+                    # Add the recognized text to the visualization
+                    cv2.putText(vis_img, lp, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
+                    flag = 1
+                    break
                 if flag == 1:
                     break
     
@@ -378,27 +470,16 @@ def on_license_plate(data):
 
 def process_license_plates_thread():
     """Background thread to process license plate images"""
-    global running
+    global running, yolo_LP_detect, yolo_license_plate
     
     print("Starting license plate OCR thread")
     
-    # Temporarily redirect stdout to suppress YOLOv5 loading messages
-    import sys
-    import os
-    original_stdout = sys.stdout
-    sys.stdout = open(os.devnull, 'w')
+    # Pre-load models for faster inference later
+    yolo_LP_detect, yolo_license_plate = load_models()
+    print("Models loaded successfully and cached for reuse")
     
-    try:
-        # Load YOLO models for OCR with verbose=False
-        yolo_LP_detect = torch.hub.load('yolov5', 'custom', path=DETECTOR_PATH, force_reload=True, source='local', verbose=False)
-        yolo_license_plate = torch.hub.load('yolov5', 'custom', path=OCR_PATH, force_reload=True, source='local', verbose=False)
-        
-        # Set model confidence threshold
-        yolo_license_plate.conf = CONFIDENCE_THRESHOLD
-    finally:
-        # Restore stdout
-        sys.stdout.close()
-        sys.stdout = original_stdout
+    # Set up batch processing variables
+    batch_size = 1  # Start with single image processing
     
     while running:
         try:
@@ -420,7 +501,7 @@ def process_license_plates_thread():
             if not image_data:
                 continue  # Skip if missing required data
             
-            # Convert buffer to image
+            # Convert buffer to image with optimized error handling
             try:
                 # Convert bytes to numpy array
                 nparr = np.frombuffer(image_data, np.uint8)
@@ -429,6 +510,11 @@ def process_license_plates_thread():
                 if img is None:
                     print(f"Error: Could not decode image for plate")
                     continue
+                    
+                # Check if image is too small for useful processing
+                if img.shape[0] < 20 or img.shape[1] < 20:
+                    print(f"Image too small for reliable processing: {img.shape}")
+                    continue
             except Exception as e:
                 print(f"Error decoding image: {e}")
                 continue
@@ -436,7 +522,7 @@ def process_license_plates_thread():
             # Start timing for inference
             start_time = time.time()
             
-            # Detect and recognize license plates
+            # Use our optimized recognition with cached models
             license_plates, marked_img = recognize_license_plate(image_array=img)
             
             # Calculate inference time

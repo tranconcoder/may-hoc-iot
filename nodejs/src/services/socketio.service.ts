@@ -30,7 +30,7 @@ export function runSocketIOService(server: Server): SocketIOServer {
       await trafficLightModel
         .create(data)
         .then((res) => {
-          console.log("Traffic light detection created successfully", res);
+          // console.log("Traffic light detection created successfully", res);
         })
         .catch((err) => {
           console.log("Traffic light detection creation failed", err);
@@ -44,7 +44,7 @@ export function runSocketIOService(server: Server): SocketIOServer {
       await carDetectionModel
         .create(data)
         .then((res) => {
-          console.log("Car detection created successfully", res);
+          // console.log("Car detection created successfully", res);
         })
         .catch((err) => {
           console.log("Car detection creation failed", err);
@@ -60,13 +60,13 @@ export function runSocketIOService(server: Server): SocketIOServer {
 
     socket.on("license_plate", (data: any) => {
       // Forward license plate detection data to all clients (including sender)
-      console.log(data);
+      // console.log(data);
       socket.broadcast.emit("license_plate", data);
     });
 
     socket.on("license_plate_ocr", (data: any) => {
       // Forward license plate detection data to all clients (including sender)
-      console.log(data);
+      // console.log(data);
       socket.broadcast.emit("license_plate_detect", data);
     });
 
