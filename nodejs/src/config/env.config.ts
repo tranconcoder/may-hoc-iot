@@ -1,7 +1,8 @@
 import 'dotenv/config';
 import dotenv from 'dotenv';
 
-export const NODE_ENV = process.env.NODE_ENV || 'development';
+export const NODE_ENV: 'development' | 'production' =
+	process.env.NODE_ENV as any || 'development' ;
 
 dotenv.config({ path: `.env.${NODE_ENV}` });
 

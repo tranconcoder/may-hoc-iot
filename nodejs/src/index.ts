@@ -21,9 +21,6 @@ import * as ffmpegService from './services/ffmpeg.service';
 // Morgan
 import morgan from 'morgan';
 
-// Error handler
-import handleError from './utils/handleError.util';
-
 // Environments
 import { envConfig } from "./config";
 
@@ -32,6 +29,7 @@ import cors from "cors";
 import { createServer } from "http"; // Import createServer from http
 import { runSocketIOService } from './services/socketio.service';
 import DBCore from './core/db.core';
+import HandleErrorService from './services/handleError.service';
 
 // Constants
 const { HOST, PORT } = envConfig;
@@ -130,7 +128,7 @@ runWebsocketService(wss, HOST, PORT);
 //
 // ERROR HANDLER
 //
-app.use(handleError);
+app.use(HandleErrorService.middleware);
 
 //
 // START SERVER

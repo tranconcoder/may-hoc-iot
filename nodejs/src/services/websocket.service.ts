@@ -10,7 +10,6 @@ import { WebSocketSourceEnum } from "../enums/ws.enum";
 import { WebsocketAnalytics } from "./websocketAnalytics.service";
 // Stream
 import {
-  readStreamEsp32CamMonitorImg,
   readStreamEsp32CamSecurityGateImg,
 } from "./stream.service";
 
@@ -26,13 +25,27 @@ export default function runWebsocketService(wss: WebSocketServer, HOST: string, 
     "connection",
     async function connection(ws: WebSocketCustom, req: Request) {
       // Validate connection
-      const { query } = url.parse(req.url, true);
-      let source = query.source || WebSocketSourceEnum.INVALID_SOURCE;
-      if (Array.isArray(source)) source = source[0];
+      const query = url.parse(req.url, true).query;
+      const cameraId = query.cameraId as string;
+      const apiKey = query.apiKey as string;
 
-      // Set connection state
-      ws.source = source as string;
+      /* ------------------------ Check cameraId and apiKey ----------------------- */
+      if (!cameraId || !apiKey) {
+        return ws.close();
+      }
+
+      /* ----------------------------- Set connection state ----------------------------- */
+      ws.id = cameraId;
+
       ws.on("error", console.error);
+
+      /* ----------------------------- Handle message ----------------------------- */
+      ws.on("message", async function message(buffer: Buffer) {
+        websocketAnalytics.transferData(buffer.length, 1);
+
+        io.of(`/${cameraId}`).emit("image", buffer);
+      });
+
       switch (ws.source) {
         case WebSocketSourceEnum.ESP32CAM_SECURITY_GATE_SEND_IMG:
           ws.on("message", async function message(buffer: Buffer) {

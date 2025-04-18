@@ -1,0 +1,564 @@
+{{!-- Trang quản lý camera --}}
+
+<style>
+/* CSS cho trang quản lý camera */
+
+/* Thiết lập chung */
+.camera-management-page {
+  padding: 20px;
+}
+
+/* Header trang */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  color: #333;
+}
+
+.page-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Thanh tìm kiếm và lọc */
+.camera-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+}
+
+.filter-group label {
+  margin-right: 8px;
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.search-group {
+  display: flex;
+  flex-grow: 1;
+}
+
+.search-group input {
+  flex-grow: 1;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.search-group button {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* Grid camera */
+.camera-grid-container {
+  width: 100%;
+}
+
+.camera-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.camera-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  background-color: white;
+}
+
+.camera-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.camera-preview {
+  position: relative;
+  height: 180px;
+  overflow: hidden;
+  background-color: #f0f0f0;
+}
+
+.camera-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-status {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+.camera-status i {
+  margin-right: 4px;
+}
+
+.camera-status.active {
+  color: #28a745;
+}
+
+.camera-status.inactive {
+  color: #dc3545;
+}
+
+.camera-status.maintenance {
+  color: #ffc107;
+}
+
+.camera-info {
+  padding: 15px;
+}
+
+.camera-name {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.camera-location, .camera-ip {
+  margin: 0 0 5px 0;
+  font-size: 14px;
+  color: #666;
+  display: flex;
+  align-items: center;
+}
+
+.camera-location i, .camera-ip i {
+  margin-right: 6px;
+  width: 16px;
+  text-align: center;
+}
+
+.camera-actions {
+  display: flex;
+  padding: 10px 15px;
+  border-top: 1px solid #e0e0e0;
+  gap: 8px;
+}
+
+/* Không ada camera */
+.no-cameras-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
+  padding: 80px;
+  border-radius: 8px;
+  text-align: center;
+  grid-column: 1 / -1;
+}
+
+.no-cameras-found i {
+  font-size: 64px;
+  color: #6c757d;
+  margin-bottom: 20px;
+}
+
+.no-cameras-found p {
+  font-size: 18px;
+  color: #6c757d;
+  margin-bottom: 20px;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .camera-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .page-actions {
+    width: 100%;
+  }
+  
+  .camera-filter-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .filter-group {
+    width: 100%;
+  }
+  
+  .camera-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+<div class="container-fluid camera-management-page">
+  <div class="page-header">
+    <h1 class="page-title">Quản lý Camera</h1>
+    <div class="page-actions">
+      <button class="btn btn-primary" id="btnAddCamera">
+        <i class="fas fa-plus"></i> Thêm Camera
+      </button>
+      <button class="btn btn-secondary" id="btnRefreshCameras">
+        <i class="fas fa-sync-alt"></i> Làm mới
+      </button>
+    </div>
+  </div>
+
+  <div class="camera-filter-bar">
+    <div class="filter-group">
+      <label for="cameraStatusFilter">Trạng thái:</label>
+      <select id="cameraStatusFilter" class="form-control">
+        <option value="all">Tất cả</option>
+        <option value="active">Đang hoạt động</option>
+        <option value="inactive">Không hoạt động</option>
+        <option value="maintenance">Bảo trì</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="cameraLocationFilter">Khu vực:</label>
+      <select id="cameraLocationFilter" class="form-control">
+        <option value="all">Tất cả khu vực</option>
+        <option value="north">Khu vực Bắc</option>
+        <option value="central">Khu vực Trung</option>
+        <option value="south">Khu vực Nam</option>
+      </select>
+    </div>
+    <div class="filter-group search-group">
+      <input type="text" id="cameraSearchInput" class="form-control" placeholder="Tìm kiếm camera...">
+      <button class="btn btn-outline-secondary" id="btnSearch">
+        <i class="fas fa-search"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="camera-grid-container">
+    <div class="camera-grid">
+      {{#if cameras.length}}
+        {{#each cameras}}
+          <div class="camera-card" data-camera-id="{{this.id}}">
+            <div class="camera-preview">
+              <img src="{{this.previewUrl}}" alt="{{this.name}}" onerror="this.src='/img/camera-offline.jpg'">
+              <div class="camera-status {{this.status}}">
+                <i class="fas fa-circle"></i>
+                <span>{{this.statusText}}</span>
+              </div>
+            </div>
+            <div class="camera-info">
+              <h3 class="camera-name">{{this.name}}</h3>
+              <p class="camera-location"><i class="fas fa-map-marker-alt"></i> {{this.location}}</p>
+              <p class="camera-ip"><i class="fas fa-network-wired"></i> {{this.ipAddress}}</p>
+            </div>
+            <div class="camera-actions">
+              <button class="btn btn-sm btn-primary btn-view" data-id="{{this.id}}">
+                <i class="fas fa-eye"></i> Xem
+              </button>
+              <button class="btn btn-sm btn-info btn-edit" data-id="{{this.id}}">
+                <i class="fas fa-edit"></i> Sửa
+              </button>
+              <button class="btn btn-sm btn-danger btn-delete" data-id="{{this.id}}">
+                <i class="fas fa-trash"></i> Xóa
+              </button>
+            </div>
+          </div>
+        {{/each}}
+      {{else}}
+        <div class="no-cameras-found">
+          <i class="fas fa-video-slash"></i>
+          <p>Không có camera nào được tìm thấy</p>
+          <button class="btn btn-primary" id="btnAddFirstCamera">Thêm camera đầu tiên</button>
+        </div>
+      {{/if}}
+    </div>
+  </div>
+</div>
+
+<!-- Modal thêm/sửa camera -->
+<div class="modal fade" id="cameraModal" tabindex="-1" role="dialog" aria-labelledby="cameraModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="cameraModalLabel">Thêm Camera Mới</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="cameraForm">
+          <div class="form-group">
+            <label for="cameraName">Tên camera</label>
+            <input type="text" class="form-control" id="cameraName" required>
+          </div>
+          <div class="form-group">
+            <label for="cameraLocation">Vị trí</label>
+            <input type="text" class="form-control" id="cameraLocation" required>
+          </div>
+          <div class="form-group">
+            <label for="cameraIpAddress">Địa chỉ IP</label>
+            <input type="text" class="form-control" id="cameraIpAddress" required>
+          </div>
+          <div class="form-group">
+            <label for="cameraStreamUrl">URL Stream</label>
+            <input type="text" class="form-control" id="cameraStreamUrl" required>
+          </div>
+          <div class="form-group">
+            <label for="cameraUsername">Tên đăng nhập (nếu có)</label>
+            <input type="text" class="form-control" id="cameraUsername">
+          </div>
+          <div class="form-group">
+            <label for="cameraPassword">Mật khẩu (nếu có)</label>
+            <input type="password" class="form-control" id="cameraPassword">
+          </div>
+          <div class="form-group">
+            <label for="cameraStatus">Trạng thái</label>
+            <select class="form-control" id="cameraStatus">
+              <option value="active">Hoạt động</option>
+              <option value="inactive">Không hoạt động</option>
+              <option value="maintenance">Bảo trì</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+        <button type="button" class="btn btn-primary" id="btnSaveCamera">Lưu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript cho tương tác trang quản lý camera -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Khởi tạo các event listeners
+    const btnAddCamera = document.getElementById('btnAddCamera');
+    const btnAddFirstCamera = document.getElementById('btnAddFirstCamera');
+    const btnSaveCamera = document.getElementById('btnSaveCamera');
+    const cameraModal = document.getElementById('cameraModal');
+    
+    // Nút thêm camera
+    if (btnAddCamera) {
+      btnAddCamera.addEventListener('click', function() {
+        // Reset form và hiển thị modal
+        document.getElementById('cameraForm').reset();
+        document.getElementById('cameraModalLabel').textContent = 'Thêm Camera Mới';
+        // Hiển thị modal (giả định bạn đang sử dụng Bootstrap)
+        $('#cameraModal').modal('show');
+      });
+    }
+    
+    // Nút thêm camera đầu tiên
+    if (btnAddFirstCamera) {
+      btnAddFirstCamera.addEventListener('click', function() {
+        document.getElementById('cameraForm').reset();
+        document.getElementById('cameraModalLabel').textContent = 'Thêm Camera Đầu Tiên';
+        $('#cameraModal').modal('show');
+      });
+    }
+    
+    // Nút lưu camera
+    if (btnSaveCamera) {
+      btnSaveCamera.addEventListener('click', function() {
+        // Validate form
+        const form = document.getElementById('cameraForm');
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+        
+        // Thu thập dữ liệu từ form
+        const cameraData = {
+          name: document.getElementById('cameraName').value,
+          location: document.getElementById('cameraLocation').value,
+          ipAddress: document.getElementById('cameraIpAddress').value,
+          streamUrl: document.getElementById('cameraStreamUrl').value,
+          username: document.getElementById('cameraUsername').value,
+          password: document.getElementById('cameraPassword').value,
+          status: document.getElementById('cameraStatus').value
+        };
+        
+        // Gửi dữ liệu đến server (API)
+        fetch('/api/cameras', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(cameraData)
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Không thể lưu camera');
+          }
+          return response.json();
+        })
+        .then(data => {
+          // Đóng modal
+          $('#cameraModal').modal('hide');
+          
+          // Làm mới trang để hiển thị camera mới
+          location.reload();
+        })
+        .catch(error => {
+          alert('Lỗi: ' + error.message);
+        });
+      });
+    }
+    
+    // Xử lý nút sửa camera
+    const editButtons = document.querySelectorAll('.btn-edit');
+    editButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const cameraId = this.getAttribute('data-id');
+        
+        // Lấy thông tin camera từ server
+        fetch(`/api/cameras/${cameraId}`)
+          .then(response => response.json())
+          .then(camera => {
+            // Điền thông tin vào form
+            document.getElementById('cameraName').value = camera.name;
+            document.getElementById('cameraLocation').value = camera.location;
+            document.getElementById('cameraIpAddress').value = camera.ipAddress;
+            document.getElementById('cameraStreamUrl').value = camera.streamUrl;
+            document.getElementById('cameraUsername').value = camera.username || '';
+            document.getElementById('cameraPassword').value = ''; // Không hiển thị mật khẩu
+            document.getElementById('cameraStatus').value = camera.status;
+            
+            // Cập nhật tiêu đề modal
+            document.getElementById('cameraModalLabel').textContent = 'Sửa Camera';
+            
+            // Lưu ID camera để sử dụng khi cập nhật
+            btnSaveCamera.setAttribute('data-camera-id', cameraId);
+            
+            // Hiển thị modal
+            $('#cameraModal').modal('show');
+          })
+          .catch(error => {
+            alert('Không thể lấy thông tin camera: ' + error.message);
+          });
+      });
+    });
+    
+    // Xử lý nút xóa camera
+    const deleteButtons = document.querySelectorAll('.btn-delete');
+    deleteButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        if (confirm('Bạn có chắc chắn muốn xóa camera này?')) {
+          const cameraId = this.getAttribute('data-id');
+          
+          fetch(`/api/cameras/${cameraId}`, {
+            method: 'DELETE'
+          })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Không thể xóa camera');
+            }
+            return response.json();
+          })
+          .then(() => {
+            // Xóa camera khỏi giao diện hoặc làm mới trang
+            const cameraCard = document.querySelector(`.camera-card[data-camera-id="${cameraId}"]`);
+            if (cameraCard) {
+              cameraCard.remove();
+            }
+            
+            // Nếu không còn camera nào, hiển thị thông báo
+            const remainingCameras = document.querySelectorAll('.camera-card');
+            if (remainingCameras.length === 0) {
+              location.reload(); // Làm mới để hiển thị thông báo "không có camera"
+            }
+          })
+          .catch(error => {
+            alert('Lỗi: ' + error.message);
+          });
+        }
+      });
+    });
+    
+    // Xử lý nút xem camera
+    const viewButtons = document.querySelectorAll('.btn-view');
+    viewButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const cameraId = this.getAttribute('data-id');
+        // Chuyển hướng đến trang xem camera chi tiết
+        window.location.href = `/views/dashboard/cameras/${cameraId}`;
+      });
+    });
+    
+    // Xử lý tìm kiếm và lọc
+    const searchInput = document.getElementById('cameraSearchInput');
+    const statusFilter = document.getElementById('cameraStatusFilter');
+    const locationFilter = document.getElementById('cameraLocationFilter');
+    
+    function applyFilters() {
+      const searchTerm = searchInput.value.toLowerCase();
+      const statusValue = statusFilter.value;
+      const locationValue = locationFilter.value;
+      
+      const cameras = document.querySelectorAll('.camera-card');
+      
+      cameras.forEach(camera => {
+        const cameraName = camera.querySelector('.camera-name').textContent.toLowerCase();
+        const cameraLocation = camera.querySelector('.camera-location').textContent.toLowerCase();
+        const cameraStatus = camera.querySelector('.camera-status').classList.contains(statusValue);
+        
+        // Áp dụng bộ lọc
+        let showCamera = true;
+        
+        // Lọc theo tên/vị trí
+        if (searchTerm && !cameraName.includes(searchTerm) && !cameraLocation.includes(searchTerm)) {
+          showCamera = false;
+        }
+        
+        // Lọc theo trạng thái
+        if (statusValue !== 'all' && !cameraStatus) {
+          showCamera = false;
+        }
+        
+        // Lọc theo khu vực
+        if (locationValue !== 'all') {
+          const locationMatch = camera.querySelector('.camera-location').textContent.toLowerCase().includes(locationValue.toLowerCase());
+          if (!locationMatch) {
+            showCamera = false;
+          }
+        }
+        
+        // Hiển thị hoặc ẩn camera
+        camera.style.display = showCamera ? '' : 'none';
+      });
+    }
+    
+    if (searchInput) searchInput.addEventListener('input', applyFilters);
+    if (statusFilter) statusFilter.addEventListener('change', applyFilters);
+    if (locationFilter) locationFilter.addEventListener('change', applyFilters);
+  });
+</script>

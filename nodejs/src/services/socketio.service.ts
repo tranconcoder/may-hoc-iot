@@ -1,7 +1,6 @@
 import type { Server } from "http";
 import { Server as SocketIOServer, Socket } from "socket.io";
-import carDetectionModel from "../models/carDetection.model";
-import trafficLightModel from "../models/trafficLight.model";
+import handleEvent from "../utils/socketio.utils";
 
 /**
  * Initializes and runs the Socket.IO connection logic.
@@ -18,57 +17,35 @@ export function runSocketIOService(server: Server): SocketIOServer {
   io.on("connection", (socket: Socket) => {
     console.log(`SOCKET.IO CLIENT CONNECTED: ${socket.id}`);
 
-    socket.on("message", (data: any) => {
-      socket.broadcast.emit("message", data);
-    });
+    /* -------------------------------------------------------------------------- */
+    /*                       Setup 'message' event handler                        */
+    /* -------------------------------------------------------------------------- */
+    socket.on("message", handleEvent("message").bind(socket))
 
-    // Listen for detection results from Python client
-    socket.on("dentinhieu", async (data: any) => {
-      // Forward traffic sign detection data to all clients (including sender)
-      socket.broadcast.emit("dentinhieu", data);
+    /* -------------------------------------------------------------------------- */
+    /*                      Setup 'dentinhieu' event handler                      */
+    /* -------------------------------------------------------------------------- */
+    socket.on("dentinhieu", handleEvent("dentinhieu").bind(socket))
 
-      await trafficLightModel
-        .create(data)
-        .then((res) => {
-          // console.log("Traffic light detection created successfully", res);
-        })
-        .catch((err) => {
-          console.log("Traffic light detection creation failed", err);
-        });
-    });
+    /* -------------------------------------------------------------------------- */
+    /*                      Setup 'giaothong' event handler                      */
+    /* -------------------------------------------------------------------------- */
+    socket.on("giaothong", handleEvent("giaothong").bind(socket))
 
-    socket.on("giaothong", async (data: any) => {
-      // Forward vehicle detection data to all clients with original event name
-      socket.broadcast.emit("giaothong", data);
+    /* -------------------------------------------------------------------------- */
+    /*                      Setup 'car' event handler                            */
+    /* -------------------------------------------------------------------------- */
+    socket.on("car", handleEvent("car").bind(socket));
 
-      await carDetectionModel
-        .create(data)
-        .then((res) => {
-          // console.log("Car detection created successfully", res);
-        })
-        .catch((err) => {
-          console.log("Car detection creation failed", err);
-        });
-    });
+    /* -------------------------------------------------------------------------- */
+    /*                      Setup 'license_plate' event handler                  */
+    /* -------------------------------------------------------------------------- */
+    socket.on("license_plate", handleEvent("license_plate").bind(socket));
 
-    socket.on("car", (data: any) => {
-      // Forward vehicle detection data to all clients (including sender)
-      console.log(data);
-
-      socket.broadcast.emit("car", data);
-    });
-
-    socket.on("license_plate", (data: any) => {
-      // Forward license plate detection data to all clients (including sender)
-      // console.log(data);
-      socket.broadcast.emit("license_plate", data);
-    });
-
-    socket.on("license_plate_ocr", (data: any) => {
-      // Forward license plate detection data to all clients (including sender)
-      // console.log(data);
-      socket.broadcast.emit("license_plate_detect", data);
-    });
+    /* -------------------------------------------------------------------------- */
+    /*                      Setup 'license_plate_ocr' event handler            */
+    /* -------------------------------------------------------------------------- */
+    socket.on("license_plate_ocr", handleEvent("license_plate_ocr").bind(socket));
 
     socket.on("disconnect", () => {
       console.log(`Socket.IO Client disconnected: ${socket.id}`);

@@ -1,0 +1,828 @@
+{{!-- Trang xem chi tiết camera --}}
+
+<style>
+/* CSS cho trang xem chi tiết camera */
+.camera-view-page {
+  padding: 20px;
+}
+
+/* Header trang */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.btn-back {
+  padding: 5px;
+  font-size: 14px;
+  color: #007bff;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+.btn-back i {
+  margin-right: 5px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.camera-status {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 14px;
+  background-color: #f8f9fa;
+}
+
+.camera-status.active {
+  color: #28a745;
+}
+
+.camera-status.inactive {
+  color: #dc3545;
+}
+
+.camera-status.maintenance {
+  color: #ffc107;
+}
+
+.camera-status i {
+  font-size: 10px;
+  margin-right: 5px;
+}
+
+.page-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Nội dung trang */
+.camera-view-content {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 20px;
+}
+
+/* Container stream camera */
+.camera-stream-container {
+  background-color: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.stream-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.camera-stream {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 56.25%; /* Tỷ lệ 16:9 */
+  overflow: hidden;
+}
+
+.camera-stream img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.stream-controls {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 10px;
+  background-color: #222;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-light {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #444;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.btn-light:hover {
+  background-color: #444;
+}
+
+/* Điều khiển PTZ */
+.camera-ptz-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  gap: 2px;
+  width: 120px;
+}
+
+.ptz-btn {
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ptz-up {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.ptz-left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.ptz-right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.ptz-down {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+/* Sidebar thông tin */
+.camera-info-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.info-card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.info-card h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 18px;
+  font-weight: 600;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.info-table td {
+  padding: 6px 0;
+}
+
+.info-table td:first-child {
+  font-weight: 500;
+  width: 40%;
+  color: #555;
+}
+
+.status-text {
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  display: inline-block;
+}
+
+.status-text.active {
+  background-color: rgba(40, 167, 69, 0.1);
+  color: #28a745;
+}
+
+.status-text.inactive {
+  background-color: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+}
+
+.status-text.maintenance {
+  background-color: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+}
+
+/* Danh sách sự kiện */
+.event-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.event-item {
+  display: flex;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.event-item:last-child {
+  border-bottom: none;
+}
+
+.event-time {
+  font-size: 12px;
+  color: #666;
+  width: 70px;
+}
+
+.event-description {
+  flex: 1;
+  font-size: 13px;
+}
+
+.no-events {
+  padding: 20px 0;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}
+
+/* Phát hiện đối tượng */
+.object-detection-toggle {
+  margin-bottom: 15px;
+}
+
+.form-check {
+  display: flex;
+  align-items: center;
+}
+
+.form-check-input {
+  margin-right: 8px;
+}
+
+.form-switch .form-check-input {
+  width: 36px;
+  height: 20px;
+}
+
+.object-detection-settings {
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.form-range {
+  width: 100%;
+}
+
+.range-value {
+  text-align: center;
+  margin-top: 5px;
+  font-size: 12px;
+  color: #666;
+}
+
+.detection-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .camera-view-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .camera-stream {
+    padding-bottom: 75%; /* Tỷ lệ 4:3 cho màn hình nhỏ hơn */
+  }
+  
+  .stream-controls {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .page-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .page-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+</style>
+
+<div class="container-fluid camera-view-page">
+  <div class="page-header">
+    <div class="header-left">
+      <a href="/views/dashboard/cameras" class="btn btn-link btn-back">
+        <i class="fas fa-arrow-left"></i> Quay lại
+      </a>
+      <h1 class="page-title">{{camera.name}}</h1>
+      <div class="camera-status {{camera.status}}">
+        <i class="fas fa-circle"></i>
+        <span>{{camera.statusText}}</span>
+      </div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-outline-primary" id="btnEditCamera" data-id="{{camera.id}}">
+        <i class="fas fa-cog"></i> Cài đặt camera
+      </button>
+      <button class="btn btn-outline-secondary" id="btnFullscreen">
+        <i class="fas fa-expand"></i> Toàn màn hình
+      </button>
+    </div>
+  </div>
+
+  <div class="camera-view-content">
+    <div class="camera-stream-container">
+      <div class="stream-wrapper">
+        <div id="cameraStream" class="camera-stream">
+          <img src="{{camera.streamUrl}}" alt="{{camera.name}} Stream" id="streamImg" onerror="this.src='/img/camera-offline.jpg'">
+        </div>
+        <div class="stream-controls">
+          <button class="btn btn-sm btn-light" id="btnStartRecord">
+            <i class="fas fa-record-vinyl"></i> Ghi hình
+          </button>
+          <button class="btn btn-sm btn-light" id="btnSnapshot">
+            <i class="fas fa-camera"></i> Chụp ảnh
+          </button>
+          <button class="btn btn-sm btn-light" id="btnZoomIn">
+            <i class="fas fa-search-plus"></i>
+          </button>
+          <button class="btn btn-sm btn-light" id="btnZoomOut">
+            <i class="fas fa-search-minus"></i>
+          </button>
+          <div class="camera-ptz-controls">
+            <button class="btn btn-sm btn-light ptz-btn ptz-up">
+              <i class="fas fa-chevron-up"></i>
+            </button>
+            <button class="btn btn-sm btn-light ptz-btn ptz-left">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="btn btn-sm btn-light ptz-btn ptz-right">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+            <button class="btn btn-sm btn-light ptz-btn ptz-down">
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="camera-info-sidebar">
+      <div class="info-card">
+        <h3>Thông tin camera</h3>
+        <table class="info-table">
+          <tr>
+            <td>Mã camera:</td>
+            <td>{{camera.id}}</td>
+          </tr>
+          <tr>
+            <td>Vị trí:</td>
+            <td>{{camera.location}}</td>
+          </tr>
+          <tr>
+            <td>Địa chỉ IP:</td>
+            <td>{{camera.ipAddress}}</td>
+          </tr>
+          <tr>
+            <td>Trạng thái:</td>
+            <td><span class="status-text {{camera.status}}">{{camera.statusText}}</span></td>
+          </tr>
+        </table>
+      </div>
+      
+      <div class="info-card">
+        <h3>Các sự kiện gần đây</h3>
+        <div class="event-list">
+          {{#if events.length}}
+            {{#each events}}
+              <div class="event-item">
+                <div class="event-time">{{this.time}}</div>
+                <div class="event-description">{{this.description}}</div>
+              </div>
+            {{/each}}
+          {{else}}
+            <div class="no-events">Không có sự kiện nào được ghi nhận</div>
+          {{/if}}
+        </div>
+      </div>
+      
+      <div class="info-card">
+        <h3>Phát hiện đối tượng</h3>
+        <div class="object-detection">
+          <div class="object-detection-toggle">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="objectDetectionToggle">
+              <label class="form-check-label" for="objectDetectionToggle">
+                Bật phát hiện đối tượng
+              </label>
+            </div>
+          </div>
+          
+          <div class="object-detection-settings">
+            <div class="form-group">
+              <label for="detectionThreshold">Ngưỡng phát hiện:</label>
+              <input type="range" class="form-range" min="0" max="1" step="0.05" value="0.5" id="detectionThreshold">
+              <div class="range-value">50%</div>
+            </div>
+            <div class="detection-options">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="detectPeople" checked>
+                <label class="form-check-label" for="detectPeople">Người</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="detectVehicles" checked>
+                <label class="form-check-label" for="detectVehicles">Phương tiện</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="detectLicensePlates" checked>
+                <label class="form-check-label" for="detectLicensePlates">Biển số xe</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="detectFaces">
+                <label class="form-check-label" for="detectFaces">Khuôn mặt</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal cài đặt camera -->
+<div class="modal fade" id="cameraSettingsModal" tabindex="-1" role="dialog" aria-labelledby="cameraSettingsModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="cameraSettingsModalLabel">Cài đặt Camera - {{camera.name}}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <ul class="nav nav-tabs" id="cameraSettingsTabs" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link active" id="general-tab" data-toggle="tab" href="#generalSettings" role="tab">
+              Cài đặt chung
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="video-tab" data-toggle="tab" href="#videoSettings" role="tab">
+              Video
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="alerts-tab" data-toggle="tab" href="#alertSettings" role="tab">
+              Cảnh báo
+            </a>
+          </li>
+        </ul>
+        
+        <div class="tab-content mt-3" id="cameraSettingsTabsContent">
+          <div class="tab-pane fade show active" id="generalSettings" role="tabpanel">
+            <form id="generalSettingsForm">
+              <div class="form-group">
+                <label for="settingsCameraName">Tên camera</label>
+                <input type="text" class="form-control" id="settingsCameraName" value="{{camera.name}}" required>
+              </div>
+              <div class="form-group">
+                <label for="settingsCameraLocation">Vị trí</label>
+                <input type="text" class="form-control" id="settingsCameraLocation" value="{{camera.location}}" required>
+              </div>
+              <div class="form-group">
+                <label for="settingsCameraIpAddress">Địa chỉ IP</label>
+                <input type="text" class="form-control" id="settingsCameraIpAddress" value="{{camera.ipAddress}}" required>
+              </div>
+              <div class="form-group">
+                <label for="settingsCameraStreamUrl">URL Stream</label>
+                <input type="text" class="form-control" id="settingsCameraStreamUrl" value="{{camera.streamUrl}}" required>
+              </div>
+              <div class="form-group">
+                <label for="settingsCameraStatus">Trạng thái</label>
+                <select class="form-control" id="settingsCameraStatus">
+                  <option value="active" {{#if (eq camera.status "active")}}selected{{/if}}>Hoạt động</option>
+                  <option value="inactive" {{#if (eq camera.status "inactive")}}selected{{/if}}>Không hoạt động</option>
+                  <option value="maintenance" {{#if (eq camera.status "maintenance")}}selected{{/if}}>Bảo trì</option>
+                </select>
+              </div>
+            </form>
+          </div>
+          
+          <div class="tab-pane fade" id="videoSettings" role="tabpanel">
+            <form id="videoSettingsForm">
+              <div class="form-group">
+                <label for="settingsResolution">Độ phân giải</label>
+                <select class="form-control" id="settingsResolution">
+                  <option value="1080p">1080p (FHD)</option>
+                  <option value="720p">720p (HD)</option>
+                  <option value="480p">480p (SD)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="settingsFps">Tốc độ khung hình (FPS)</label>
+                <select class="form-control" id="settingsFps">
+                  <option value="30">30 FPS</option>
+                  <option value="25">25 FPS</option>
+                  <option value="15">15 FPS</option>
+                  <option value="10">10 FPS</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="settingsBitrate">Tốc độ bit (Bitrate)</label>
+                <select class="form-control" id="settingsBitrate">
+                  <option value="4000">4 Mbps</option>
+                  <option value="2000">2 Mbps</option>
+                  <option value="1000">1 Mbps</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="settingsEnableAudio" checked>
+                  <label class="form-check-label" for="settingsEnableAudio">
+                    Bật âm thanh
+                  </label>
+                </div>
+              </div>
+            </form>
+          </div>
+          
+          <div class="tab-pane fade" id="alertSettings" role="tabpanel">
+            <form id="alertSettingsForm">
+              <div class="form-group">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="settingsMotionDetection" checked>
+                  <label class="form-check-label" for="settingsMotionDetection">
+                    Phát hiện chuyển động
+                  </label>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="settingsMotionSensitivity">Độ nhạy phát hiện chuyển động</label>
+                <input type="range" class="form-range" min="1" max="10" step="1" value="5" id="settingsMotionSensitivity">
+                <div class="range-value">5</div>
+              </div>
+              
+              <div class="form-group">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="settingsObjectDetection" checked>
+                  <label class="form-check-label" for="settingsObjectDetection">
+                    Phát hiện đối tượng
+                  </label>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="settingsEmailAlert" checked>
+                  <label class="form-check-label" for="settingsEmailAlert">
+                    Gửi thông báo qua email
+                  </label>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="settingsEmailRecipients">Địa chỉ email nhận thông báo</label>
+                <input type="text" class="form-control" id="settingsEmailRecipients" placeholder="example@domain.com, example2@domain.com">
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+        <button type="button" class="btn btn-primary" id="btnSaveCameraSettings">Lưu thay đổi</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript cho tương tác trang xem camera -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Xử lý nút toàn màn hình
+    const btnFullscreen = document.getElementById('btnFullscreen');
+    const cameraStream = document.getElementById('cameraStream');
+    
+    if (btnFullscreen) {
+      btnFullscreen.addEventListener('click', function() {
+        if (cameraStream.requestFullscreen) {
+          cameraStream.requestFullscreen();
+        } else if (cameraStream.webkitRequestFullscreen) {
+          cameraStream.webkitRequestFullscreen();
+        } else if (cameraStream.msRequestFullscreen) {
+          cameraStream.msRequestFullscreen();
+        }
+      });
+    }
+    
+    // Xử lý nút cài đặt camera
+    const btnEditCamera = document.getElementById('btnEditCamera');
+    if (btnEditCamera) {
+      btnEditCamera.addEventListener('click', function() {
+        $('#cameraSettingsModal').modal('show');
+      });
+    }
+    
+    // Xử lý thanh trượt ngưỡng phát hiện
+    const detectionThreshold = document.getElementById('detectionThreshold');
+    if (detectionThreshold) {
+      detectionThreshold.addEventListener('input', function() {
+        const value = (this.value * 100).toFixed(0);
+        this.nextElementSibling.textContent = value + '%';
+      });
+    }
+    
+    // Xử lý toggle phát hiện đối tượng
+    const objectDetectionToggle = document.getElementById('objectDetectionToggle');
+    const objectDetectionSettings = document.querySelector('.object-detection-settings');
+    
+    if (objectDetectionToggle && objectDetectionSettings) {
+      objectDetectionToggle.addEventListener('change', function() {
+        if (this.checked) {
+          objectDetectionSettings.style.display = 'block';
+        } else {
+          objectDetectionSettings.style.display = 'none';
+        }
+      });
+      
+      // Kiểm tra trạng thái ban đầu
+      if (!objectDetectionToggle.checked) {
+        objectDetectionSettings.style.display = 'none';
+      }
+    }
+    
+    // Xử lý nút chụp ảnh
+    const btnSnapshot = document.getElementById('btnSnapshot');
+    if (btnSnapshot) {
+      btnSnapshot.addEventListener('click', function() {
+        alert('Đã chụp ảnh từ camera!');
+        // Thực tế sẽ có code để chụp ảnh từ stream và lưu lại
+      });
+    }
+    
+    // Xử lý nút ghi hình
+    let isRecording = false;
+    const btnStartRecord = document.getElementById('btnStartRecord');
+    if (btnStartRecord) {
+      btnStartRecord.addEventListener('click', function() {
+        isRecording = !isRecording;
+        if (isRecording) {
+          this.innerHTML = '<i class="fas fa-stop"></i> Dừng ghi';
+          this.classList.remove('btn-light');
+          this.classList.add('btn-danger');
+        } else {
+          this.innerHTML = '<i class="fas fa-record-vinyl"></i> Ghi hình';
+          this.classList.remove('btn-danger');
+          this.classList.add('btn-light');
+        }
+      });
+    }
+    
+    // Xử lý nút lưu cài đặt
+    const btnSaveCameraSettings = document.getElementById('btnSaveCameraSettings');
+    if (btnSaveCameraSettings) {
+      btnSaveCameraSettings.addEventListener('click', function() {
+        // Thu thập dữ liệu từ các form cài đặt
+        const cameraData = {
+          id: '{{camera.id}}',
+          name: document.getElementById('settingsCameraName').value,
+          location: document.getElementById('settingsCameraLocation').value,
+          ipAddress: document.getElementById('settingsCameraIpAddress').value,
+          streamUrl: document.getElementById('settingsCameraStreamUrl').value,
+          status: document.getElementById('settingsCameraStatus').value,
+          // Các cài đặt khác từ video và tab cảnh báo
+          video: {
+            resolution: document.getElementById('settingsResolution').value,
+            fps: document.getElementById('settingsFps').value,
+            bitrate: document.getElementById('settingsBitrate').value,
+            audio: document.getElementById('settingsEnableAudio').checked
+          },
+          alerts: {
+            motionDetection: document.getElementById('settingsMotionDetection').checked,
+            motionSensitivity: document.getElementById('settingsMotionSensitivity').value,
+            objectDetection: document.getElementById('settingsObjectDetection').checked,
+            emailAlert: document.getElementById('settingsEmailAlert').checked,
+            emailRecipients: document.getElementById('settingsEmailRecipients').value
+          }
+        };
+        
+        // Gửi dữ liệu cài đặt đến server
+        fetch(`/api/cameras/${cameraData.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(cameraData)
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Không thể cập nhật cài đặt camera');
+          }
+          return response.json();
+        })
+        .then(data => {
+          // Đóng modal và thông báo thành công
+          $('#cameraSettingsModal').modal('hide');
+          alert('Cài đặt camera đã được cập nhật thành công!');
+          
+          // Cập nhật thông tin hiển thị trên trang
+          document.querySelector('.page-title').textContent = cameraData.name;
+          document.querySelector('.info-table tr:nth-child(2) td:nth-child(2)').textContent = cameraData.location;
+          document.querySelector('.info-table tr:nth-child(3) td:nth-child(2)').textContent = cameraData.ipAddress;
+          
+        })
+        .catch(error => {
+          alert('Lỗi: ' + error.message);
+        });
+      });
+    }
+    
+    // Xử lý các nút điều khiển PTZ camera
+    const ptzButtons = document.querySelectorAll('.ptz-btn');
+    ptzButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const direction = this.classList.contains('ptz-up') ? 'up' :
+                         this.classList.contains('ptz-down') ? 'down' :
+                         this.classList.contains('ptz-left') ? 'left' : 'right';
+        
+        // Gửi lệnh điều khiển PTZ đến server
+        fetch(`/api/cameras/{{camera.id}}/ptz/${direction}`, {
+          method: 'POST'
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Không thể điều khiển camera PTZ');
+          }
+          return response.json();
+        })
+        .catch(error => {
+          console.error('Lỗi điều khiển PTZ:', error);
+        });
+      });
+    });
+    
+    // Xử lý các nút zoom
+    const btnZoomIn = document.getElementById('btnZoomIn');
+    const btnZoomOut = document.getElementById('btnZoomOut');
+    
+    if (btnZoomIn) {
+      btnZoomIn.addEventListener('click', function() {
+        fetch(`/api/cameras/{{camera.id}}/zoom/in`, {
+          method: 'POST'
+        })
+        .catch(error => {
+          console.error('Lỗi zoom in:', error);
+        });
+      });
+    }
+    
+    if (btnZoomOut) {
+      btnZoomOut.addEventListener('click', function() {
+        fetch(`/api/cameras/{{camera.id}}/zoom/out`, {
+          method: 'POST'
+        })
+        .catch(error => {
+          console.error('Lỗi zoom out:', error);
+        });
+      });
+    }
+    
+    // Thanh trượt độ nhạy chuyển động trong tab cài đặt
+    const motionSensitivity = document.getElementById('settingsMotionSensitivity');
+    if (motionSensitivity) {
+      motionSensitivity.addEventListener('input', function() {
+        this.nextElementSibling.textContent = this.value;
+      });
+    }
+  });
+</script>
