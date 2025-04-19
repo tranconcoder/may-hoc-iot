@@ -468,9 +468,8 @@ def disconnect():
     print("Will attempt to reconnect automatically...")
 
 @sio.on('image')
-def on_image(cameraId, data):
+def on_image(data):
     global last_frame_time
-    print(cameraId)
     
     # Limit frame processing rate to avoid overload
     current_time = time.time()
@@ -478,15 +477,16 @@ def on_image(cameraId, data):
         return  # Skip this frame to maintain reasonable frame rate
     
     last_frame_time = current_time
+    image = data['buffer']
     
     try:
         # Convert image data from buffer to numpy array
-        if isinstance(data, dict) and 'image' in data:
+        if isinstance(image, dict) and 'image' in image:
             # If data is a dictionary with 'image' key
-            image_data = data['image']
+            image_data = image['image']
         else:
             # If data is directly the image buffer
-            image_data = data
+            image_data = image
         
         # Convert the received image data to numpy array
         if isinstance(image_data, str):

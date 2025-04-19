@@ -14,7 +14,10 @@ export default new (class ViewController {
   };
 
   dashboardPage: RequestHandler = (req, res, next) => {
-    res.render("pages/home-page", { layout: "dashboard-layout", isHome: true });
+    res.render("pages/home-page", {
+      layout: "traffic-dashboard",
+      isHome: true,
+    });
   };
 
   cameraManagementPage: RequestHandler = (req, res, next) => {
