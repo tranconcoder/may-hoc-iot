@@ -1,5 +1,5 @@
 import _ from "lodash"
-import cameraModel from "../models/camera.model"
+import cameraModel from "../models/camera.model.js"
 import crypto from 'crypto'
 
 export default new class CameraService {

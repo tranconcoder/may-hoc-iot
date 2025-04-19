@@ -1,46 +1,46 @@
 // Express app
 import express from 'express';
 import session, { SessionOptions } from 'express-session';
-import handleRoute from './routes';
+import handleRoute from '@/routes/index.js';
 import bodyParser from 'body-parser';
 
 // Handlebars
 import path from 'path';
-import SetupHandlebars from './services/handlebars.service';
+import SetupHandlebars from '@/services/handlebars.service.js';
 
 // Https server
 import fs from 'fs';
 
 // Websocket Server
-import runWebsocketService from './services/websocket.service';
+import runWebsocketService from '@/services/websocket.service.js';
 import { WebSocketServer } from 'ws';
 
 // Services
-import * as ffmpegService from './services/ffmpeg.service';
+import * as ffmpegService from '@/services/ffmpeg.service.js';
 
 // Morgan
 import morgan from 'morgan';
 
 // Environments
-import { envConfig } from "./config";
+import { envConfig } from "@/config/index.js";
 
 // Secure
 import cors from "cors";
 import { createServer } from "http"; // Import createServer from http
-import { runSocketIOService } from './services/socketio.service';
-import DBCore from './core/db.core';
-import HandleErrorService from './services/handleError.service';
+import { runSocketIOService } from '@/services/socketio.service.js';
+import DBCore from '@/core/db.core.js';
+import HandleErrorService from '@/services/handleError.service.js';
 
 // Constants
 const { HOST, PORT } = envConfig;
 
 // SSL Certificates
 const privateKey = fs.readFileSync(
-  path.join(__dirname, "./assets/certificates/key.pem"),
+  path.join(import.meta.dirname, "./assets/certificates/key.pem"),
   "utf8"
 );
 const certificate = fs.readFileSync(
-  path.join(__dirname, "./assets/certificates/cert.pem"),
+  path.join(import.meta.dirname, "./assets/certificates/cert.pem"),
   "utf8"
 );
 
@@ -99,9 +99,9 @@ app.use(bodyParser.json());
 //
 // STATIC FILES
 //
-app.use("/public", express.static(path.join(__dirname, "../public")));
-app.use("/css", express.static(path.join(__dirname, "../public/css")));
-app.use("/scripts", express.static(path.join(__dirname, "../public/scripts")));
+app.use("/public", express.static(path.join(import.meta.dirname, "../public")));
+app.use("/css", express.static(path.join(import.meta.dirname, "../public/css")));
+app.use("/scripts", express.static(path.join(import.meta.dirname, "../public/scripts")));
 
 //
 // HANDLEBARS

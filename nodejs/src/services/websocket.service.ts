@@ -1,22 +1,22 @@
 import type { Request } from 'express';
-import type { WebSocketCustom } from '../types/ws';
+import type { WebSocketCustom } from '../types/ws.js';
 import { io as ioClient, Socket } from "socket.io-client";
 
 // Websocket
 import url from "url";
 import { WebSocketServer } from "ws";
 // Analytics
-import { WebsocketAnalytics } from "./websocketAnalytics.service";
+import { WebsocketAnalytics } from "./websocketAnalytics.service.js";
 
 // Import the io instance (assuming it's exported from index.ts)
 // Adjust the path if necessary
-import cameraModel, { CameraModel, cameraSchema } from "@/models/camera.model";
-import { envConfig } from '@/config';
-import { CAMERA_NAMESPACE_START } from '@/config/socketio.config';
+import cameraModel, { CameraModel, cameraSchema } from "@/models/camera.model.js";
+import { envConfig } from '@/config/index.js';
+import { CAMERA_NAMESPACE_START } from '@/config/socketio.config.js';
 import { imageSize } from 'image-size';
-import { io } from '..';
+import { io } from '@/index.js';
 import mongoose from 'mongoose';
-import cameraImageModel from '@/models/cameraImage.model';
+import cameraImageModel from '@/models/cameraImage.model.js';
 
 
 const websocketAnalytics = new WebsocketAnalytics(0, 0, 10_000);
@@ -68,9 +68,18 @@ export default function runWebsocketService(
         websocketAnalytics.transferData(buffer.length, 1)
 
         const room = `camera_${cameraId}`;
-        const imageId = new mongoose.Types.ObjectId();
+        const imageId = new mongoose.Types.ObjectId().toString();
+        const timestamp = Date.now();
 
-        io.to(room).emit("image", { cameraId, imageId, width, height, buffer });
+        io.to(room).emit("image", {
+          cameraId,
+          imageId, 
+          width, 
+          height, 
+          buffer, 
+          track_line_y: camera.camera_track_line_y, 
+          created_at: timestamp
+        });
 
         /* ---------------------------- Save image to db ---------------------------- */
         cameraImageModel.create({
@@ -79,6 +88,7 @@ export default function runWebsocketService(
           image: buffer,
           width,
           height,
+          created_at: timestamp,
         })
           .catch(console.error);
       });

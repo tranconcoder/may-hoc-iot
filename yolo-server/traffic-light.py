@@ -50,7 +50,7 @@ def process_frames_thread():
                 time.sleep(0.01)
                 continue
             
-            frame, timestamp = frame_data
+            frame, timestamp, cameraId, imageId = frame_data
             
             # Skip processing if model isn't loaded
             if model is None:
@@ -122,13 +122,15 @@ def process_frames_thread():
             
             # Prepare response with detection results
             response = {
+                'cameraId': cameraId,
+                'imageId': imageId,
                 'detections': detected_signs,
                 'inference_time': inference_time,
                 'image_dimensions': {
                     'width': width,
                     'height': height
                 },
-                'timestamp': timestamp,
+                'created_at': timestamp,
                 'sign_counts': sign_counts
             }
 
@@ -232,6 +234,8 @@ def on_image(data):
     last_frame_time = current_time
 
     image = data['buffer']
+    cameraId = data['cameraId']
+    imageId = data['imageId']
     
     try:
         # Convert image data from buffer to numpy array
@@ -271,7 +275,7 @@ def on_image(data):
         
         # Add the frame to the model processing queue
         try:
-            model_frame_queue.put((frame.copy(), time.time()), block=False)
+            model_frame_queue.put((frame.copy(), time.time(), cameraId, imageId), block=False)
         except queue.Full:
             # If model queue is full, just discard this frame for processing
             pass

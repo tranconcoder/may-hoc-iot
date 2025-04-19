@@ -1,10 +1,10 @@
 import path from 'path';
-import { envConfig } from '.';
-import { ConfigFilterVideo } from '../types/ffmpeg';
+import { envConfig } from './index.js';
+import { ConfigFilterVideo } from '@/types/ffmpeg.js';
 
 // Bin file path
-export const FFMPEG_PATH = path.join(__dirname, envConfig.FFMPEG_PATH);
-export const FFPROBE_PATH = path.join(__dirname, envConfig.FFPROBE_PATH);
+export const FFMPEG_PATH = path.join(import.meta.dirname, envConfig.FFMPEG_PATH);
+export const FFPROBE_PATH = path.join(import.meta.dirname, envConfig.FFPROBE_PATH);
 
 export const FRAMESIZES = {
 	QCIF: '176x144',
@@ -29,7 +29,7 @@ export const FONTSIZE = 18;
 export const LINE_MARGIN_SIZE = 3;
 export const DRAWTEXT_COLOR = 'white@0.8';
 export const DRAWTEXT_FONTPATH = path.join(
-	__dirname,
+	import.meta.dirname,
 	'./assets/fonts/CaskaydiaCoveNerdFontMono-Regular.ttf'
 );
 export const SECURITY_GATE_LIVE_NAME = 'security_gate';

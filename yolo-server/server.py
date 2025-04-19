@@ -101,7 +101,7 @@ def process_frames_thread():
                 time.sleep(0.01)
                 continue
             
-            frame, timestamp, cameraId, imageId = frame_data
+            frame, cameraId, imageId, created_at, track_line_y = frame_data
             
             # Skip processing if model isn't loaded
             if model is None:
@@ -257,26 +257,22 @@ def process_frames_thread():
                     
             # Prepare response with detection results
             response = {
-                'cameraId': cameraId,
-                'imageId': imageId,
+                'camera_id': cameraId,
+                'image_id': imageId,
+                'track_line_y': track_line_y,
                 'detections': detected_objects,
                 'inference_time': inference_time,
                 'image_dimensions': {
                     'width': width,
                     'height': height
                 },
-                'timestamp': timestamp,
+                'created_at': created_at,
                 'vehicle_count': {
                     'total_up': total_counted_up,
                     'total_down': total_counted_down,
                     'by_type_up': vehicle_counts_up,
                     'by_type_down': vehicle_counts_down,
                     'current': vehicle_counts
-                },
-                'counting_line': {
-                    'y': counting_line_y,
-                    'start_x': counting_line_start_x,
-                    'end_x': counting_line_end_x
                 },
                 'tracks': [
                     {
@@ -296,8 +292,8 @@ def process_frames_thread():
             }
 
             # Emit detection results back to the server
-            sio.emit('giaothong', response, to=f"camera_{cameraId}")
-            
+            if len(detected_objects) > 0:
+                sio.emit('giaothong', response)
             print(f"Processed image, found {len(detected_objects)} vehicles, inference time: {inference_time:.2f}ms")
             
             # Display vehicle count summary
@@ -410,6 +406,8 @@ def on_image(data):
     image = data['buffer']
     cameraId = data['cameraId']
     imageId = data['imageId']
+    created_at = data['created_at']
+    track_line_y = data['track_line_y']
     
     try:
         # Convert image data from buffer to numpy array
@@ -449,7 +447,7 @@ def on_image(data):
         
         # Add the frame to the model processing queue
         try:
-            model_frame_queue.put((frame.copy(), time.time(), cameraId, imageId), block=False)
+            model_frame_queue.put((frame.copy(), cameraId, imageId, created_at, track_line_y), block=False)
         except queue.Full:
             # If model queue is full, just discard this frame for processing
             pass

@@ -1,7 +1,7 @@
 import {model, Schema} from "mongoose";
-import { timestamps } from "../config/model.config";
-import { IMAGES_EXPIRE_TIME } from "../config/images.config";
-import { CAMERA_MODEL_NAME } from "./camera.model";
+import { timestamps } from "@/config/model.config.js";
+import { IMAGES_EXPIRE_TIME } from "@/config/images.config.js";
+import { CAMERA_MODEL_NAME } from "@/models/camera.model.js";
 
 export const IMAGES_DOCUMENT_NAME = "images";
 export const IMAGES_COLLECTION_NAME = "images";

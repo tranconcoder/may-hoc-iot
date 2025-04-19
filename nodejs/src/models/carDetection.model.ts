@@ -1,9 +1,16 @@
 import { Schema, model } from 'mongoose';
+import { CAMERA_MODEL_NAME } from '@/models/camera.model.js';
+import { CAMERA_IMAGE_MODEL_NAME } from '@/models/cameraImage.model.js';
+
 
 export const CART_DETECTION_MODEL_NAME = 'CarDetection';
 export const CART_DETECTION_COLLECTION_NAME = 'car_detections';
 
+
 export const cartDetectionSchema = new Schema({
+    camera_id: { type: Schema.Types.ObjectId, ref: CAMERA_MODEL_NAME, required: true },
+    image_id: { type: Schema.Types.ObjectId, ref: CAMERA_IMAGE_MODEL_NAME, required: true },
+
     detections: {
         type: [
             {
@@ -19,7 +26,7 @@ export const cartDetectionSchema = new Schema({
                 }
             }
         ],
-        default: []
+        required: true
     },
     inference_time: { type: Number, required: true },
     image_dimensions: {
@@ -43,23 +50,38 @@ export const cartDetectionSchema = new Schema({
             motorcycle: { type: Number, required: true },
             bicycle: { type: Number, required: true },
         },
-        current: {
-            car: { type: Number, required: true },
-            truck: { type: Number, required: true },
-            bus: { type: Number, required: true },
-            motorcycle: { type: Number, required: true },
-            bicycle: { type: Number, required: true },
-        }
     },
-    counting_line: {
-        y: { type: Number, required: true },
-        start_x: { type: Number, required: true },
-        end_x: { type: Number, required: true },
+    tracks: {
+        type: [
+            {
+                id: { type: Number, required: true },
+                positions: {
+                    type: [
+                        {
+                            x: { type: Number, required: true },
+                            y: { type: Number, required: true },
+                            time: { type: Number, required: true },
+                        }
+                    ],
+                    default: []
+                },
+                class: { type: String, required: true },
+            }
+        ],
+        default: []
+    },
+    new_crossings: {
+        type: [
+            {
+                id: { type: String, required: true },
+                direction: { type: String, required: true },
+            }
+        ],
+        default: []
     }
 }, {
     timestamps: {
         createdAt: 'created_at',
-        updatedAt: false
     },
     collection: CART_DETECTION_COLLECTION_NAME,
 });

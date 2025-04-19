@@ -2,6 +2,7 @@
 	"name": "iot-trong-cong-nghiep-server",
 	"version": "1.0.0",
 	"private": true,
+	"type": "module",
 	"scripts": {
 		"dev": "NODE_ENV=development tsx --watch src/index.ts",
 		"product": "NODE_ENV=production node ./dist/bundle.js",

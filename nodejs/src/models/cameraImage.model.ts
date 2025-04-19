@@ -1,6 +1,6 @@
 import { Schema, model } from "mongoose";
 import ms from "ms";
-import { CAMERA_MODEL_NAME } from "./camera.model";
+import { CAMERA_MODEL_NAME } from "@/models/camera.model.js";
 
 export const CAMERA_IMAGE_MODEL_NAME = "camera_image";
 export const CAMERA_IMAGE_COLLECTION_NAME = "camera_images";

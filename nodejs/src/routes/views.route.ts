@@ -1,4 +1,4 @@
-import viewController from "@/controllers/view.controller";
+import viewController from "@/controllers/view.controller.js";
 import { Router } from "express";
 
 const viewsRouter = Router();

@@ -4,30 +4,24 @@ import Ffmpeg from 'fluent-ffmpeg';
 import {
 	readStreamEsp32CamMonitorImg,
 	readStreamEsp32CamSecurityGateImg,
-} from './stream.service';
+} from './stream.service.js';
 // Utils
 import {
-	convertObjectConfigToString,
 	handleCodecData,
 	handleEnd,
 	handleError,
 	handleProgress,
 	handleStart,
 	reverseFrameSize,
-} from '../utils/ffmpeg.util';
+} from '@/utils/ffmpeg.util.js';
 // Configs
 import {
 	FFMPEG_PATH,
 	FRAMESIZE,
 	RTMP_MONITOR_URL,
 	RTMP_SECURITY_GATE_URL,
-} from '../config/ffmpeg.config';
+} from '@/config/ffmpeg.config.js';
 // Video filter config
-import {
-	securityGateFilterConfig,
-	timeFilterConfig,
-	monitorFilterConfig,
-} from '../config/ffmpeg.config';
 
 //
 // Initial ffmpeg service

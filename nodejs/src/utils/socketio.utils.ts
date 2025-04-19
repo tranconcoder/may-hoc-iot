@@ -38,6 +38,8 @@ export async function handleImageEvent(this: Socket, data: {
   width: number;
   height: number;
   buffer: Buffer;
+  created_at: number;
+  track_line_y: number;
 }) {
   const socket = this;
 
@@ -47,6 +49,8 @@ export async function handleImageEvent(this: Socket, data: {
     width: data.width,
     height: data.height,
     buffer: data.buffer,
+    created_at: data.created_at,
+    track_line_y: data.track_line_y,
   })
 }
 
@@ -59,11 +63,8 @@ export async function handleDenTinHieuEvent(this: Socket, data: any) {
   // Forward traffic sign detection data to all clients (including sender)
   socket.broadcast.emit("dentinhieu", data);
 
-  await trafficLightModel
+  trafficLightModel
     .create(data)
-    .then((res) => {
-      // console.log("Traffic light detection created successfully", res);
-    })
     .catch((err) => {
       console.log("Traffic light detection creation failed", err);
     });
@@ -79,9 +80,19 @@ export async function handleGiaoThongEvent(this: Socket, data: any) {
   socket.broadcast.emit("giaothong", data);
 
   await carDetectionModel
-    .create(data)
-    .then((res) => {
-      // console.log("Car detection created successfully", res);
+    .create({
+      camera_id: data.camera_id,
+      image_id: data.image_id,
+      created_at: data.created_at,
+      detections: data.detections,
+      inference_time: data.inference_time,
+      image_dimensions: data.image_dimensions,
+      vehicle_count: data.vehicle_count,
+      tracks: data.tracks,
+      new_crossings: data.new_crossings,
+    })
+    .then((newCarDetection) => {
+      console.log("Car detection created successfully", newCarDetection);
     })
     .catch((err) => {
       console.log("Car detection creation failed", err);

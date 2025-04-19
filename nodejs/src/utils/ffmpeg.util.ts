@@ -1,4 +1,4 @@
-import type { ObjectAnyKey } from "../types/object";
+import type { ObjectAnyKey } from "@/types/object.js";
 import path from "path";
 import { format } from "date-fns";
 import fs from "fs";

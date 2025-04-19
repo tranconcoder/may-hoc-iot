@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 import ErrorResponse from '@/core/error.core.js';
 import { v7 as uuid } from 'uuid';
-import { NODE_ENV } from '@/config/env.config';
+import { NODE_ENV } from '@/config/env.config.js';
 
 type ErrorHandler = (error: ErrorResponse, req: Request, res: Response, next: NextFunction) => void;
 

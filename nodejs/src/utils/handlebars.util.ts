@@ -2,7 +2,7 @@ import type { UnknownObject } from 'express-handlebars/types';
 
 import { readdirSync, existsSync, lstatSync } from 'fs';
 import path from 'path';
-import { envConfig } from '../config';
+import { envConfig } from '@/config/index.js';
 
 const exHbsHelpers: UnknownObject = {
 	loadCss(view: string) {

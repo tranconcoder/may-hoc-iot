@@ -71,10 +71,6 @@ export function runSocketIOService(server: Server): SocketIOServer {
 
   console.log("Socket.IO service logic initialized.");
 
-  io.of(/^\/camera_\d+$/).on("connection", (socket: Socket) => {
-    console.log(socket);
-  });
-
   io.listen(3001);
 
   return io;

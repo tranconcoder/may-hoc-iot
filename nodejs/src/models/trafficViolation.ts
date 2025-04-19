@@ -1,6 +1,6 @@
 import {model, Schema} from "mongoose";
-import { timestamps } from "../config/model.config";
-import { TrafficViolation } from "../enums/trafficViolation.model";
+import { timestamps } from "@/config/model.config.js";
+import { TrafficViolation } from "@/enums/trafficViolation.model.js";
 
 export const TRAFFIC_VIOLATION_DOCUMENT_NAME = "trafficViolation";
 export const TRAFFIC_VIOLATION_COLLECTION_NAME = "trafficViolation";
