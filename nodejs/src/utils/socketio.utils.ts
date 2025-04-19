@@ -33,13 +33,20 @@ export async function handleMessageEvent(this: Socket, data: any) {
 /* -------------------------------------------------------------------------- */
 /*                          Handle 'image' event handler                       */
 /* -------------------------------------------------------------------------- */
-export async function handleImageEvent(this: Socket, room: string, data: any) {
+export async function handleImageEvent(this: Socket, data: {
+  width: number;
+  height: number;
+  buffer: Buffer;
+}) {
   const socket = this;
-  console.log(this)
 
-  console.log({
-    room,
-    data
+  const cameraId = socket.nsp.name.split("_")[1];
+
+  socket.broadcast.emit("image", {
+    cameraId,
+    width: data.width,
+    height: data.height,
+    buffer: data.buffer,
   });
 }
 

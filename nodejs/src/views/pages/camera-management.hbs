@@ -42,98 +42,81 @@
     </div>
   </div>
 
-  <div class="camera-grid-container">
-    <div class="camera-grid">
-      {{#if cameras.length}}
-        {{#each cameras}}
-          <div class="camera-card" data-camera-id="{{this.id}}">
-            <div class="camera-preview">
-              <img src="{{this.previewUrl}}" alt="{{this.name}}" onerror="this.src='/img/camera-offline.jpg'">
-              <div class="camera-status {{this.status}}">
-                <i class="fas fa-circle"></i>
-                <span>{{this.statusText}}</span>
+  <!-- Tab Navigation -->
+  <ul class="nav nav-tabs camera-tabs mb-4" id="cameraTabList" role="tablist">
+    {{#if cameras.length}}
+      {{#each cameraTabs}}
+        <li class="nav-item" role="presentation">
+          <button class="nav-link {{#if @first}}active{{/if}}" 
+                  id="tab-{{@index}}-tab" 
+                  data-bs-toggle="tab" 
+                  data-bs-target="#tab-{{@index}}" 
+                  type="button" 
+                  role="tab" 
+                  aria-controls="tab-{{@index}}" 
+                  aria-selected="{{#if @first}}true{{else}}false{{/if}}">
+            Trang {{add @index 1}}
+          </button>
+        </li>
+      {{/each}}
+    {{else}}
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="empty-tab" data-bs-toggle="tab" data-bs-target="#empty-content" type="button" role="tab">
+          Danh sách camera
+        </button>
+      </li>
+    {{/if}}
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="tab-content" id="cameraTabContent">
+    {{#if cameras.length}}
+      {{#each cameraTabs}}
+        <div class="tab-pane fade {{#if @first}}show active{{/if}}" 
+             id="tab-{{@index}}" 
+             role="tabpanel" 
+             aria-labelledby="tab-{{@index}}-tab">
+          <div class="camera-grid">
+            {{#each this}}
+              <div class="camera-card" data-camera-id="{{this.id}}">
+                <div class="camera-preview">
+                  <img src="{{this.previewUrl}}" alt="{{this.name}}" onerror="this.src='/img/camera-offline.jpg'">
+                  <div class="camera-status {{this.status}}">
+                    <i class="fas fa-circle"></i>
+                    <span>{{this.statusText}}</span>
+                  </div>
+                  <div class="camera-resolution">{{this.resolution}}</div>
+                </div>
+                <div class="camera-info">
+                  <h3 class="camera-name">{{this.name}}</h3>
+                  <p class="camera-location"><i class="fas fa-map-marker-alt"></i> {{this.location}}</p>
+                  <p class="camera-ip"><i class="fas fa-network-wired"></i> {{this.ipAddress}}</p>
+                </div>
+                <div class="camera-actions">
+                  <button class="btn btn-sm btn-primary btn-view" data-id="{{this.id}}">
+                    <i class="fas fa-eye"></i> Xem
+                  </button>
+                  <button class="btn btn-sm btn-info btn-edit" data-id="{{this.id}}">
+                    <i class="fas fa-edit"></i> Sửa
+                  </button>
+                  <button class="btn btn-sm btn-danger btn-delete" data-id="{{this.id}}">
+                    <i class="fas fa-trash"></i> Xóa
+                  </button>
+                </div>
               </div>
-            </div>
-            <div class="camera-info">
-              <h3 class="camera-name">{{this.name}}</h3>
-              <p class="camera-location"><i class="fas fa-map-marker-alt"></i> {{this.location}}</p>
-              <p class="camera-ip"><i class="fas fa-network-wired"></i> {{this.ipAddress}}</p>
-            </div>
-            <div class="camera-actions">
-              <button class="btn btn-sm btn-primary btn-view" data-id="{{this.id}}">
-                <i class="fas fa-eye"></i> Xem
-              </button>
-              <button class="btn btn-sm btn-info btn-edit" data-id="{{this.id}}">
-                <i class="fas fa-edit"></i> Sửa
-              </button>
-              <button class="btn btn-sm btn-danger btn-delete" data-id="{{this.id}}">
-                <i class="fas fa-trash"></i> Xóa
-              </button>
-            </div>
+            {{/each}}
           </div>
-        {{/each}}
-      {{else}}
+        </div>
+      {{/each}}
+    {{else}}
+      <div class="tab-pane fade show active" id="empty-content" role="tabpanel">
         <div class="no-cameras-found">
           <i class="fas fa-video-slash"></i>
           <p>Không có camera nào được tìm thấy</p>
           <button class="btn btn-primary" id="btnAddFirstCamera">Thêm camera đầu tiên</button>
         </div>
-      {{/if}}
-    </div>
-  </div>
-</div>
-
-<!-- Modal thêm/sửa camera -->
-<div class="modal fade" id="cameraModal" tabindex="-1" role="dialog" aria-labelledby="cameraModalLabel" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="cameraModalLabel">Thêm Camera Mới</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
       </div>
-      <div class="modal-body">
-        <form id="cameraForm">
-          <div class="form-group">
-            <label for="cameraName">Tên camera</label>
-            <input type="text" class="form-control" id="cameraName" required>
-          </div>
-          <div class="form-group">
-            <label for="cameraLocation">Vị trí</label>
-            <input type="text" class="form-control" id="cameraLocation" required>
-          </div>
-          <div class="form-group">
-            <label for="cameraIpAddress">Địa chỉ IP</label>
-            <input type="text" class="form-control" id="cameraIpAddress" required>
-          </div>
-          <div class="form-group">
-            <label for="cameraStreamUrl">URL Stream</label>
-            <input type="text" class="form-control" id="cameraStreamUrl" required>
-          </div>
-          <div class="form-group">
-            <label for="cameraUsername">Tên đăng nhập (nếu có)</label>
-            <input type="text" class="form-control" id="cameraUsername">
-          </div>
-          <div class="form-group">
-            <label for="cameraPassword">Mật khẩu (nếu có)</label>
-            <input type="password" class="form-control" id="cameraPassword">
-          </div>
-          <div class="form-group">
-            <label for="cameraStatus">Trạng thái</label>
-            <select class="form-control" id="cameraStatus">
-              <option value="active">Hoạt động</option>
-              <option value="inactive">Không hoạt động</option>
-              <option value="maintenance">Bảo trì</option>
-            </select>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
-        <button type="button" class="btn btn-primary" id="btnSaveCamera">Lưu</button>
-      </div>
-    </div>
+    {{/if}}
   </div>
 </div>
 
@@ -149,102 +132,28 @@
     // Nút thêm camera
     if (btnAddCamera) {
       btnAddCamera.addEventListener('click', function() {
-        // Reset form và hiển thị modal
-        document.getElementById('cameraForm').reset();
-        document.getElementById('cameraModalLabel').textContent = 'Thêm Camera Mới';
-        // Hiển thị modal (giả định bạn đang sử dụng Bootstrap)
-        $('#cameraModal').modal('show');
+        // Chuyển hướng đến trang thêm camera
+        window.location.href = '/views/cameras/add';
       });
     }
     
     // Nút thêm camera đầu tiên
     if (btnAddFirstCamera) {
       btnAddFirstCamera.addEventListener('click', function() {
-        document.getElementById('cameraForm').reset();
-        document.getElementById('cameraModalLabel').textContent = 'Thêm Camera Đầu Tiên';
-        $('#cameraModal').modal('show');
+        // Chuyển hướng đến trang thêm camera
+        window.location.href = '/views/cameras/add';
       });
     }
     
-    // Nút lưu camera
-    if (btnSaveCamera) {
-      btnSaveCamera.addEventListener('click', function() {
-        // Validate form
-        const form = document.getElementById('cameraForm');
-        if (!form.checkValidity()) {
-          form.reportValidity();
-          return;
-        }
-        
-        // Thu thập dữ liệu từ form
-        const cameraData = {
-          name: document.getElementById('cameraName').value,
-          location: document.getElementById('cameraLocation').value,
-          ipAddress: document.getElementById('cameraIpAddress').value,
-          streamUrl: document.getElementById('cameraStreamUrl').value,
-          username: document.getElementById('cameraUsername').value,
-          password: document.getElementById('cameraPassword').value,
-          status: document.getElementById('cameraStatus').value
-        };
-        
-        // Gửi dữ liệu đến server (API)
-        fetch('/api/cameras', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(cameraData)
-        })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Không thể lưu camera');
-          }
-          return response.json();
-        })
-        .then(data => {
-          // Đóng modal
-          $('#cameraModal').modal('hide');
-          
-          // Làm mới trang để hiển thị camera mới
-          location.reload();
-        })
-        .catch(error => {
-          alert('Lỗi: ' + error.message);
-        });
-      });
-    }
+    // Nút lưu camera - đã xóa vì không còn cần thiết khi đã chuyển sang trang add-camera riêng biệt
     
     // Xử lý nút sửa camera
     const editButtons = document.querySelectorAll('.btn-edit');
     editButtons.forEach(button => {
       button.addEventListener('click', function() {
         const cameraId = this.getAttribute('data-id');
-        
-        // Lấy thông tin camera từ server
-        fetch(`/api/cameras/${cameraId}`)
-          .then(response => response.json())
-          .then(camera => {
-            // Điền thông tin vào form
-            document.getElementById('cameraName').value = camera.name;
-            document.getElementById('cameraLocation').value = camera.location;
-            document.getElementById('cameraIpAddress').value = camera.ipAddress;
-            document.getElementById('cameraStreamUrl').value = camera.streamUrl;
-            document.getElementById('cameraUsername').value = camera.username || '';
-            document.getElementById('cameraPassword').value = ''; // Không hiển thị mật khẩu
-            document.getElementById('cameraStatus').value = camera.status;
-            
-            // Cập nhật tiêu đề modal
-            document.getElementById('cameraModalLabel').textContent = 'Sửa Camera';
-            
-            // Lưu ID camera để sử dụng khi cập nhật
-            btnSaveCamera.setAttribute('data-camera-id', cameraId);
-            
-            // Hiển thị modal
-            $('#cameraModal').modal('show');
-          })
-          .catch(error => {
-            alert('Không thể lấy thông tin camera: ' + error.message);
-          });
+        // Chuyển hướng đến trang sửa camera (có thể tạo route mới hoặc sử dụng route hiện có với tham số)
+        window.location.href = `/views/cameras/edit/${cameraId}`;
       });
     });
     

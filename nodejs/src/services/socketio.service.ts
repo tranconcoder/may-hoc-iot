@@ -39,22 +39,7 @@ export function runSocketIOService(server: Server): SocketIOServer {
     /* -------------------------------------------------------------------------- */
     /*                          Set 'image' event handler                         */
     /* -------------------------------------------------------------------------- */
-    socket.on("image", (data: {
-      width: number;
-      height: number;
-      buffer: Buffer;
-    }) => {
-      const cameraId = socket.nsp.name.split("_")[1];
-
-      socket.broadcast.emit("image", {
-        cameraId,
-        width: data.width,
-        height: data.height,
-        buffer: data.buffer,
-      });
-
-      console.log("Emited image to all clients");
-    });
+    socket.on("image", handleEvent("image").bind(socket));
 
     /* -------------------------------------------------------------------------- */
     /*                       Setup 'message' event handler                        */

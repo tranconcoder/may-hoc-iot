@@ -4,6 +4,8 @@ import { Router } from "express";
 
 const router = Router();
 
+router.get("/all", catchError(cameraController.getAllCameras));
+
 router.post("/create", catchError(cameraController.create))
 
 
