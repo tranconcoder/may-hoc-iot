@@ -1,12 +1,19 @@
 import { Socket } from "socket.io";
 import trafficLightModel from "@/models/trafficLight.model.js";
 import carDetectionModel from "@/models/carDetection.model.js";
+import cameraModel from "@/models/camera.model.js";
 
 /* -------------------------------------------------------------------------- */
 /*                            Use strategy pattern                            */
 /* -------------------------------------------------------------------------- */
 const strategy = {
-  message: handleMessageEvent,
+  /* ---------------------------- Join room handler --------------------------- */
+  join_camera: handleJoinCameraEvent,
+  join_all_camera: handleJoinAllCameraEvent,
+  leave_camera: handleLeaveCameraEvent,
+
+
+  /* ------------------------------ Event handler ----------------------------- */
   image: handleImageEvent,
   dentinhieu: handleDenTinHieuEvent,
   giaothong: handleGiaoThongEvent,
@@ -20,13 +27,41 @@ export default function handleEvent(event: keyof typeof strategy) {
   return handler;
 }
 
+
 /* -------------------------------------------------------------------------- */
-/*                          Handle 'message' event handler                     */
+/*                          Handle 'join_camera' event handler                */
 /* -------------------------------------------------------------------------- */
-export async function handleMessageEvent(this: Socket, data: any) {
+export async function handleJoinCameraEvent(this: Socket, cameraId: string) {
+  const socket = this
+  socket.join(`camera_${cameraId}`);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          Handle 'join_all_camera' event handler          */
+/* -------------------------------------------------------------------------- */
+export async function handleJoinAllCameraEvent(this: Socket) {
   const socket = this;
 
-  socket.broadcast.emit("message", data);
+  console.log("join_all_camera by client:", socket.id);
+
+  const cameraIds = await cameraModel
+    .find(
+      {},
+      { _id: 1 }
+    )
+    .lean();
+
+  cameraIds.forEach((id) => {
+    socket.join(`camera_${id._id}`);
+  })
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          Handle 'leave_camera' event handler              */
+/* -------------------------------------------------------------------------- */
+export async function handleLeaveCameraEvent(this: Socket, cameraId: string) {
+  const socket = this;
+  socket.leave(`camera_${cameraId}`);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -60,7 +95,6 @@ export async function handleImageEvent(this: Socket, data: {
 export async function handleDenTinHieuEvent(this: Socket, data: any) {
   const socket = this;
 
-  // Forward traffic sign detection data to all clients (including sender)
   let maxDetection = { confidence: 0 };
   data.detections.forEach((element: any) => {
     if (maxDetection.confidence < element.confidence) {

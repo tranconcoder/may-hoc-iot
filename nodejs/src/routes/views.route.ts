@@ -7,7 +7,7 @@ viewsRouter.get("/", viewController.homePage);
 
 viewsRouter.get("/capture", viewController.capturePage);
 
-viewsRouter.get("/preview", viewController.previewPage);
+viewsRouter.get("/preview", viewController.cameraPreviewPage);
 
 viewsRouter.get("/cameras", viewController.cameraManagementPage);
 

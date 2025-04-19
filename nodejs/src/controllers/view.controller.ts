@@ -14,11 +14,6 @@ export default new (class ViewController {
     res.render("pages/capture");
   };
 
-  /* ----------------------------- Preview Page ----------------------------- */
-  previewPage: RequestHandler = (req, res, next) => {
-    res.render("pages/preview");
-  };
-
   /* ----------------------------- Create Camera Page ----------------------------- */
   createCameraPage: RequestHandler = (req, res, next) => {
     res.render("pages/add-camera", {
@@ -162,4 +157,14 @@ export default new (class ViewController {
       camera,
     });
   };
+
+  /* ----------------------------- Camera Preview Page ----------------------------- */
+  cameraPreviewPage: RequestHandler = (req, res, next) => {
+    res.render("pages/camera-preview", {
+      layout: "traffic-dashboard",
+      pageTitle: "Xem trực tiếp từ Camera AI",
+      styles: ["/css/camera-preview.css"]
+    });
+  };
+
 })();

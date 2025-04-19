@@ -1,0 +1,84 @@
+<!-- filepath: /home/tranv/Workspace/mh-iot-new/nodejs/src/views/pages/camera-preview.hbs -->
+<link rel="stylesheet" href="/public/css/camera-preview.css">
+
+<div class="camera-preview-page">
+  <div class="page-header">
+    <div class="header-left">
+      <a href="/views/cameras" class="btn-back">
+        <i class="fas fa-arrow-left"></i> Quay lại
+      </a>
+      <h1 class="page-title">Xem trực tiếp từ Camera AI</h1>
+    </div>
+  </div>
+
+  <div class="content-container">
+    <div class="camera-selection-panel">
+      <h3>Chọn Camera</h3>
+      <div class="camera-list" id="camera-list">
+        <div class="loading-indicator">
+          <i class="fas fa-spinner fa-spin"></i> Đang tải danh sách camera...
+        </div> <!-- Fixed missing closing tag -->
+      </div>
+    </div>
+
+    <div class="preview-panel">
+      <div class="preview-container">
+        <div class="stream-status" id="stream-status">
+          <div class="status-indicator" id="status-indicator"></div>
+          <span id="status-text">Chưa kết nối</span>
+        </div>
+        <div class="canvas-container">
+          <canvas id="preview-canvas"></canvas>
+          <div id="waiting-message">Hãy chọn một camera để bắt đầu</div>
+        </div>
+      </div>
+
+      <div class="stats-panel">
+        <div class="stats-section">
+          <h4>Thông tin phát hiện</h4>
+          <div class="stats-row">
+            <div class="stat-item">
+              <div class="stat-label">Tổng số xe phát hiện:</div>
+              <div class="stat-value" id="total-vehicles">0</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Thời gian xử lý:</div>
+              <div class="stat-value" id="processing-time">0 ms</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-section">
+          <h4>Thống kê giao thông</h4>
+          <div class="traffic-stats">
+            <div class="direction-stats">
+              <div class="direction-header up-direction">
+                <i class="fas fa-arrow-up"></i> Xe đi lên
+              </div>
+              <div class="stat-value" id="vehicles-up">0</div>
+            </div>
+            <div class="direction-stats">
+              <div class="direction-header down-direction">
+                <i class="fas fa-arrow-down"></i> Xe đi xuống
+              </div>
+              <div class="stat-value" id="vehicles-down">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-section">
+          <h4>Phân loại xe</h4>
+          <div class="vehicle-types" id="vehicle-types"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="detection-log">
+    <h4>Lịch sử phát hiện</h4>
+    <div class="log-container" id="log-container"></div>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script src="/public/scripts/camera-preview.js"></script>
