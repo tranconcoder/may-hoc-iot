@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import cameraRouter from './camera.route';
+import cameraRouter from '@/routes/camera.route.js';
 
 const router = Router();
 

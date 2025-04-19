@@ -50,7 +50,7 @@ def process_frames_thread():
                 time.sleep(0.01)
                 continue
             
-            frame, timestamp, cameraId, imageId = frame_data
+            frame, cameraId, imageId, created_at = frame_data
             
             # Skip processing if model isn't loaded
             if model is None:
@@ -67,9 +67,6 @@ def process_frames_thread():
             # Process detection results
             detected_signs = []
             
-            # Traffic sign counts by type
-            sign_counts = {}
-            
             has_detections = False  # Flag to track if any objects were detected
             
             for result in results:
@@ -85,12 +82,6 @@ def process_frames_thread():
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
                         
                         class_name = model.names[cls_id]
-                        
-                        # Count by class name
-                        if class_name in sign_counts:
-                            sign_counts[class_name] += 1
-                        else:
-                            sign_counts[class_name] = 1
                         
                         # Calculate relative coordinates (0-1 range)
                         rel_x1 = x1 / width
@@ -121,28 +112,26 @@ def process_frames_thread():
                 print("Traffic Sign Detection: No traffic signs detected in this frame")
             
             # Prepare response with detection results
+            max_confidence = max(detected_signs, key=lambda x: x['confidence'])
+            traffic_status = max_confidence['class']
+
             response = {
                 'cameraId': cameraId,
                 'imageId': imageId,
+                'traffic_status': traffic_status,
                 'detections': detected_signs,
                 'inference_time': inference_time,
                 'image_dimensions': {
                     'width': width,
                     'height': height
                 },
-                'created_at': timestamp,
-                'sign_counts': sign_counts
+                'created_at': created_at,
             }
 
             # Emit detection results back to the server
             if detected_signs:
                 sio.emit('dentinhieu', response)
                 print(f"Detected {len(detected_signs)} traffic signs, inference time: {inference_time:.2f}ms")
-                
-                # Display sign count summary
-                count_summary = ", ".join([f"{count} {sign_type}" 
-                                         for sign_type, count in sign_counts.items()])
-                print(f"Sign counts: {count_summary}")
                     
         except Exception as e:
             print(f"Error in processing thread: {e}")
@@ -192,6 +181,8 @@ def connect():
     print(f"Successfully connected to Socket.IO server: {SOCKETIO_SERVER_URL}")
     print("Waiting for 'image' events...")
 
+    sio.emit("join_all_camera")
+
 @sio.event
 def connect_error(error):
     print(f"Connection error: {error}")
@@ -236,6 +227,7 @@ def on_image(data):
     image = data['buffer']
     cameraId = data['cameraId']
     imageId = data['imageId']
+    created_at = data['created_at']
     
     try:
         # Convert image data from buffer to numpy array
@@ -275,7 +267,7 @@ def on_image(data):
         
         # Add the frame to the model processing queue
         try:
-            model_frame_queue.put((frame.copy(), time.time(), cameraId, imageId), block=False)
+            model_frame_queue.put((frame.copy(), cameraId, imageId, created_at), block=False)
         except queue.Full:
             # If model queue is full, just discard this frame for processing
             pass

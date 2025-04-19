@@ -1,7 +1,7 @@
 import type { Server } from "http";
 import { Server as SocketIOServer, Socket } from "socket.io";
-import handleEvent from "../utils/socketio.utils";
-import cameraModel from "@/models/camera.model";
+import handleEvent from "../utils/socketio.utils.js";
+import cameraModel from "@/models/camera.model.js";
 
 export function runSocketIOService(server: Server): SocketIOServer {
   const io = new SocketIOServer(server, {

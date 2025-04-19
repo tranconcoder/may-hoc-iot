@@ -1,8 +1,8 @@
 import {
 	FACE_RECOGNITION_SERVER_HOST,
 	FACE_RECOGNITION_SERVER_PORT,
-} from '../config/env.config';
-import { readStreamEsp32CamSecurityGateImg } from './stream.service';
+} from '../config/env.config.js';
+import { readStreamEsp32CamSecurityGateImg } from './stream.service.js';
 
 export default class SecurityGateServices {
 	public static async authDoor(

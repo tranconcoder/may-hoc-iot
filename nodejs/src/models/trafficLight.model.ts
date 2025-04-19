@@ -4,6 +4,7 @@ export const TRAFFIC_LIGHT_MODEL_NAME = 'TrafficLight';
 export const TRAFFIC_LIGHT_COLLECTION_NAME = 'traffic_lights';
 
 export const trafficLightSchema = new Schema({
+    traffic_status: { type: String, required: true },
     detections: {
         type: [{
             class: { type: String, required: true },

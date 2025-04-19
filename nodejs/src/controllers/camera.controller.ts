@@ -1,7 +1,7 @@
-import SuccessResponse, { CreatedResponse, OkResponse } from "@/core/success.response"
-import { CameraModel } from "@/models/camera.model"
-import cameraService from "@/services/camera.service"
-import { RequestHandler } from "express"
+import SuccessResponse, { CreatedResponse, OkResponse } from "@/core/success.response.js";
+import { CameraModel } from "@/models/camera.model.js";
+import cameraService from "@/services/camera.service.js";
+import { RequestHandler } from "express";
 
 export default new class CameraController {
     /* -------------------------------------------------------------------------- */

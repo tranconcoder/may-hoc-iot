@@ -26,7 +26,7 @@ export default new class CameraService {
     /*                               GET ALL CAMERAS                              */
     /* -------------------------------------------------------------------------- */
     async getAllCameras() {
-        return await cameraModel.find({}).lean()
+        return await cameraModel.find({}, { camera_api_key: 0 }).lean()
     }
 
     async getAvailableCameraCount() {

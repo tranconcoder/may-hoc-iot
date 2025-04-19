@@ -1,5 +1,5 @@
-import { CameraModel } from "@/models/camera.model";
-import trafficLightService from "./trafficLight.service";
+import { CameraModel } from "@/models/camera.model.js";
+import trafficLightService from "./trafficLight.service.js";
 
 interface Detect {
     cameraId: string;

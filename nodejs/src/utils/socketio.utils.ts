@@ -1,6 +1,6 @@
 import { Socket } from "socket.io";
-import trafficLightModel from "../models/trafficLight.model";
-import carDetectionModel from "@/models/carDetection.model";
+import trafficLightModel from "@/models/trafficLight.model.js";
+import carDetectionModel from "@/models/carDetection.model.js";
 
 /* -------------------------------------------------------------------------- */
 /*                            Use strategy pattern                            */
@@ -61,7 +61,24 @@ export async function handleDenTinHieuEvent(this: Socket, data: any) {
   const socket = this;
 
   // Forward traffic sign detection data to all clients (including sender)
-  socket.broadcast.emit("dentinhieu", data);
+  let maxDetection = { confidence: 0 };
+  data.detections.forEach((element: any) => {
+    if (maxDetection.confidence < element.confidence) {
+      maxDetection = element;
+    }
+  });
+
+  socket.broadcast.emit("dentinhieu", {
+    cameraId: data.cameraId,
+    imageId: data.imageId,
+    traffic_status: data.traffic_status,
+    detection: maxDetection,
+    inference_time: data.inference_time,
+    image_dimensions: data.image_dimensions,
+    created_at: data.created_at,
+  });
+
+  console.log('Traffic light detection data', data);
 
   trafficLightModel
     .create(data)

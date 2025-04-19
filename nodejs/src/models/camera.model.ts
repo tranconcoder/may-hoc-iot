@@ -1,5 +1,5 @@
 import { Schema, model } from "mongoose";
-import { timestamps } from "../config/model.config";
+import { timestamps } from "@/config/model.config.js";
 
 export const CAMERA_MODEL_NAME = "Camera";
 export const CAMERA_COLLECTION_NAME = "cameras";

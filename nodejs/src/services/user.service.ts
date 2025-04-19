@@ -1,7 +1,7 @@
 import {
 	FACE_RECOGNITION_SERVER_HOST,
 	FACE_RECOGNITION_SERVER_PORT,
-} from '../config/env.config';
+} from '../config/env.config.js';
 
 export default class UserServices {
 	public static async addUser(files: Express.Multer.File[]) {

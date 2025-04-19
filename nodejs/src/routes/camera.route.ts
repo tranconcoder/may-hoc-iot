@@ -1,5 +1,5 @@
-import cameraController from "@/controllers/camera.controller";
-import { catchError } from "@/middlewares/handleError.middware";
+import cameraController from "@/controllers/camera.controller.js";
+import { catchError } from "@/middlewares/handleError.middware.js";
 import { Router } from "express";
 
 const router = Router();
