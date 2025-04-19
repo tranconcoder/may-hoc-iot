@@ -1,25 +1,33 @@
 import { RequestHandler } from "express"
 
 export default new (class ViewController {
+  /* ----------------------------- Home Page ----------------------------- */
   homePage: RequestHandler = (req, res, next) => {
-    res.render("pages/home-page", { layout: "traffic-dashboard" });
-  };
-
-  capturePage: RequestHandler = (req, res, next) => {
-    res.render("pages/capture");
-  };
-
-  previewPage: RequestHandler = (req, res, next) => {
-    res.render("pages/preview");
-  };
-
-  dashboardPage: RequestHandler = (req, res, next) => {
     res.render("pages/home-page", {
       layout: "traffic-dashboard",
       isHome: true,
     });
   };
 
+  /* ----------------------------- Capture Page ----------------------------- */
+  capturePage: RequestHandler = (req, res, next) => {
+    res.render("pages/capture");
+  };
+
+  /* ----------------------------- Preview Page ----------------------------- */
+  previewPage: RequestHandler = (req, res, next) => {
+    res.render("pages/preview");
+  };
+
+  /* ----------------------------- Create Camera Page ----------------------------- */
+  createCameraPage: RequestHandler = (req, res, next) => {
+    res.render("pages/add-camera", {
+      layout: "traffic-dashboard",
+      pageTitle: "Thêm Camera Mới",
+    });
+  };
+
+  /* ----------------------------- Camera Management Page ----------------------------- */
   cameraManagementPage: RequestHandler = (req, res, next) => {
     const cameras: any[] = [];
 
@@ -30,6 +38,7 @@ export default new (class ViewController {
     });
   };
 
+  /* ----------------------------- View Camera Detail Page ----------------------------- */ 
   viewCameraDetail: RequestHandler = (req, res, next) => {
     const { cameraId } = req.params;
 

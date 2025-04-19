@@ -1,0 +1,218 @@
+/* CSS cho trang quản lý camera */
+/* Thiết lập chung */
+.camera-management-page {
+  padding: 20px;
+}
+
+/* Header trang */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  color: #333;
+}
+
+.page-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Thanh tìm kiếm và lọc */
+.camera-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+}
+
+.filter-group label {
+  margin-right: 8px;
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.search-group {
+  display: flex;
+  flex-grow: 1;
+}
+
+.search-group input {
+  flex-grow: 1;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.search-group button {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* Grid camera */
+.camera-grid-container {
+  width: 100%;
+}
+
+.camera-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.camera-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  background-color: white;
+}
+
+.camera-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.camera-preview {
+  position: relative;
+  height: 180px;
+  overflow: hidden;
+  background-color: #f0f0f0;
+}
+
+.camera-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-status {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+.camera-status i {
+  margin-right: 4px;
+}
+
+.camera-status.active {
+  color: #28a745;
+}
+
+.camera-status.inactive {
+  color: #dc3545;
+}
+
+.camera-status.maintenance {
+  color: #ffc107;
+}
+
+.camera-info {
+  padding: 15px;
+}
+
+.camera-name {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.camera-location, .camera-ip {
+  margin: 0 0 5px 0;
+  font-size: 14px;
+  color: #666;
+  display: flex;
+  align-items: center;
+}
+
+.camera-location i, .camera-ip i {
+  margin-right: 6px;
+  width: 16px;
+  text-align: center;
+}
+
+.camera-actions {
+  display: flex;
+  padding: 10px 15px;
+  border-top: 1px solid #e0e0e0;
+  gap: 8px;
+}
+
+/* Không ada camera */
+.no-cameras-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
+  padding: 80px;
+  border-radius: 8px;
+  text-align: center;
+  grid-column: 1 / -1;
+}
+
+.no-cameras-found i {
+  font-size: 64px;
+  color: #6c757d;
+  margin-bottom: 20px;
+}
+
+.no-cameras-found p {
+  font-size: 18px;
+  color: #6c757d;
+  margin-bottom: 20px;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .camera-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .page-actions {
+    width: 100%;
+  }
+  
+  .camera-filter-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .filter-group {
+    width: 100%;
+  }
+  
+  .camera-grid {
+    grid-template-columns: 1fr;
+  }
+}

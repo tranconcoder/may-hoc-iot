@@ -31,7 +31,7 @@ function initSidebar() {
     // Add active class to current page link
     const href = link.getAttribute('href');
     if (href === currentPath || 
-        (href !== '/' && currentPath.startsWith(href))) {
+        (href !== '/views' && currentPath.startsWith(href))) {
       link.classList.add('active');
     }
   });
