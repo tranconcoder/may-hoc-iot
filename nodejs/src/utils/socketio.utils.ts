@@ -7,6 +7,7 @@ import carDetectionModel from "@/models/carDetection.model";
 /* -------------------------------------------------------------------------- */
 const strategy = {
   message: handleMessageEvent,
+  image: handleImageEvent,
   dentinhieu: handleDenTinHieuEvent,
   giaothong: handleGiaoThongEvent,
   car: handleCarEvent,
@@ -29,6 +30,18 @@ export async function handleMessageEvent(this: Socket, data: any) {
   socket.broadcast.emit("message", data);
 }
 
+/* -------------------------------------------------------------------------- */
+/*                          Handle 'image' event handler                       */
+/* -------------------------------------------------------------------------- */
+export async function handleImageEvent(this: Socket, room: string, data: any) {
+  const socket = this;
+  console.log(this)
+
+  console.log({
+    room,
+    data
+  });
+}
 
 /* -------------------------------------------------------------------------- */
 /*                      Handle 'dentinhieu' event handler                      */

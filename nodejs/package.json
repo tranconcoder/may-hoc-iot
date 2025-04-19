@@ -60,6 +60,7 @@
 		"sharp": "^0.33.5",
 		"snappy": "^7.2.2",
 		"socket.io": "^4.8.1",
+		"socket.io-client": "^4.8.1",
 		"socketio": "^1.0.0",
 		"socks": "^2.8.3",
 		"tsx": "^4.19.3",

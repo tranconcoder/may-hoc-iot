@@ -468,8 +468,9 @@ def disconnect():
     print("Will attempt to reconnect automatically...")
 
 @sio.on('image')
-def on_image(data):
+def on_image(cameraId, data):
     global last_frame_time
+    print(cameraId)
     
     # Limit frame processing rate to avoid overload
     current_time = time.time()

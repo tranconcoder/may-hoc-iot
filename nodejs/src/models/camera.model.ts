@@ -4,7 +4,14 @@ import { timestamps } from "../config/model.config";
 export const CAMERA_MODEL_NAME = "Camera";
 export const CAMERA_COLLECTION_NAME = "cameras";
 
-export const cameraSchema = new Schema({
+export interface CameraModel {
+    camera_name: string;
+    camera_location: string;
+    camera_status: boolean;
+    camera_api_key: string;
+}
+
+export const cameraSchema = new Schema<CameraModel>({
     camera_name: { type: String, required: true, unique: true },
     camera_location: { type: String, required: true },
     camera_status: { type: Boolean, default: false },

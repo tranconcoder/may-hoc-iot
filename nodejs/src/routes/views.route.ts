@@ -1,5 +1,5 @@
-import viewController from '@/controllers/view.controlelr';
-import { Router } from 'express';
+import viewController from "@/controllers/view.controller";
+import { Router } from "express";
 
 const viewsRouter = Router();
 
@@ -21,25 +21,6 @@ viewsRouter.get("/cameras/add", (_, res) => {
 });
 
 // Route xem chi tiết camera
-viewsRouter.get("/cameras/:cameraId", (req, res) => {
-  const { cameraId } = req.params;
-  // Ở đây sau này sẽ lấy thông tin camera theo ID từ database
-  // Hiện tại sẽ giả lập một camera để hiển thị
-  const camera = {
-    id: cameraId,
-    name: `Camera #${cameraId}`,
-    location: "Vị trí mặc định",
-    ipAddress: "192.168.1.100",
-    streamUrl: "http://example.com/stream",
-    status: "active",
-    statusText: "Đang hoạt động",
-  };
-
-  res.render("pages/camera-view", {
-    layout: "traffic-dashboard",
-    pageTitle: `Camera ${cameraId}`,
-    camera,
-  });
-});
+viewsRouter.get("/cameras/:cameraId", viewController.viewCameraDetail);
 
 export default viewsRouter;

@@ -121,10 +121,18 @@ button.stop:hover {
     font-weight: bold;
 }
 
-.settings select {
+.settings select, .settings input {
     padding: 5px;
     border-radius: 4px;
     border: 1px solid #ddd;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.settings input:focus {
+    border-color: #4CAF50;
+    outline: none;
+    box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
 }
 
 .settings-title {
