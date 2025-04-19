@@ -2,7 +2,6 @@ import type { Server } from "http";
 import { Server as SocketIOServer, Socket } from "socket.io";
 import handleEvent from "../utils/socketio.utils";
 import cameraModel from "@/models/camera.model";
-import { wss } from "..";
 import { CAMERA_NAMESPACE_PATH } from "@/config/socketio.config";
 /**
  * Initializes and runs the Socket.IO connection logic.
@@ -17,20 +16,8 @@ export function runSocketIOService(server: Server): SocketIOServer {
     },
   }); // Store the instance
 
-  const cameraNamespace = io.of("/camera_68027ecbc11ceedc95d734df");
 
-  cameraNamespace.on("connection", (socket: Socket) => {
-    console.log(`CAMERA NAMESPACE CONNECTED: ${socket.id}`);
 
-    socket.on("image", (buffer: Buffer) => {
-      const cameraId = socket.nsp.name.split("_")[1];
-
-      console.log({
-        cameraId,
-        buffer: buffer.length,
-      });
-    });
-  });
 
   io.on("connection", async (socket: Socket) => {
     console.log(`SOCKET.IO CLIENT CONNECTED: ${socket.id}`);
@@ -46,19 +33,33 @@ export function runSocketIOService(server: Server): SocketIOServer {
 
     cameraIds.forEach((id) => {
       socket.join(`camera_${id._id}`);
+    })
+
+
+    /* -------------------------------------------------------------------------- */
+    /*                          Set 'image' event handler                         */
+    /* -------------------------------------------------------------------------- */
+    socket.on("image", (data: {
+      width: number;
+      height: number;
+      buffer: Buffer;
+    }) => {
+      const cameraId = socket.nsp.name.split("_")[1];
+
+      socket.broadcast.emit("image", {
+        cameraId,
+        width: data.width,
+        height: data.height,
+        buffer: data.buffer,
+      });
+
+      console.log("Emited image to all clients");
     });
 
     /* -------------------------------------------------------------------------- */
     /*                       Setup 'message' event handler                        */
     /* -------------------------------------------------------------------------- */
-    // socket.on("message", handleEvent("message").bind(socket));
-
-    socket.on("image", (cameraId: string, data: any) => {
-      console.log({
-        cameraId,
-        data,
-      });
-    });
+    // socket.on("message", handleEvent("message").bind(socket))
 
     /* -------------------------------------------------------------------------- */
     /*                      Setup 'dentinhieu' event handler                      */

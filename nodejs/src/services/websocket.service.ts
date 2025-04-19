@@ -13,7 +13,8 @@ import { WebsocketAnalytics } from "./websocketAnalytics.service";
 import cameraModel, { CameraModel, cameraSchema } from "@/models/camera.model";
 import { envConfig } from '@/config';
 import { CAMERA_NAMESPACE_START } from '@/config/socketio.config';
-import { InferRawDocType } from 'mongoose';
+import { imageSize } from 'image-size';
+
 
 const websocketAnalytics = new WebsocketAnalytics(0, 0, 10_000);
 websocketAnalytics.startAnalytics();
@@ -49,7 +50,7 @@ export default function runWebsocketService(
         if (!camera) throw new Error("Invalid header");
 
         /* -------------------------- Setup socketio client ------------------------- */
-        const wsUrl = `ws://${envConfig.HOST}:3001${CAMERA_NAMESPACE_START}${cameraId}`
+        const wsUrl = `ws://${envConfig.HOST}:3001`
 
         ioClientConnect = ioClient(wsUrl, {
           transports: ["websocket"],
@@ -84,11 +85,20 @@ export default function runWebsocketService(
 
       ws.on("error", console.error);
 
+      let width: number;
+      let height: number;
+
+      /* ----------------------------- Init image size ---------------------------- */
+      ws.once("message", async function message(buffer: Buffer) {
+        const dimensions = imageSize(buffer);
+        width = dimensions.width;
+        height = dimensions.height;
+      });
+
       /* ----------------------------- Handle message ----------------------------- */
       ws.on("message", async function message(buffer: Buffer) {
-        websocketAnalytics.transferData(buffer.length, 1);
-
-        ioClientConnect.emit("image", buffer);
+        websocketAnalytics.transferData(buffer.length, 1)
+        ioClientConnect.emit("image", { width, height, buffer });
       });
     }
   );
