@@ -10,7 +10,6 @@ const strategy = {
   image: handleImageEvent,
   dentinhieu: handleDenTinHieuEvent,
   giaothong: handleGiaoThongEvent,
-  car: handleCarEvent,
   license_plate: handleLicensePlateEvent,
   license_plate_ocr: handleLicensePlateOcrEvent,
 }
@@ -34,20 +33,21 @@ export async function handleMessageEvent(this: Socket, data: any) {
 /*                          Handle 'image' event handler                       */
 /* -------------------------------------------------------------------------- */
 export async function handleImageEvent(this: Socket, data: {
+  cameraId: string;
+  imageId: string;
   width: number;
   height: number;
   buffer: Buffer;
 }) {
   const socket = this;
 
-  const cameraId = socket.nsp.name.split("_")[1];
-
   socket.broadcast.emit("image", {
-    cameraId,
+    cameraId: data.cameraId,
+    imageId: data.imageId,
     width: data.width,
     height: data.height,
     buffer: data.buffer,
-  });
+  })
 }
 
 /* -------------------------------------------------------------------------- */
@@ -86,18 +86,6 @@ export async function handleGiaoThongEvent(this: Socket, data: any) {
     .catch((err) => {
       console.log("Car detection creation failed", err);
     });
-}
-
-/* -------------------------------------------------------------------------- */
-/*                      Handle 'car' event handler                            */
-/* -------------------------------------------------------------------------- */
-export async function handleCarEvent(this: Socket, data: any) {
-  const socket = this;
-
-  // Forward vehicle detection data to all clients (including sender)
-  console.log(data);
-
-  socket.broadcast.emit("car", data);
 }
 
 /* -------------------------------------------------------------------------- */

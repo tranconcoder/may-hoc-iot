@@ -80,55 +80,6 @@ def check_line_crossing(prev_pos, curr_pos, line_y):
 # Global variables for vehicle image cropping
 last_vehicle_crop_times = {}  # Store last emission time for each vehicle ID
 
-def crop_vehicle_image(frame, bbox, vehicle_id, vehicle_class):
-    """Crop a vehicle image from the frame using bounding box coordinates"""
-    # Extract bounding box coordinates
-    x1, y1, x2, y2 = map(int, bbox)
-    
-    # Add some padding to the bounding box (10% on each side)
-    h, w = frame.shape[:2]
-    padding_x = int((x2 - x1) * 0.1)
-    padding_y = int((y2 - y1) * 0.1)
-    
-    # Apply padding with bounds checking
-    x1 = max(0, x1 - padding_x)
-    y1 = max(0, y1 - padding_y)
-    x2 = min(w, x2 + padding_x)
-    y2 = min(h, y2 + padding_y)
-    
-    # Crop the image
-    cropped_img = frame[y1:y2, x1:x2]
-    
-    # Resize if the cropped image is too large
-    height, width = cropped_img.shape[:2]
-    if width > CROP_MAX_SIZE or height > CROP_MAX_SIZE:
-        scale = CROP_MAX_SIZE / max(width, height)
-        new_width = int(width * scale)
-        new_height = int(height * scale)
-        cropped_img = cv2.resize(cropped_img, (new_width, new_height))
-    
-    # Convert to RGB for PIL
-    cropped_img_rgb = cv2.cvtColor(cropped_img, cv2.COLOR_BGR2RGB)
-    
-    # Convert to PIL Image
-    pil_img = Image.fromarray(cropped_img_rgb)
-    
-    # Convert to JPEG buffer
-    buffer = io.BytesIO()
-    pil_img.save(buffer, format="JPEG", quality=CROP_IMAGE_QUALITY)
-    
-    # Return the buffer value directly (not base64 encoded)
-    buffer_value = buffer.getvalue()
-    
-    vehicle_data = {
-        'vehicle_id': vehicle_id,
-        'class': vehicle_class,
-        'image_data': buffer_value,  # Raw buffer instead of base64
-        'timestamp': time.time()
-    }
-    
-    return vehicle_data
-
 def process_frames_thread():
     """Thread function to process frames with the model in the background"""
     global running, model, vehicle_tracks, counted_vehicles
@@ -150,7 +101,7 @@ def process_frames_thread():
                 time.sleep(0.01)
                 continue
             
-            frame, timestamp = frame_data
+            frame, timestamp, cameraId, imageId = frame_data
             
             # Skip processing if model isn't loaded
             if model is None:
@@ -240,31 +191,6 @@ def process_frames_thread():
                                 'time': current_time,
                                 'class': class_name
                             }
-                            
-                            # Emit cropped vehicle image if enabled and it's time to emit
-                            if ENABLE_VEHICLE_CROPPING:
-                                current_time = time.time()
-                                if (track_id not in last_vehicle_crop_times or 
-                                    current_time - last_vehicle_crop_times.get(track_id, 0) >= CROP_EMIT_INTERVAL):
-                                    
-                                    # Crop and emit vehicle image
-                                    try:
-                                        vehicle_img_data = crop_vehicle_image(
-                                            frame, 
-                                            [x1, y1, x2, y2], 
-                                            track_id, 
-                                            class_name
-                                        )
-                                        
-                                        # Emit the vehicle image with its ID (raw buffer)
-                                        sio.emit('car', vehicle_img_data)
-                                        
-                                        # Update the last emission time for this vehicle
-                                        last_vehicle_crop_times[track_id] = current_time
-                                        
-                                        print(f"Emitted cropped image for {class_name} ID: {track_id}")
-                                    except Exception as e:
-                                        print(f"Error cropping/emitting vehicle image: {e}")
             
             # Update vehicle tracking history and check for line crossings
             current_time = time.time()
@@ -331,6 +257,8 @@ def process_frames_thread():
                     
             # Prepare response with detection results
             response = {
+                'cameraId': cameraId,
+                'imageId': imageId,
                 'detections': detected_objects,
                 'inference_time': inference_time,
                 'image_dimensions': {
@@ -368,7 +296,7 @@ def process_frames_thread():
             }
 
             # Emit detection results back to the server
-            sio.emit('giaothong', response)
+            sio.emit('giaothong', response, to=f"camera_{cameraId}")
             
             print(f"Processed image, found {len(detected_objects)} vehicles, inference time: {inference_time:.2f}ms")
             
@@ -456,6 +384,8 @@ def connect():
     print(f"Successfully connected to Socket.IO server: {SOCKETIO_SERVER_URL}")
     print("Waiting for 'image' events...")
 
+    sio.emit("join_all_camera")
+
 @sio.event
 def connect_error(error):
     print(f"Connection error: {error}")
@@ -478,6 +408,8 @@ def on_image(data):
     
     last_frame_time = current_time
     image = data['buffer']
+    cameraId = data['cameraId']
+    imageId = data['imageId']
     
     try:
         # Convert image data from buffer to numpy array
@@ -510,14 +442,14 @@ def on_image(data):
         height, width = frame.shape[:2]
         
         # Resize the frame if it's too large to save memory
-        max_dimension = 1280  # Maximum dimension to process
+        max_dimension = 1920 # Maximum dimension to process
         if width > max_dimension or height > max_dimension:
             scale = max_dimension / max(width, height)
             frame = cv2.resize(frame, (int(width * scale), int(height * scale)))
         
         # Add the frame to the model processing queue
         try:
-            model_frame_queue.put((frame.copy(), time.time()), block=False)
+            model_frame_queue.put((frame.copy(), time.time(), cameraId, imageId), block=False)
         except queue.Full:
             # If model queue is full, just discard this frame for processing
             pass

@@ -14,6 +14,9 @@ import cameraModel, { CameraModel, cameraSchema } from "@/models/camera.model";
 import { envConfig } from '@/config';
 import { CAMERA_NAMESPACE_START } from '@/config/socketio.config';
 import { imageSize } from 'image-size';
+import { io } from '..';
+import mongoose from 'mongoose';
+import cameraImageModel from '@/models/cameraImage.model';
 
 
 const websocketAnalytics = new WebsocketAnalytics(0, 0, 10_000);
@@ -35,51 +38,16 @@ export default function runWebsocketService(
       /* -------------------------------------------------------------------------- */
       /*                               Validate header                              */
       /* -------------------------------------------------------------------------- */
-      let camera: CameraModel | null;
-      let ioClientConnect: Socket;
+      /* ------------------------ Check cameraId and apiKey ----------------------- */
+      if (!cameraId || !apiKey) return ws.close();
 
-      try {
-        /* ------------------------ Check cameraId and apiKey ----------------------- */
-        if (!cameraId || !apiKey) throw new Error("Invalid header");
+      /* -------------------------- Check camera is valid ------------------------- */
+      const camera = await cameraModel.findOne({
+        _id: cameraId,
+        camera_api_key: apiKey,
+      });
+      if (!camera) return ws.close();
 
-        /* -------------------------- Check camera is valid ------------------------- */
-        camera = await cameraModel.findOne({
-          _id: cameraId,
-          camera_api_key: apiKey,
-        });
-        if (!camera) throw new Error("Invalid header");
-
-        /* -------------------------- Setup socketio client ------------------------- */
-        const wsUrl = `ws://${envConfig.HOST}:3001`
-
-        ioClientConnect = ioClient(wsUrl, {
-          transports: ["websocket"],
-          reconnection: true,
-          reconnectionAttempts: 3,
-          reconnectionDelay: 1000,
-          reconnectionDelayMax: 5000,
-          timeout: 5000,
-        });
-
-        ioClientConnect.connect();
-
-        ioClientConnect.on("connect", () => {
-          console.log("Connected to camera namespace");
-        });
-
-        ioClientConnect.on("timeout", () => {
-          console.log("Timeout connecting to camera namespace");
-          ws.close();
-        });
-
-        ioClientConnect.on("error", (error) => {
-          console.error("Error connecting to camera namespace", error);
-          ws.close();
-        });
-      } catch (error: any) {
-        console.log(error.message);
-        ws.close();
-      }
 
       ws.id = cameraId;
 
@@ -98,8 +66,23 @@ export default function runWebsocketService(
       /* ----------------------------- Handle message ----------------------------- */
       ws.on("message", async function message(buffer: Buffer) {
         websocketAnalytics.transferData(buffer.length, 1)
-        ioClientConnect.emit("image", { width, height, buffer });
+
+        const room = `camera_${cameraId}`;
+        const imageId = new mongoose.Types.ObjectId();
+
+        io.to(room).emit("image", { cameraId, imageId, width, height, buffer });
+
+        /* ---------------------------- Save image to db ---------------------------- */
+        cameraImageModel.create({
+          _id: imageId,
+          cameraId,
+          image: buffer,
+          width,
+          height,
+        })
+          .catch(console.error);
       });
+
     }
   );
 

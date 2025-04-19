@@ -1,6 +1,49 @@
 document.addEventListener("DOMContentLoaded", function () {
-  // Xử lý nút hủy
+  // Khởi tạo các phần tử DOM
   const cancelBtn = document.getElementById("cancelBtn");
+  const addCameraForm = document.getElementById("addCameraForm");
+  const previewArea = document.getElementById("camera-preview-area");
+  const previewImage = document.getElementById("preview-image");
+  const tracklineIndicator = document.getElementById("trackline-indicator");
+  const tracklineYSlider = document.getElementById("trackline_y_slider");
+  const tracklineYValue = document.getElementById("trackline_y_value");
+  const tracklineYInput = document.getElementById("trackline_y");
+  const imageUpload = document.getElementById("camera-image-upload");
+
+  // Khởi tạo trackline
+  initTrackline();
+
+  // Xử lý tải lên hình ảnh
+  if (imageUpload) {
+    imageUpload.addEventListener("change", function (e) {
+      if (e.target.files && e.target.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          previewImage.src = event.target.result;
+        };
+        reader.readAsDataURL(e.target.files[0]);
+      }
+    });
+  }
+
+  // Xử lý trackline slider
+  if (tracklineYSlider) {
+    tracklineYSlider.addEventListener("input", function () {
+      updateTracklinePosition(parseInt(this.value));
+    });
+  }
+
+  // Xử lý click trên hình ảnh
+  if (previewArea) {
+    previewArea.addEventListener("click", function (e) {
+      const rect = previewArea.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const percentage = Math.round((y / rect.height) * 100);
+      updateTracklinePosition(percentage);
+    });
+  }
+
+  // Xử lý nút hủy
   if (cancelBtn) {
     cancelBtn.addEventListener("click", function () {
       if (
@@ -8,13 +51,12 @@ document.addEventListener("DOMContentLoaded", function () {
           "Bạn có chắc chắn muốn hủy thêm camera? Mọi thông tin đã nhập sẽ bị mất."
         )
       ) {
-        window.location.href = "/views/dashboard/cameras";
+        window.location.href = "/views/cameras";
       }
     });
   }
 
   // Xử lý form submit
-  const addCameraForm = document.getElementById("addCameraForm");
   if (addCameraForm) {
     addCameraForm.addEventListener("submit", function (e) {
       e.preventDefault();
@@ -25,6 +67,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const cameraLocation = document
         .getElementById("camera_location")
         .value.trim();
+      const tracklineY = tracklineYInput.value.trim();
 
       if (!cameraName) {
         document.getElementById("camera_name").classList.add("is-invalid");
@@ -42,6 +85,22 @@ document.addEventListener("DOMContentLoaded", function () {
           .classList.remove("is-invalid");
       }
 
+      if (
+        !tracklineY ||
+        isNaN(parseInt(tracklineY)) ||
+        parseInt(tracklineY) < 0 ||
+        parseInt(tracklineY) > 100
+      ) {
+        tracklineYInput.parentElement.querySelector(
+          ".invalid-feedback"
+        ).style.display = "block";
+        isValid = false;
+      } else {
+        tracklineYInput.parentElement.querySelector(
+          ".invalid-feedback"
+        ).style.display = "none";
+      }
+
       if (!isValid) {
         return false;
       }
@@ -50,11 +109,12 @@ document.addEventListener("DOMContentLoaded", function () {
       const cameraData = {
         camera_name: cameraName,
         camera_location: cameraLocation,
+        trackline_y: parseInt(tracklineY),
       };
 
       console.log("Camera data to save:", cameraData);
 
-      // Gửi dữ liệu lên server API mới
+      // Gửi dữ liệu lên server API
       fetch("/api/camera/create", {
         method: "POST",
         headers: {
@@ -82,7 +142,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
           // Chuyển hướng sau 2 giây
           setTimeout(() => {
-            window.location.href = "/views/dashboard/cameras";
+            window.location.href = "/views/cameras";
           }, 2000);
         })
         .catch((error) => {
@@ -95,5 +155,39 @@ document.addEventListener("DOMContentLoaded", function () {
           `;
         });
     });
+  }
+
+  // Hàm khởi tạo trackline
+  function initTrackline() {
+    if (tracklineIndicator && previewArea) {
+      // Đặt vị trí mặc định là 50%
+      updateTracklinePosition(50);
+    }
+  }
+
+  // Hàm cập nhật vị trí trackline
+  function updateTracklinePosition(percentage) {
+    if (
+      tracklineIndicator &&
+      tracklineYSlider &&
+      tracklineYValue &&
+      tracklineYInput
+    ) {
+      // Giới hạn giá trị trong khoảng 0-100
+      percentage = Math.max(0, Math.min(100, percentage));
+
+      // Cập nhật vị trí của trackline
+      const position = `${percentage}%`;
+      tracklineIndicator.style.top = position;
+
+      // Cập nhật giá trị slider
+      tracklineYSlider.value = percentage;
+
+      // Cập nhật text hiển thị
+      tracklineYValue.textContent = percentage;
+
+      // Cập nhật giá trị input hidden
+      tracklineYInput.value = percentage;
+    }
   }
 });

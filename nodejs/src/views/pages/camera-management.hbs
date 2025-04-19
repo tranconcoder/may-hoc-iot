@@ -22,16 +22,13 @@
         <option value="all">Tất cả</option>
         <option value="active">Đang hoạt động</option>
         <option value="inactive">Không hoạt động</option>
-        <option value="maintenance">Bảo trì</option>
       </select>
     </div>
     <div class="filter-group">
       <label for="cameraLocationFilter">Khu vực:</label>
       <select id="cameraLocationFilter" class="form-control">
         <option value="all">Tất cả khu vực</option>
-        <option value="north">Khu vực Bắc</option>
-        <option value="central">Khu vực Trung</option>
-        <option value="south">Khu vực Nam</option>
+        <!-- Dynamic locations will be populated via JavaScript -->
       </select>
     </div>
     <div class="filter-group search-group">
@@ -42,212 +39,264 @@
     </div>
   </div>
 
-  <!-- Tab Navigation -->
-  <ul class="nav nav-tabs camera-tabs mb-4" id="cameraTabList" role="tablist">
-    {{#if cameras.length}}
-      {{#each cameraTabs}}
-        <li class="nav-item" role="presentation">
-          <button class="nav-link {{#if @first}}active{{/if}}" 
-                  id="tab-{{@index}}-tab" 
-                  data-bs-toggle="tab" 
-                  data-bs-target="#tab-{{@index}}" 
-                  type="button" 
-                  role="tab" 
-                  aria-controls="tab-{{@index}}" 
-                  aria-selected="{{#if @first}}true{{else}}false{{/if}}">
-            Trang {{add @index 1}}
-          </button>
-        </li>
-      {{/each}}
-    {{else}}
-      <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="empty-tab" data-bs-toggle="tab" data-bs-target="#empty-content" type="button" role="tab">
-          Danh sách camera
-        </button>
-      </li>
-    {{/if}}
-  </ul>
-
-  <!-- Tab Content -->
+  <!-- Camera List Container -->
   <div class="tab-content" id="cameraTabContent">
-    {{#if cameras.length}}
-      {{#each cameraTabs}}
-        <div class="tab-pane fade {{#if @first}}show active{{/if}}" 
-             id="tab-{{@index}}" 
-             role="tabpanel" 
-             aria-labelledby="tab-{{@index}}-tab">
-          <div class="camera-grid">
-            {{#each this}}
-              <div class="camera-card" data-camera-id="{{this.id}}">
-                <div class="camera-preview">
-                  <img src="{{this.previewUrl}}" alt="{{this.name}}" onerror="this.src='/img/camera-offline.jpg'">
-                  <div class="camera-status {{this.status}}">
-                    <i class="fas fa-circle"></i>
-                    <span>{{this.statusText}}</span>
-                  </div>
-                  <div class="camera-resolution">{{this.resolution}}</div>
-                </div>
-                <div class="camera-info">
-                  <h3 class="camera-name">{{this.name}}</h3>
-                  <p class="camera-location"><i class="fas fa-map-marker-alt"></i> {{this.location}}</p>
-                  <p class="camera-ip"><i class="fas fa-network-wired"></i> {{this.ipAddress}}</p>
-                </div>
-                <div class="camera-actions">
-                  <button class="btn btn-sm btn-primary btn-view" data-id="{{this.id}}">
-                    <i class="fas fa-eye"></i> Xem
-                  </button>
-                  <button class="btn btn-sm btn-info btn-edit" data-id="{{this.id}}">
-                    <i class="fas fa-edit"></i> Sửa
-                  </button>
-                  <button class="btn btn-sm btn-danger btn-delete" data-id="{{this.id}}">
-                    <i class="fas fa-trash"></i> Xóa
-                  </button>
-                </div>
-              </div>
-            {{/each}}
-          </div>
-        </div>
-      {{/each}}
-    {{else}}
-      <div class="tab-pane fade show active" id="empty-content" role="tabpanel">
-        <div class="no-cameras-found">
-          <i class="fas fa-video-slash"></i>
-          <p>Không có camera nào được tìm thấy</p>
-          <button class="btn btn-primary" id="btnAddFirstCamera">Thêm camera đầu tiên</button>
-        </div>
+    <div class="tab-pane fade show active" id="cameras-content" role="tabpanel">
+      <div class="camera-grid" id="cameraGrid">
+        <!-- Camera cards will be dynamically populated here via JavaScript -->
       </div>
-    {{/if}}
+    </div>
+  </div>
+  
+  <!-- No cameras message - initially hidden -->
+  <div class="no-cameras-found" id="noCamerasMessage" style="display: none;">
+    <i class="fas fa-video-slash"></i>
+    <p>Không có camera nào được tìm thấy</p>
+    <button class="btn btn-primary" id="btnAddFirstCamera">Thêm camera đầu tiên</button>
   </div>
 </div>
 
 <!-- JavaScript cho tương tác trang quản lý camera -->
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // Khởi tạo các event listeners
+    // Elements
     const btnAddCamera = document.getElementById('btnAddCamera');
+    const btnRefreshCameras = document.getElementById('btnRefreshCameras');
     const btnAddFirstCamera = document.getElementById('btnAddFirstCamera');
-    const btnSaveCamera = document.getElementById('btnSaveCamera');
-    const cameraModal = document.getElementById('cameraModal');
-    
-    // Nút thêm camera
-    if (btnAddCamera) {
-      btnAddCamera.addEventListener('click', function() {
-        // Chuyển hướng đến trang thêm camera
-        window.location.href = '/views/cameras/add';
-      });
-    }
-    
-    // Nút thêm camera đầu tiên
-    if (btnAddFirstCamera) {
-      btnAddFirstCamera.addEventListener('click', function() {
-        // Chuyển hướng đến trang thêm camera
-        window.location.href = '/views/cameras/add';
-      });
-    }
-    
-    // Nút lưu camera - đã xóa vì không còn cần thiết khi đã chuyển sang trang add-camera riêng biệt
-    
-    // Xử lý nút sửa camera
-    const editButtons = document.querySelectorAll('.btn-edit');
-    editButtons.forEach(button => {
-      button.addEventListener('click', function() {
-        const cameraId = this.getAttribute('data-id');
-        // Chuyển hướng đến trang sửa camera (có thể tạo route mới hoặc sử dụng route hiện có với tham số)
-        window.location.href = `/views/cameras/edit/${cameraId}`;
-      });
-    });
-    
-    // Xử lý nút xóa camera
-    const deleteButtons = document.querySelectorAll('.btn-delete');
-    deleteButtons.forEach(button => {
-      button.addEventListener('click', function() {
-        if (confirm('Bạn có chắc chắn muốn xóa camera này?')) {
-          const cameraId = this.getAttribute('data-id');
-          
-          fetch(`/api/cameras/${cameraId}`, {
-            method: 'DELETE'
-          })
-          .then(response => {
-            if (!response.ok) {
-              throw new Error('Không thể xóa camera');
-            }
-            return response.json();
-          })
-          .then(() => {
-            // Xóa camera khỏi giao diện hoặc làm mới trang
-            const cameraCard = document.querySelector(`.camera-card[data-camera-id="${cameraId}"]`);
-            if (cameraCard) {
-              cameraCard.remove();
-            }
-            
-            // Nếu không còn camera nào, hiển thị thông báo
-            const remainingCameras = document.querySelectorAll('.camera-card');
-            if (remainingCameras.length === 0) {
-              location.reload(); // Làm mới để hiển thị thông báo "không có camera"
-            }
-          })
-          .catch(error => {
-            alert('Lỗi: ' + error.message);
-          });
-        }
-      });
-    });
-    
-    // Xử lý nút xem camera
-    const viewButtons = document.querySelectorAll('.btn-view');
-    viewButtons.forEach(button => {
-      button.addEventListener('click', function() {
-        const cameraId = this.getAttribute('data-id');
-        // Chuyển hướng đến trang xem camera chi tiết
-        window.location.href = `/views/dashboard/cameras/${cameraId}`;
-      });
-    });
-    
-    // Xử lý tìm kiếm và lọc
+    const cameraGrid = document.getElementById('cameraGrid');
+    const noCamerasMessage = document.getElementById('noCamerasMessage');
     const searchInput = document.getElementById('cameraSearchInput');
     const statusFilter = document.getElementById('cameraStatusFilter');
     const locationFilter = document.getElementById('cameraLocationFilter');
     
+    // Fetch and display cameras
+    function fetchCameras() {
+      fetch('/api/camera/all')
+        .then(response => response.json())
+        .then(data => {
+          if (data.statusCode === 200 && Array.isArray(data.metadata)) {
+            renderCameras(data.metadata);
+            updateLocationFilter(data.metadata);
+          } else {
+            showNoCamerasMessage();
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching cameras:', error);
+          showNoCamerasMessage();
+        });
+    }
+    
+    // Render cameras from API response
+    function renderCameras(cameras) {
+      if (!cameras || cameras.length === 0) {
+        showNoCamerasMessage();
+        return;
+      }
+      
+      cameraGrid.innerHTML = '';
+      noCamerasMessage.style.display = 'none';
+      
+      cameras.forEach(camera => {
+        const statusClass = camera.camera_status ? 'active' : 'inactive';
+        const statusText = camera.camera_status ? 'Đang hoạt động' : 'Không hoạt động';
+        
+        const cameraCard = document.createElement('div');
+        cameraCard.className = 'camera-card';
+        cameraCard.dataset.cameraId = camera._id;
+        
+        cameraCard.innerHTML = `
+          <div class="camera-preview">
+            <img src="/img/camera-preview-placeholder.jpg" alt="${camera.camera_name}" onerror="this.src='/img/camera-offline.jpg'">
+            <div class="camera-status ${statusClass}">
+              <i class="fas fa-circle"></i>
+              <span>${statusText}</span>
+            </div>
+            <div class="camera-resolution">HD</div>
+          </div>
+          <div class="camera-info">
+            <h3 class="camera-name">${camera.camera_name}</h3>
+            <p class="camera-location"><i class="fas fa-map-marker-alt"></i> ${camera.camera_location}</p>
+            <p class="camera-ip"><i class="fas fa-network-wired"></i> ID: ${camera._id}</p>
+          </div>
+          <div class="camera-actions">
+            <button class="btn btn-sm btn-primary btn-view" data-id="${camera._id}">
+              <i class="fas fa-eye"></i> Xem
+            </button>
+            <button class="btn btn-sm btn-info btn-edit" data-id="${camera._id}">
+              <i class="fas fa-edit"></i> Sửa
+            </button>
+            <button class="btn btn-sm btn-danger btn-delete" data-id="${camera._id}">
+              <i class="fas fa-trash"></i> Xóa
+            </button>
+          </div>
+        `;
+        
+        cameraGrid.appendChild(cameraCard);
+      });
+      
+      // Add event listeners to the new buttons
+      attachButtonEventListeners();
+    }
+    
+    // Update location filter with unique locations
+    function updateLocationFilter(cameras) {
+      const locations = new Set();
+      cameras.forEach(camera => {
+        if (camera.camera_location) {
+          locations.add(camera.camera_location);
+        }
+      });
+      
+      // Clear existing options except "All"
+      locationFilter.innerHTML = '<option value="all">Tất cả khu vực</option>';
+      
+      // Add unique locations
+      locations.forEach(location => {
+        const option = document.createElement('option');
+        option.value = location;
+        option.textContent = location;
+        locationFilter.appendChild(option);
+      });
+    }
+    
+    function showNoCamerasMessage() {
+      cameraGrid.innerHTML = '';
+      noCamerasMessage.style.display = 'flex';
+    }
+    
+    // Attach event listeners to camera action buttons
+    function attachButtonEventListeners() {
+      // View buttons
+      document.querySelectorAll('.btn-view').forEach(button => {
+        button.addEventListener('click', function() {
+          const cameraId = this.getAttribute('data-id');
+          window.location.href = `/views/dashboard/cameras/${cameraId}`;
+        });
+      });
+      
+      // Edit buttons
+      document.querySelectorAll('.btn-edit').forEach(button => {
+        button.addEventListener('click', function() {
+          const cameraId = this.getAttribute('data-id');
+          window.location.href = `/views/cameras/edit/${cameraId}`;
+        });
+      });
+      
+      // Delete buttons
+      document.querySelectorAll('.btn-delete').forEach(button => {
+        button.addEventListener('click', function() {
+          const cameraId = this.getAttribute('data-id');
+          if (confirm('Bạn có chắc chắn muốn xóa camera này?')) {
+            deleteCamera(cameraId);
+          }
+        });
+      });
+    }
+    
+    // Delete camera function
+    function deleteCamera(cameraId) {
+      fetch(`/api/camera/${cameraId}`, {
+        method: 'DELETE'
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Không thể xóa camera');
+        }
+        return response.json();
+      })
+      .then(() => {
+        // Remove from UI
+        const cameraCard = document.querySelector(`.camera-card[data-camera-id="${cameraId}"]`);
+        if (cameraCard) {
+          cameraCard.remove();
+        }
+        
+        // Check if any cameras remain
+        const remainingCameras = document.querySelectorAll('.camera-card');
+        if (remainingCameras.length === 0) {
+          showNoCamerasMessage();
+        }
+      })
+      .catch(error => {
+        alert('Lỗi: ' + error.message);
+      });
+    }
+    
+    // Apply filters
     function applyFilters() {
       const searchTerm = searchInput.value.toLowerCase();
       const statusValue = statusFilter.value;
       const locationValue = locationFilter.value;
       
       const cameras = document.querySelectorAll('.camera-card');
+      let visibleCount = 0;
       
       cameras.forEach(camera => {
         const cameraName = camera.querySelector('.camera-name').textContent.toLowerCase();
         const cameraLocation = camera.querySelector('.camera-location').textContent.toLowerCase();
         const cameraStatus = camera.querySelector('.camera-status').classList.contains(statusValue);
         
-        // Áp dụng bộ lọc
+        // Apply filters
         let showCamera = true;
         
-        // Lọc theo tên/vị trí
+        // Filter by name/location
         if (searchTerm && !cameraName.includes(searchTerm) && !cameraLocation.includes(searchTerm)) {
           showCamera = false;
         }
         
-        // Lọc theo trạng thái
+        // Filter by status
         if (statusValue !== 'all' && !cameraStatus) {
           showCamera = false;
         }
         
-        // Lọc theo khu vực
+        // Filter by location
         if (locationValue !== 'all') {
-          const locationMatch = camera.querySelector('.camera-location').textContent.toLowerCase().includes(locationValue.toLowerCase());
+          const locationMatch = cameraLocation.includes(locationValue.toLowerCase());
           if (!locationMatch) {
             showCamera = false;
           }
         }
         
-        // Hiển thị hoặc ẩn camera
+        // Show or hide camera
         camera.style.display = showCamera ? '' : 'none';
+        if (showCamera) visibleCount++;
+      });
+      
+      // Show "no cameras" message if all are filtered out
+      if (visibleCount === 0 && cameras.length > 0) {
+        noCamerasMessage.style.display = 'flex';
+        noCamerasMessage.querySelector('p').textContent = 'Không tìm thấy camera nào phù hợp với bộ lọc';
+      } else {
+        noCamerasMessage.style.display = cameras.length === 0 ? 'flex' : 'none';
+        noCamerasMessage.querySelector('p').textContent = 'Không có camera nào được tìm thấy';
+      }
+    }
+    
+    // Event listeners
+    if (btnAddCamera) {
+      btnAddCamera.addEventListener('click', function() {
+        window.location.href = '/views/cameras/add';
+      });
+    }
+    
+    if (btnAddFirstCamera) {
+      btnAddFirstCamera.addEventListener('click', function() {
+        window.location.href = '/views/cameras/add';
+      });
+    }
+    
+    if (btnRefreshCameras) {
+      btnRefreshCameras.addEventListener('click', function() {
+        fetchCameras();
       });
     }
     
     if (searchInput) searchInput.addEventListener('input', applyFilters);
     if (statusFilter) statusFilter.addEventListener('change', applyFilters);
     if (locationFilter) locationFilter.addEventListener('change', applyFilters);
+    
+    // Initial fetch
+    fetchCameras();
   });
 </script>

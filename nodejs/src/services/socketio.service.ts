@@ -2,39 +2,34 @@ import type { Server } from "http";
 import { Server as SocketIOServer, Socket } from "socket.io";
 import handleEvent from "../utils/socketio.utils";
 import cameraModel from "@/models/camera.model";
-import { CAMERA_NAMESPACE_PATH } from "@/config/socketio.config";
-/**
- * Initializes and runs the Socket.IO connection logic.
- * @param io The Socket.IO server instance
- */
 
 export function runSocketIOService(server: Server): SocketIOServer {
   const io = new SocketIOServer(server, {
     cors: {
       origin: "*",
       methods: ["GET", "POST"],
+
     },
+    transports: ["websocket"],
   }); // Store the instance
-
-
-
 
   io.on("connection", async (socket: Socket) => {
     console.log(`SOCKET.IO CLIENT CONNECTED: ${socket.id}`);
 
-    const cameraIds = await cameraModel
-      .find(
-        {},
-        {
-          _id: 1,
-        }
-      )
-      .lean();
+    socket.on("join_all_camera", async () => {
+      console.log("join_all_camera by client:", socket.id);
 
-    cameraIds.forEach((id) => {
-      socket.join(`camera_${id._id}`);
+      const cameraIds = await cameraModel
+        .find(
+          {},
+          { _id: 1 }
+        )
+        .lean();
+
+      cameraIds.forEach((id) => {
+        socket.join(`camera_${id._id}`);
+      })
     })
-
 
     /* -------------------------------------------------------------------------- */
     /*                          Set 'image' event handler                         */
@@ -55,11 +50,6 @@ export function runSocketIOService(server: Server): SocketIOServer {
     /*                      Setup 'giaothong' event handler                      */
     /* -------------------------------------------------------------------------- */
     socket.on("giaothong", handleEvent("giaothong").bind(socket));
-
-    /* -------------------------------------------------------------------------- */
-    /*                      Setup 'car' event handler                            */
-    /* -------------------------------------------------------------------------- */
-    socket.on("car", handleEvent("car").bind(socket));
 
     /* -------------------------------------------------------------------------- */
     /*                      Setup 'license_plate' event handler                  */
