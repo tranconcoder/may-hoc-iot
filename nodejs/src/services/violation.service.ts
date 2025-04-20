@@ -3,8 +3,8 @@ import trafficLightService from "./trafficLight.service.js";
 import { TrafficLightEnum } from "@/enums/trafficLight.enum.js";
 
 interface Detect {
-    cameraId: string;
-    imageId: string;
+    camera_id: string;
+    image_id: string;
     detections: {
         'class': string,
         'confidence': number,
@@ -58,9 +58,9 @@ interface Detect {
 
 export default new class ViolationService {
     async detectRedLightViolation(data: Detect) {
-        const { cameraId, tracks } = data;
+        const { camera_id, tracks } = data;
 
-        const camera = await cameraModel.findById(cameraId);
+        const camera = await cameraModel.findById(camera_id);
         if (!camera) throw new Error("Not found camera!");
 
         const track_line_y = camera.camera_track_line_y;

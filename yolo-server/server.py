@@ -176,7 +176,7 @@ def process_frames_thread():
 
                         # Add track_id if available
                         if track_id is not None:
-                            detection_info['track_id'] = track_id
+                            detection_info['id'] = track_id
                         
                         detected_objects.append(detection_info)
                         

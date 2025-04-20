@@ -137,10 +137,11 @@ export async function handleGiaoThongEvent(this: Socket, data: any) {
     if (!imageBuffer) throw new Error("Not found image buffer!");
 
     socket.emit("vipham", {
-      cameraId: data.camera_id,
-      imageId: data.image_id,
+      camera_id: data.camera_id,
+      image_id: data.image_id,
       vehicleIds: await violationService.detectRedLightViolation(data),
-      buffer: imageBuffer.image
+      buffer: imageBuffer.image,
+      detections: data.detections,
     });
 
     await carDetectionModel
@@ -156,7 +157,7 @@ export async function handleGiaoThongEvent(this: Socket, data: any) {
         new_crossings: data.new_crossings,
       })
       .then((newCarDetection) => {
-        console.log("Car detection created successfully", newCarDetection);
+        console.log("Car detection created successfully");
       })
       .catch((err) => {
         throw new Error("Car detection creation failed: " + err);
@@ -164,7 +165,6 @@ export async function handleGiaoThongEvent(this: Socket, data: any) {
   } catch (error: any) {
     console.log("Error handleGiaoThongEvent: ", error);
   }
-
 }
 
 /* -------------------------------------------------------------------------- */

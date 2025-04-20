@@ -108,10 +108,7 @@ def process_license_plates_thread():
         try:
             # Try to get a car event from the queue, non-blocking
             try:
-                car_data = model_queue.get(block=False)
-                if car_data is None:
-                    time.sleep(0.01)
-                    continue
+                car_img, vehicle_id = model_queue.get(block=False)
             except queue.Empty:
                 time.sleep(0.01)
                 continue
@@ -121,19 +118,13 @@ def process_license_plates_thread():
                 time.sleep(0.01)
                 continue
             
-            # Extract data from the car event
-            vehicle_id = car_data.get('vehicle_id')
-            vehicle_class = car_data.get('class')
-            image_data = car_data.get('image_data')
-            timestamp = car_data.get('timestamp', time.time())
-            
-            if not image_data or not vehicle_id:
+            if not car_img or not vehicle_id:
                 continue  # Skip if missing required data
             
             # Convert buffer to image
             try:
                 # Convert bytes to numpy array
-                nparr = np.frombuffer(image_data, np.uint8)
+                nparr = np.frombuffer(car_img, np.uint8)
                 img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                 
                 if img is None:
@@ -190,6 +181,8 @@ def process_license_plates_thread():
                         
                         # Create plate detection info
                         plate_info = {
+                            'vehicle_id': vehicle_id,
+                            'image_id': image_id,
                             'confidence': float(confidence),
                             'bbox': {
                                 'x1': float(rel_x1),
@@ -199,7 +192,6 @@ def process_license_plates_thread():
                                 'width': float(rel_x2 - rel_x1),
                                 'height': float(rel_y2 - rel_y1)
                             },
-                            'image_data': plate_buffer
                         }
                         
                         license_plates.append(plate_info)
@@ -250,15 +242,20 @@ def disconnect():
     global running
     running = False
 
-@sio.on('car')
+@sio.on('vipham')
 def on_car(data):
     global last_processing_time
-    
-    # Limit processing rate to avoid overload
+
     current_time = time.time()
     if current_time - last_processing_time < 1.0/MAX_FPS:
         return  # Skip this frame to maintain reasonable frame rate
-    
+
+    cameraId = data.get('camera_id')
+    imageId = data.get('image_id')
+    vehicleIds = data.get('vehicleIds')
+    buffer = data.get('buffer')
+    detections = data.get('detections')
+
     last_processing_time = current_time
     
     try:
@@ -267,22 +264,31 @@ def on_car(data):
             print("Warning: Received car event with invalid data format")
             return
         
-        vehicle_id = data.get('vehicle_id')
-        if not vehicle_id:
-            print("Warning: Received car event without vehicle ID")
-            return
-        
-        image_data = data.get('image_data')
-        if not image_data:
-            print(f"Warning: Received car event without image data for vehicle {vehicle_id}")
-            return
-        
-        # Add car data to processing queue
-        try:
-            model_queue.put(data, block=False)
-        except queue.Full:
-            # If queue is full, just discard this data
-            pass
+        image_data = data.get('buffer')
+        image = Image.open(io.BytesIO(image_data))
+
+        frame = np.array(image)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+        height, width = frame.shape[:2]
+
+        # Crop car detection
+        for detection in detections:
+            x1, y1, x2, y2 = detection['bbox']
+            x1 = int(x1 * width)
+            y1 = int(y1 * height)
+            x2 = int(x2 * width)
+            y2 = int(y2 * height)
+
+            # Crop car detection
+            car_img = frame[y1:y2, x1:x2]
+
+            # Add car data to processing queue
+            try:
+                model_queue.put((car_img.copy(), detection["vehicle_id"]), block=False)
+            except queue.Full:
+                pass
+
     
     except Exception as e:
         print(f"Error handling car event: {e}")

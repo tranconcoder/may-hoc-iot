@@ -14,6 +14,7 @@ export const cartDetectionSchema = new Schema({
     detections: {
         type: [
             {
+                id: { type: Number },
                 class: { type: String, required: true },
                 confidence: { type: Number, required: true },
                 bbox: {
