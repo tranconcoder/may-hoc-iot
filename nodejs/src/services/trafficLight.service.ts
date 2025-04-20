@@ -1,17 +1,42 @@
+import { TrafficLightEnum } from "@/enums/trafficLight.enum.js";
 import trafficLightModel from "@/models/trafficLight.model.js";
 
 export default new class TrafficLightService {
-    async getTrafficLightByTime(time: number) {
-        const trafficLight = await trafficLightModel.findOne({}, {}, {
-            sort: {
-                $expr: {
-                    $abs: {
-                        $subtract: ["$created_at", time]
-                    }
-                }
+    async getTrafficLightByTime(time: number){
+      // Sử dụng MongoDB Aggregation Pipeline để tìm bản ghi có thời gian gần nhất với time đã cho
+      const trafficLights = await trafficLightModel
+        .aggregate([
+          {
+            $addFields: {
+              createdAtValue: { $toLong: "$created_at" },
             },
-        });
+          },
+          {
+            $addFields: {
+              timeDifference: {
+                $subtract: [time, "$createdAtValue"]
+              },
+            },
+          },
+          {
+            $match: {
+              timeDifference: {
+                $lte: 0
+              }
+            }
+          },
+          {
+            $sort: { timeDifference: 1 },
+          },
+          {
+            $limit: 1,
+          },
+        ])
+        .exec();
 
-        return trafficLight;
+      // Trả về null nếu không tìm thấy kết quả, ngược lại trả về bản ghi đầu tiên
+      const trafficLight = trafficLights.length > 0 ? trafficLights[0] : null;
+
+      return trafficLight as TrafficLightEnum;
     }
 }

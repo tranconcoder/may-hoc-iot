@@ -2,6 +2,8 @@ import { Socket } from "socket.io";
 import trafficLightModel from "@/models/trafficLight.model.js";
 import carDetectionModel from "@/models/carDetection.model.js";
 import cameraModel from "@/models/camera.model.js";
+import violationService from "@/services/violation.service.js";
+import cameraImageModel from "@/models/cameraImage.model.js";
 
 /* -------------------------------------------------------------------------- */
 /*                            Use strategy pattern                            */
@@ -130,24 +132,39 @@ export async function handleGiaoThongEvent(this: Socket, data: any) {
   // Forward vehicle detection data to all clients with original event name
   socket.broadcast.emit("giaothong", data);
 
-  await carDetectionModel
-    .create({
-      camera_id: data.camera_id,
-      image_id: data.image_id,
-      created_at: data.created_at,
-      detections: data.detections,
-      inference_time: data.inference_time,
-      image_dimensions: data.image_dimensions,
-      vehicle_count: data.vehicle_count,
-      tracks: data.tracks,
-      new_crossings: data.new_crossings,
-    })
-    .then((newCarDetection) => {
-      console.log("Car detection created successfully", newCarDetection);
-    })
-    .catch((err) => {
-      console.log("Car detection creation failed", err);
+  try {
+    const imageBuffer = await cameraImageModel.findById(data.image_id);
+    if (!imageBuffer) throw new Error("Not found image buffer!");
+
+    socket.emit("vipham", {
+      cameraId: data.camera_id,
+      imageId: data.image_id,
+      vehicleIds: await violationService.detectRedLightViolation(data),
+      buffer: imageBuffer.image
     });
+
+    await carDetectionModel
+      .create({
+        camera_id: data.camera_id,
+        image_id: data.image_id,
+        created_at: data.created_at,
+        detections: data.detections,
+        inference_time: data.inference_time,
+        image_dimensions: data.image_dimensions,
+        vehicle_count: data.vehicle_count,
+        tracks: data.tracks,
+        new_crossings: data.new_crossings,
+      })
+      .then((newCarDetection) => {
+        console.log("Car detection created successfully", newCarDetection);
+      })
+      .catch((err) => {
+        throw new Error("Car detection creation failed: " + err);
+      });
+  } catch (error: any) {
+    console.log("Error handleGiaoThongEvent: ", error);
+  }
+
 }
 
 /* -------------------------------------------------------------------------- */
