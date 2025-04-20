@@ -130,7 +130,7 @@ def process_frames_thread():
 
             # Emit detection results back to the server
             if detected_signs:
-                sio.emit('dentinhieu', response)
+                sio.emit('traffic_light', response)
                 print(f"Detected {len(detected_signs)} traffic signs, inference time: {inference_time:.2f}ms")
                     
         except Exception as e:
@@ -274,8 +274,6 @@ def on_image(data):
     
     except Exception as e:
         print(f"Error processing image: {e}")
-        # Send error response
-        sio.emit('dentinhieu', {'error': str(e)})
 
 def main():
     global running

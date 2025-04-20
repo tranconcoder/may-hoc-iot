@@ -108,7 +108,7 @@ def process_license_plates_thread():
         try:
             # Try to get a car event from the queue, non-blocking
             try:
-                car_img, vehicle_id = model_queue.get(block=False)
+                car_img, cameraId, imageId, vehicleId, violationType = model_queue.get(block=False)
             except queue.Empty:
                 time.sleep(0.01)
                 continue
@@ -118,7 +118,7 @@ def process_license_plates_thread():
                 time.sleep(0.01)
                 continue
             
-            if not car_img or not vehicle_id:
+            if not car_img or not vehicleId:
                 continue  # Skip if missing required data
             
             # Convert buffer to image
@@ -128,7 +128,7 @@ def process_license_plates_thread():
                 img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                 
                 if img is None:
-                    print(f"Error: Could not decode image for vehicle {vehicle_id}")
+                    print(f"Error: Could not decode image for vehicle {vehicleId}")
                     continue
             except Exception as e:
                 print(f"Error decoding image: {e}")
@@ -146,11 +146,21 @@ def process_license_plates_thread():
             height, width = img.shape[:2]
             
             # Process detection results
-            license_plates = []
+            license_plate = None
+
+            print(results)
             
             for result in results:
-                boxes = result.boxes
-                for box in boxes:
+                max_confidence = 0
+                box = None
+
+                for box in result.boxes:
+                    confidence = float(box.conf[0])
+
+                    if confidence > max_confidence:
+                        max_confidence = confidence
+                        box = box
+
                     confidence = float(box.conf[0])
                     
                     # Check if confidence meets threshold
@@ -242,8 +252,8 @@ def disconnect():
     global running
     running = False
 
-@sio.on('vipham')
-def on_car(data):
+@sio.on('violation_detect')
+def on_violation_detect(data):
     global last_processing_time
 
     current_time = time.time()
@@ -252,7 +262,7 @@ def on_car(data):
 
     cameraId = data.get('camera_id')
     imageId = data.get('image_id')
-    vehicleIds = data.get('vehicleIds')
+    violations = data.get('violations')
     buffer = data.get('buffer')
     detections = data.get('detections')
 
@@ -264,8 +274,7 @@ def on_car(data):
             print("Warning: Received car event with invalid data format")
             return
         
-        image_data = data.get('buffer')
-        image = Image.open(io.BytesIO(image_data))
+        image = Image.open(io.BytesIO(buffer))
 
         frame = np.array(image)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
@@ -284,10 +293,13 @@ def on_car(data):
             car_img = frame[y1:y2, x1:x2]
 
             # Add car data to processing queue
-            try:
-                model_queue.put((car_img.copy(), detection["vehicle_id"]), block=False)
-            except queue.Full:
-                pass
+            violation = next((x for x in violations if x['id'] == detection["id"]), None)
+
+            if violation:
+                try:
+                    model_queue.put((car_img.copy(), cameraId, imageId, detection['id'], violation['type']), block=False)
+                except queue.Full:
+                    pass
 
     
     except Exception as e:

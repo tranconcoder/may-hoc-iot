@@ -8,9 +8,11 @@ export const CART_DETECTION_COLLECTION_NAME = 'car_detections';
 
 
 export const cartDetectionSchema = new Schema({
+    /* ------------------------------- Foreign key ------------------------------ */
     camera_id: { type: Schema.Types.ObjectId, ref: CAMERA_MODEL_NAME, required: true },
     image_id: { type: Schema.Types.ObjectId, ref: CAMERA_IMAGE_MODEL_NAME, required: true },
 
+    /* -------------------------------- Detection ------------------------------- */
     detections: {
         type: [
             {
@@ -30,10 +32,6 @@ export const cartDetectionSchema = new Schema({
         required: true
     },
     inference_time: { type: Number, required: true },
-    image_dimensions: {
-        width: { type: Number, required: true },
-        height: { type: Number, required: true },
-    },
     vehicle_count: {
         total_up: { type: Number, required: true },
         total_down: { type: Number, required: true },
@@ -79,7 +77,13 @@ export const cartDetectionSchema = new Schema({
             }
         ],
         default: []
-    }
+    },
+
+    /* ------------------------------- Image dimensions ------------------------------ */
+    image_dimensions: {
+        width: { type: Number, required: true },
+        height: { type: Number, required: true },
+    },
 }, {
     timestamps: {
         createdAt: 'created_at',

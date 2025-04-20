@@ -293,7 +293,7 @@ def process_frames_thread():
 
             # Emit detection results back to the server
             if len(detected_objects) > 0:
-                sio.emit('giaothong', response)
+                sio.emit('car_detected', response)
             print(f"Processed image, found {len(detected_objects)} vehicles, inference time: {inference_time:.2f}ms")
             
             # Display vehicle count summary
@@ -454,8 +454,6 @@ def on_image(data):
     
     except Exception as e:
         print(f"Error processing image: {e}")
-        # Send error response
-        sio.emit('giaothong', {'error': str(e)})
 
 def maintain_connection():
     """Thread to manage Socket.IO connection and auto-reconnect"""

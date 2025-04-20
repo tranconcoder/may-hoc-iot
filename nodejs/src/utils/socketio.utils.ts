@@ -4,6 +4,7 @@ import carDetectionModel from "@/models/carDetection.model.js";
 import cameraModel from "@/models/camera.model.js";
 import violationService from "@/services/violation.service.js";
 import cameraImageModel from "@/models/cameraImage.model.js";
+import { TrafficViolation } from "@/enums/trafficViolation.model.js";
 
 /* -------------------------------------------------------------------------- */
 /*                            Use strategy pattern                            */
@@ -130,18 +131,24 @@ export async function handleGiaoThongEvent(this: Socket, data: any) {
   const socket = this;
 
   // Forward vehicle detection data to all clients with original event name
-  socket.broadcast.emit("giaothong", data);
+  socket.broadcast.emit("car_detected", data);
 
   try {
     const imageBuffer = await cameraImageModel.findById(data.image_id);
     if (!imageBuffer) throw new Error("Not found image buffer!");
 
-    socket.emit("vipham", {
+    socket.emit("violation_detect", {
       camera_id: data.camera_id,
       image_id: data.image_id,
-      vehicleIds: await violationService.detectRedLightViolation(data),
+      violations: [
+        /* ----------------------- Red light violation detect ----------------------- */
+        ...(await violationService.detectRedLightViolation(data)).map(id => ({
+          id,
+          type: TrafficViolation.RED_LIGHT_VIOLATION,
+        })),
+      ],
       buffer: imageBuffer.image,
-      detections: data.detections,
+      detections: data.detections
     });
 
     await carDetectionModel

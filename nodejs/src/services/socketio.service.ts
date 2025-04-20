@@ -38,10 +38,10 @@ export function runSocketIOService(server: Server): SocketIOServer {
     socket.on("image", handleEvent("image").bind(socket));
 
     /* ---------------------------- Set 'dentinhieu' event handler ---------------------------- */
-    socket.on("dentinhieu", handleEvent("dentinhieu").bind(socket));
+    socket.on("traffic_light", handleEvent("dentinhieu").bind(socket));
 
     /* ---------------------------- Set 'giaothong' event handler ---------------------------- */
-    socket.on("giaothong", handleEvent("giaothong").bind(socket));
+    socket.on("car_detected", handleEvent("giaothong").bind(socket));
 
     /* ---------------------------- Set 'license_plate' event handler ---------------------------- */
     socket.on("license_plate", handleEvent("license_plate").bind(socket));
