@@ -1,5 +1,5 @@
-// Configuration
-const SOCKETIO_SERVER_URL = 'http://172.28.31.150:3001';
+
+const SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3001';
 const MAX_LOG_ENTRIES = 50;
 const FRAME_RATE_LIMIT = 30; // Max frames per second to process
 

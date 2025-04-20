@@ -1,6 +1,5 @@
-// filepath: /home/tranv/Workspace/mh-iot-new/nodejs/public/scripts/capture/main.js
 // Giá trị mặc định có thể được ghi đè bởi người dùng
-const DEFAULT_WEBSOCKET_URL = "172.28.31.150:3000";
+const DEFAULT_WEBSOCKET_URL = "100.121.193.6:3001";
 const DEFAULT_API_KEY =
   "0e1f4b7dc39c63e9dbbfbf5afc2e50f9deb625507cada47b203117c82362d1d2";
 const DEFAULT_CAMERA_ID = "68027ecbc11ceedc95d734df";
@@ -186,7 +185,7 @@ function buildWebSocketUrl() {
   const cameraId = cameraIdInput.value || DEFAULT_CAMERA_ID;
   const apiKey = apiKeyInput.value || DEFAULT_API_KEY;
 
-  return `ws://${websocketServer}?cameraId=${cameraId}&apiKey=${apiKey}`;
+  return `wss://${websocketServer}?cameraId=${cameraId}&apiKey=${apiKey}`;
 }
 
 // Start screen capture
@@ -226,6 +225,18 @@ async function startCapture() {
     };
 
     try {
+      // Kiểm tra xem navigator.mediaDevices có tồn tại không
+      if (!navigator || !navigator.mediaDevices) {
+        throw new Error("Trình duyệt không hỗ trợ API truy cập thiết bị media");
+      }
+
+      // Kiểm tra xem kết nối có bảo mật không
+      if (location.protocol !== "https:" && location.hostname !== "localhost") {
+        throw new Error(
+          "API truy cập media chỉ hoạt động trên HTTPS hoặc localhost. Vui lòng sử dụng kết nối bảo mật hoặc localhost."
+        );
+      }
+
       mediaStream = await navigator.mediaDevices.getDisplayMedia(
         displayMediaOptions
       );
@@ -530,7 +541,7 @@ function enableContinuousHighPerformanceMode() {
             socket.send(blob);
             frameCount++;
 
-            // Cập nhật FPS counter
+            // Cập nhật FPS counter:229
             const now = Date.now();
             if (now - lastFpsUpdate >= 1000) {
               fps = Math.round((frameCount * 1000) / (now - lastFpsUpdate));

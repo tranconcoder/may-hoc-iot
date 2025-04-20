@@ -10,6 +10,7 @@ import SetupHandlebars from '@/services/handlebars.service.js';
 
 // Https server
 import fs from 'fs';
+import https from 'https';
 
 // Websocket Server
 import runWebsocketService from '@/services/websocket.service.js';
@@ -52,14 +53,14 @@ const credentials = {
 // Server
 const app = express();
 // Use createServer from http for simplicity, assuming HTTPS isn't strictly needed for internal Socket.IO
-const httpServer = createServer(app); // Renamed for clarity
+const httpsServer = https.createServer(credentials, app); // Renamed for clarity
+
+const httpsWs = https.createServer(credentials);
 const wss = new WebSocketServer({
-  server: httpServer, // Attach WebSocket server to the HTTP server
-  host: HOST,
+  // server: httpsServer, // Attach WebSocket server to the HTTP server
+  server: httpsWs,
   maxPayload: 102400 * 1024, // Example payload limit
 });
-
-
 
 //
 // SESSION
@@ -76,7 +77,7 @@ app.use(session(sessionOptions));
 //
 // SOCKET.IO
 //
-const io = runSocketIOService(httpServer);
+const io = runSocketIOService(httpsServer);
 
 //
 // CORS
@@ -136,10 +137,14 @@ app.use(HandleErrorService.middleware);
 // START SERVER
 //
 // Use httpServer.listen (which now has both ws and socket.io attached)
-httpServer.listen(PORT, HOST, () => {
+httpsServer.listen(PORT, HOST, () => {
   console.log(
-    `Server (with WebSocket and Socket.IO) is running on http://${HOST}:${PORT}`
+    `Server is running on https://${HOST}:${PORT}`
   );
 });
 
-export { wss, httpServer, HOST, PORT, io }; // Export io and the httpServer
+httpsWs.listen(3001, HOST, () => {
+  console.log(`Server (with WebSocket and Socket.IO) is running on https://${HOST}:3001`);
+});
+
+export { wss, httpsServer, HOST, PORT, io };

@@ -1,16 +1,9 @@
-import type { Server } from "http";
 import { Server as SocketIOServer, Socket } from "socket.io";
+import { Server as HTTPsServer } from "https";
 import handleEvent from "../utils/socketio.utils.js";
-import cameraModel from "@/models/camera.model.js";
 
-export function runSocketIOService(server: Server): SocketIOServer {
-  const io = new SocketIOServer(server, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"],
-    },
-    transports: ["websocket"],
-  }); // Store the instance
+export function runSocketIOService(server: HTTPsServer): SocketIOServer {
+  const io = new SocketIOServer(server); // Store the instance
 
   io.on("connection", async (socket: Socket) => {
     console.log(`SOCKET.IO CLIENT CONNECTED: ${socket.id}`);
@@ -58,8 +51,6 @@ export function runSocketIOService(server: Server): SocketIOServer {
   });
 
   console.log("Socket.IO service logic initialized.");
-
-  io.listen(3001);
 
   return io;
 }

@@ -1,5 +1,5 @@
 const MAX_LOG_ENTRIES = 50;
-const SOCKETIO_SERVER_URL = 'ws://172.28.31.150:3001';
+const SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3000';
 
 // DOM Elements
 const cameraListEl = document.getElementById('camera-list');
@@ -39,7 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
     transports: ['websocket'],
     reconnection: true,
     reconnectionAttempts: 5,
-    reconnectionDelay: 1000
+    reconnectionDelay: 1000,
+    upgrade: false,
+
   });
 
   fetchCameraList();
