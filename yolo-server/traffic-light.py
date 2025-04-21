@@ -12,11 +12,11 @@ from PIL import Image
 # --- Configuration ---
 MODEL_PATH = "./models/mhiot-dentinhieu-best-new-nano.pt"  # Path to YOLOv11 model
 CONFIDENCE_THRESHOLD = 0.4  # Detection confidence threshold
-SOCKETIO_SERVER_URL = 'ws://172.28.31.150:3001'
+SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3000'
 ENABLE_GPU = True  # Enable GPU acceleration if available
 
 # Initialize Socket.IO client
-sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=5000)
+sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=3000, ssl_verify=False)
 print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
 
 # Global variables
@@ -24,7 +24,7 @@ running = True
 connected = False
 model = None
 last_frame_time = 0
-MAX_FPS = 20  # Maximum frames per second
+MAX_FPS = 30  # Maximum frames per second
 
 # Queue for model processing
 model_frame_queue = queue.Queue(maxsize=2)

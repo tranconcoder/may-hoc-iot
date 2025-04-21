@@ -13,7 +13,7 @@ import queue
 MODEL_PATH = 'yolo11n.pt'  # Using your existing model
 CONFIDENCE_THRESHOLD = 0.4  # Detection confidence threshold
 VEHICLE_CLASSES = ['car', 'truck', 'bus', 'motorcycle', 'bicycle']  # Vehicle classes in COCO dataset
-SOCKETIO_SERVER_URL = 'http://172.28.31.150:3001'
+SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3000'
 ENABLE_TRACKING = True  # Enable object tracking functionality
 ENABLE_GPU = True  # Enable GPU acceleration if available
 
@@ -35,7 +35,7 @@ CROP_IMAGE_QUALITY = 85  # JPEG quality for cropped images (1-100)
 CROP_MAX_SIZE = 300  # Maximum dimension for cropped images
 
 # Initialize Socket.IO client
-sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=5000)
+sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=5000, ssl_verify=False)
 print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
 
 # Global variables
@@ -43,7 +43,7 @@ running = True
 connected = False  # Track connection status
 model = None
 last_frame_time = 0
-MAX_FPS = 20  # Maximum frames per second
+MAX_FPS = 30  # Maximum frames per second
 
 # Queue for model processing
 model_frame_queue = queue.Queue(maxsize=2)

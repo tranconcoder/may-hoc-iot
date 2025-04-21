@@ -15,12 +15,12 @@ import os
 LICENSE_PLATE_MODEL_PATH = './models/license_plate_detector.pt'
 
 # SocketIO server configuration (same as in server.py)
-SOCKETIO_SERVER_URL = 'http://172.28.31.150:3001'
+SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3000'
 ENABLE_GPU = True  # Enable GPU acceleration if available
 
 # Detection configuration
 CONFIDENCE_THRESHOLD = 0.4  # License plate detection confidence threshold
-MAX_FPS = 90  # Maximum frames per second to process
+MAX_FPS = 30  # Maximum frames per second to process
 
 # Initialize Socket.IO client
 sio = socketio.Client()

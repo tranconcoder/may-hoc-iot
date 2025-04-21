@@ -28,12 +28,12 @@ USE_HALF_PRECISION = True  # Use FP16 precision for inference if GPU is availabl
 ENABLE_GPU = True  # Enable GPU acceleration if available
 
 # Socket.IO configuration
-SOCKETIO_SERVER_URL = 'http://172.28.31.150:3001'  # Same server as in server.py
-MAX_FPS = 20  # Maximum frames per second to process
+SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3000'  # Same server as in server.py
+MAX_FPS = 30  # Maximum frames per second to process
 QUEUE_SIZE = 5  # Size of processing queue
 
 # Initialize Socket.IO client
-sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=5000)
+sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=5000, ssl_verify=False)
 print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
 
 # Global variables
