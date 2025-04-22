@@ -21,25 +21,23 @@ export function runSocketIOService(server: HTTPsServer): SocketIOServer {
 
     socket.on("leave_camera", handleEvent("leave_camera").bind(socket));
 
-
-
     /* -------------------------------------------------------------------------- */
     /*                                Event handler                               */
     /* -------------------------------------------------------------------------- */
 
-    /* ---------------------------- Set 'image' event handler ---------------------------- */
+    /* ------------------------ Set 'image' event handler ----------------------- */
     socket.on("image", handleEvent("image").bind(socket));
 
-    /* ---------------------------- Set 'dentinhieu' event handler ---------------------------- */
-    socket.on("traffic_light", handleEvent("dentinhieu").bind(socket));
+    /* -------------------- Set 'traffic_light' event handler ------------------- */
+    socket.on("traffic_light", handleEvent("traffic_light").bind(socket));
 
-    /* ---------------------------- Set 'giaothong' event handler ---------------------------- */
-    socket.on("car_detected", handleEvent("giaothong").bind(socket));
+    /* -------------------- Set 'car_detected' event handler -------------------- */
+    socket.on("car_detected", handleEvent("car_detected").bind(socket));
 
-    /* ---------------------------- Set 'license_plate' event handler ---------------------------- */
+    /* -------------------- Set 'license_plate' event handler -------------------- */
     socket.on("license_plate", handleEvent("license_plate").bind(socket));
 
-    /* ---------------------------- Set 'license_plate_ocr' event handler ---------------------------- */
+    /* ------------------ Set 'license_plate_ocr' event handler ------------------ */
     socket.on(
       "license_plate_ocr",
       handleEvent("license_plate_ocr").bind(socket)

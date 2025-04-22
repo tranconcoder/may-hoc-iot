@@ -9,25 +9,32 @@ import queue
 import io
 from PIL import Image
 
-# --- Configuration ---
-MODEL_PATH = "./models/mhiot-dentinhieu-best-new-nano.pt"  # Path to YOLOv11 model
-CONFIDENCE_THRESHOLD = 0.4  # Detection confidence threshold
+# ---------------------------------------------------------------------------- #
+#                              Model configuration                             #
+# ---------------------------------------------------------------------------- #
+MODEL_PATH = "./models/mhiot-dentinhieu-best-new-nano.pt"
+# MODEL_PATH = "./models/mhiot-dentinhieu-best-new.pt"
+CONFIDENCE_THRESHOLD = 0.4 
 SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3000'
-ENABLE_GPU = True  # Enable GPU acceleration if available
+ENABLE_GPU = True
 
-# Initialize Socket.IO client
+# ---------------------------------------------------------------------------- #
+#                         Socketio client configuration                        #
+# ---------------------------------------------------------------------------- #
 sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=3000, ssl_verify=False)
 print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
 
-# Global variables
+# ---------------------------------------------------------------------------- #
+#                              Global variables                                #
+# ---------------------------------------------------------------------------- #
 running = True
 connected = False
 model = None
 last_frame_time = 0
-MAX_FPS = 30  # Maximum frames per second
+MAX_FPS = 30
 
 # Queue for model processing
-model_frame_queue = queue.Queue(maxsize=2)
+model_frame_queue = queue.Queue(maxsize=10)
 
 def get_model_path():
     return MODEL_PATH
@@ -112,26 +119,29 @@ def process_frames_thread():
                 print("Traffic Sign Detection: No traffic signs detected in this frame")
             
             # Prepare response with detection results
-            max_confidence = max(detected_signs, key=lambda x: x['confidence'])
-            traffic_status = max_confidence['class']
+            if len(detected_signs) > 0:
+                max_confidence = max(detected_signs, key=lambda x: x['confidence'])
+                traffic_status = max_confidence['class']
 
-            response = {
-                'cameraId': cameraId,
-                'imageId': imageId,
-                'traffic_status': traffic_status,
-                'detections': detected_signs,
-                'inference_time': inference_time,
-                'image_dimensions': {
-                    'width': width,
-                    'height': height
-                },
-                'created_at': created_at,
-            }
+                response = {
+                    'cameraId': cameraId,
+                    'imageId': imageId,
+                    'traffic_status': traffic_status,
+                    'detections': detected_signs,
+                    'inference_time': inference_time,
+                    'image_dimensions': {
+                        'width': width,
+                        'height': height
+                    },
+                    'created_at': created_at,
+                }
 
-            # Emit detection results back to the server
-            if detected_signs:
+                # Emit detection results back to the server
                 sio.emit('traffic_light', response)
                 print(f"Detected {len(detected_signs)} traffic signs, inference time: {inference_time:.2f}ms")
+            else:
+                continue
+
                     
         except Exception as e:
             print(f"Error in processing thread: {e}")

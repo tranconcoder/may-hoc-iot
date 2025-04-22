@@ -15,14 +15,13 @@ const strategy = {
   join_all_camera: handleJoinAllCameraEvent,
   leave_camera: handleLeaveCameraEvent,
 
-
   /* ------------------------------ Event handler ----------------------------- */
   image: handleImageEvent,
-  dentinhieu: handleDenTinHieuEvent,
-  giaothong: handleGiaoThongEvent,
+  traffic_light: handleTrafficLightEvent,
+  car_detected: handleCarDetectedEvent,
   license_plate: handleLicensePlateEvent,
   license_plate_ocr: handleLicensePlateOcrEvent,
-}
+};
 
 export default function handleEvent(event: keyof typeof strategy) {
   const handler = strategy[event];
@@ -93,9 +92,9 @@ export async function handleImageEvent(this: Socket, data: {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                      Handle 'dentinhieu' event handler                      */
+/*                      Handle 'traffic_light' event handler                      */
 /* -------------------------------------------------------------------------- */
-export async function handleDenTinHieuEvent(this: Socket, data: any) {
+export async function handleTrafficLightEvent(this: Socket, data: any) {
   const socket = this;
 
   let maxDetection = { confidence: 0 };
@@ -105,7 +104,7 @@ export async function handleDenTinHieuEvent(this: Socket, data: any) {
     }
   });
 
-  socket.broadcast.emit("dentinhieu", {
+  socket.broadcast.emit("traffic_light", {
     cameraId: data.cameraId,
     imageId: data.imageId,
     traffic_status: data.traffic_status,
@@ -115,19 +114,17 @@ export async function handleDenTinHieuEvent(this: Socket, data: any) {
     created_at: data.created_at,
   });
 
-  console.log('Traffic light detection data', data);
+  console.log("Traffic light detection data", data.traffic_status);
 
-  trafficLightModel
-    .create(data)
-    .catch((err) => {
-      console.log("Traffic light detection creation failed", err);
-    });
+  trafficLightModel.create(data).catch((err) => {
+    console.log("Traffic light detection creation failed", err);
+  });
 }
 
 /* -------------------------------------------------------------------------- */
-/*                      Handle 'giaothong' event handler                      */
+/*                      Handle 'car_detected' event handler                      */
 /* -------------------------------------------------------------------------- */
-export async function handleGiaoThongEvent(this: Socket, data: any) {
+export async function handleCarDetectedEvent(this: Socket, data: any) {
   const socket = this;
 
   // Forward vehicle detection data to all clients with original event name
@@ -142,16 +139,16 @@ export async function handleGiaoThongEvent(this: Socket, data: any) {
       image_id: data.image_id,
       violations: [
         /* ----------------------- Red light violation detect ----------------------- */
-        ...(await violationService.detectRedLightViolation(data)).map(id => ({
+        ...(await violationService.detectRedLightViolation(data)).map((id) => ({
           id,
           type: TrafficViolation.RED_LIGHT_VIOLATION,
         })),
       ],
       buffer: imageBuffer.image,
-      detections: data.detections
+      detections: data.detections,
     });
 
-    await carDetectionModel
+    carDetectionModel
       .create({
         camera_id: data.camera_id,
         image_id: data.image_id,

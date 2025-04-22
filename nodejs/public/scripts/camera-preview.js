@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   socket.on('image', handleImageData);
-  socket.on('giaothong', handleDetectionData);
+  socket.on('car_detected', handleDetectionData);
 });
 
 // Fetch the list of cameras from the API

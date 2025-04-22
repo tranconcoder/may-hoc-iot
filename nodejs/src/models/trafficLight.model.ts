@@ -1,4 +1,5 @@
 import { Schema, model } from 'mongoose';
+import ms from 'ms';
 
 export const TRAFFIC_LIGHT_MODEL_NAME = 'TrafficLight';
 export const TRAFFIC_LIGHT_COLLECTION_NAME = 'traffic_lights';
@@ -32,5 +33,7 @@ export const trafficLightSchema = new Schema({
     },
     collection: TRAFFIC_LIGHT_COLLECTION_NAME,
 });
+
+trafficLightSchema.index({ created_at: -1 }, { expireAfterSeconds: ms('1 hour') / 1000 });
 
 export default model(TRAFFIC_LIGHT_MODEL_NAME, trafficLightSchema);

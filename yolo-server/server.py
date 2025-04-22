@@ -11,7 +11,9 @@ import queue
 
 # --- Configuration ---
 MODEL_PATH = 'yolo11n.pt'  # Using your existing model
-CONFIDENCE_THRESHOLD = 0.4  # Detection confidence threshold
+# MODEL_PATH = 'yolo11m.pt'  # Using your existing model
+
+CONFIDENCE_THRESHOLD = 0.5  # Detection confidence threshold
 VEHICLE_CLASSES = ['car', 'truck', 'bus', 'motorcycle', 'bicycle']  # Vehicle classes in COCO dataset
 SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3000'
 ENABLE_TRACKING = True  # Enable object tracking functionality
@@ -46,7 +48,7 @@ last_frame_time = 0
 MAX_FPS = 30  # Maximum frames per second
 
 # Queue for model processing
-model_frame_queue = queue.Queue(maxsize=2)
+model_frame_queue = queue.Queue(maxsize=10)
 
 # Global variables for tracking
 vehicle_tracks = {}  # Dictionary to store tracking information: {track_id: [positions]}
@@ -185,10 +187,9 @@ def process_frames_thread():
                             
                         if track_id is not None:
                             # Add to current tracks
-                            current_time = time.time()
                             current_tracks[track_id] = {
                                 'position': (center_x, center_y),
-                                'time': current_time,
+                                'time': created_at,
                                 'class': class_name
                             }
             
@@ -317,17 +318,6 @@ def load_model():
             try:
                 import sys
                 import subprocess
-                import pkg_resources
-                
-                # Check if tracking packages are installed
-                required_packages = {"ultralytics[track]"}
-                installed = {pkg.key for pkg in pkg_resources.working_set}
-                missing = required_packages - installed
-                
-                if missing:
-                    print("Installing required packages for tracking...")
-                    subprocess.check_call([sys.executable, "-m", "pip", "install", "ultralytics[track]"])
-                    print("Tracking packages installed successfully!")
                 
                 print("Initializing model with tracking capability...")
             except Exception as e:
@@ -439,11 +429,11 @@ def on_image(data):
         # Get frame dimensions
         height, width = frame.shape[:2]
         
-        # Resize the frame if it's too large to save memory
-        max_dimension = 1920 # Maximum dimension to process
-        if width > max_dimension or height > max_dimension:
-            scale = max_dimension / max(width, height)
-            frame = cv2.resize(frame, (int(width * scale), int(height * scale)))
+        # # Resize the frame if it's too large to save memory
+        # max_dimension = 1920 # Maximum dimension to process
+        # if width > max_dimension or height > max_dimension:
+        #     scale = max_dimension / max(width, height)
+        #     frame = cv2.resize(frame, (int(width * scale), int(height * scale)))
         
         # Add the frame to the model processing queue
         try:

@@ -35,7 +35,8 @@ export default new class TrafficLightService {
         .exec();
 
       // Trả về null nếu không tìm thấy kết quả, ngược lại trả về bản ghi đầu tiên
-      const trafficLight = trafficLights.length > 0 ? trafficLights[0] : null;
+      // console.log("trafficLights: ", trafficLights);
+      const trafficLight = trafficLights.length > 0 ? trafficLights[0].traffic_status : null;
 
       return trafficLight as TrafficLightEnum;
     }

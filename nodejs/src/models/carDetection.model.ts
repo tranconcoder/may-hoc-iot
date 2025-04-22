@@ -1,6 +1,7 @@
 import { Schema, model } from 'mongoose';
 import { CAMERA_MODEL_NAME } from '@/models/camera.model.js';
 import { CAMERA_IMAGE_MODEL_NAME } from '@/models/cameraImage.model.js';
+import ms from 'ms';
 
 
 export const CART_DETECTION_MODEL_NAME = 'CarDetection';
@@ -90,5 +91,7 @@ export const cartDetectionSchema = new Schema({
     },
     collection: CART_DETECTION_COLLECTION_NAME,
 });
+
+cartDetectionSchema.index({ created_at: -1 }, { expireAfterSeconds: ms('1 hour') / 1000 });
 
 export default model(CART_DETECTION_MODEL_NAME, cartDetectionSchema);

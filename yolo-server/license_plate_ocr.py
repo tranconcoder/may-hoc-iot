@@ -435,7 +435,7 @@ def disconnect():
     global running
     running = False
 
-@sio.on('license_plate')
+@sio.on('violation_detect')
 def on_license_plate(data):
     """
     Handler for receiving license plate detection events
@@ -443,9 +443,18 @@ def on_license_plate(data):
         data: Dictionary containing license plate data with image
     """
     global last_processing_time
+
+    print("Received license plate event")
+
+    camera_id = data.get('camera_id')
+    image_id = data.get('image_id')
+    violations = data.get('violations')
+    buffer = data.get('buffer')
+    detections = data.get('detections')
     
-    # Limit processing rate to avoid overload
     current_time = time.time()
+
+    # Limit processing rate to avoid overload
     if current_time - last_processing_time < 1.0/MAX_FPS:
         return  # Skip this frame to maintain reasonable frame rate
     
@@ -459,7 +468,7 @@ def on_license_plate(data):
         
         # Add to processing queue
         try:
-            plate_queue.put(data, block=False)
+            plate_queue.put((camera_id, image_id, violations, buffer, detections), block=False)
             print(f"Added license plate image to processing queue")
         except queue.Full:
             # If queue is full, just discard this data
@@ -485,26 +494,18 @@ def process_license_plates_thread():
         try:
             # Try to get a plate event from the queue, non-blocking
             try:
-                plate_data = plate_queue.get(block=False)
-                if plate_data is None:
+                camera_id, image_id, violations, buffer, detections = plate_queue.get(block=False)
+                if camera_id is None:
                     time.sleep(0.01)
                     continue
             except queue.Empty:
                 time.sleep(0.01)
                 continue
             
-            # Extract data from the plate event
-            vehicle_id = plate_data.get('vehicle_id', 'unknown')
-            image_data = plate_data.get('image_data')
-            original_data = plate_data  # Keep original data to include in response
-            
-            if not image_data:
-                continue  # Skip if missing required data
-            
             # Convert buffer to image with optimized error handling
             try:
                 # Convert bytes to numpy array
-                nparr = np.frombuffer(image_data, np.uint8)
+                nparr = np.frombuffer(buffer, np.uint8)
                 img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                 
                 if img is None:
@@ -524,49 +525,51 @@ def process_license_plates_thread():
             
             # Use our optimized recognition with cached models
             license_plates, marked_img = recognize_license_plate(image_array=img)
+
+            print(license_plates)
             
             # Calculate inference time
             inference_time = (time.time() - start_time) * 1000  # ms
             
-            # Prepare response with recognition results and include the original data
-            response = {
-                'vehicle_id': vehicle_id,
-                'timestamp': time.time(),
-                'inference_time': inference_time,
-                'license_plates': list(license_plates) if license_plates else ["UNKNOWN"],
-                'recognized_image': None,  # Will be populated below
-                'original_data': original_data  # Include original data for reference
-            }
+            # # Prepare response with recognition results and include the original data
+            # response = {
+            #     'vehicle_id': vehicle_id,
+            #     'timestamp': time.time(),
+            #     'inference_time': inference_time,
+            #     'license_plates': list(license_plates) if license_plates else ["UNKNOWN"],
+            #     'recognized_image': None,  # Will be populated below
+            #     'original_data': original_data  # Include original data for reference
+            # }
             
-            # Encode the marked image with license plate boxes
-            if marked_img is not None:
-                _, buffer = cv2.imencode('.jpg', marked_img)
-                response['recognized_image'] = buffer.tobytes()
+            # # Encode the marked image with license plate boxes
+            # if marked_img is not None:
+            #     _, buffer = cv2.imencode('.jpg', marked_img)
+            #     response['recognized_image'] = buffer.tobytes()
             
-            # Emit license plate OCR results using 'license_plate_ocr' event
-            sio.emit('license_plate_ocr', response)
+            # # Emit license plate OCR results using 'license_plate_ocr' event
+            # sio.emit('license_plate_ocr', response)
             
-            # Print detection summary with improved formatting
-            if license_plates:
-                plate_text = ", ".join(license_plates)
-                print(f"\n{'='*60}")
-                print(f"✅ BIỂN SỐ XE NHẬN DIỆN THÀNH CÔNG")
-                print(f"{'='*60}")
-                print(f"🚗 Vehicle ID: {vehicle_id}")
-                print(f"🔢 License Plate: {plate_text}")
-                print(f"⏱️ Thời gian xử lý: {inference_time:.2f}ms")
-                print(f"🕒 Thời gian: {time.strftime('%H:%M:%S %d-%m-%Y', time.localtime())}")
-                print(f"{'='*60}")
-            else:
-                print(f"\n{'='*60}")
-                print(f"❌ KHÔNG THỂ NHẬN DIỆN BIỂN SỐ XE")
-                print(f"{'='*60}")
-                print(f"🚗 Vehicle ID: {vehicle_id}")
-                print(f"⏱️ Thời gian xử lý: {inference_time:.2f}ms")
-                print(f"🕒 Thời gian: {time.strftime('%H:%M:%S %d-%m-%Y', time.localtime())}")
-                print(f"{'='*60}")
+            # # Print detection summary with improved formatting
+            # if license_plates:
+            #     plate_text = ", ".join(license_plates)
+            #     print(f"\n{'='*60}")
+            #     print(f"✅ BIỂN SỐ XE NHẬN DIỆN THÀNH CÔNG")
+            #     print(f"{'='*60}")
+            #     print(f"🚗 Vehicle ID: {vehicle_id}")
+            #     print(f"🔢 License Plate: {plate_text}")
+            #     print(f"⏱️ Thời gian xử lý: {inference_time:.2f}ms")
+            #     print(f"🕒 Thời gian: {time.strftime('%H:%M:%S %d-%m-%Y', time.localtime())}")
+            #     print(f"{'='*60}")
+            # else:
+            #     print(f"\n{'='*60}")
+            #     print(f"❌ KHÔNG THỂ NHẬN DIỆN BIỂN SỐ XE")
+            #     print(f"{'='*60}")
+            #     print(f"🚗 Vehicle ID: {vehicle_id}")
+            #     print(f"⏱️ Thời gian xử lý: {inference_time:.2f}ms")
+            #     print(f"🕒 Thời gian: {time.strftime('%H:%M:%S %d-%m-%Y', time.localtime())}")
+            #     print(f"{'='*60}")
             
-            print(f"📤 Đã gửi dữ liệu qua event 'license_plate_ocr'")
+            # print(f"📤 Đã gửi dữ liệu qua event 'license_plate_ocr'")
             
         except Exception as e:
             print(f"Error in license plate OCR thread: {e}")

@@ -2,6 +2,7 @@ export interface Detect {
     camera_id: string;
     image_id: string;
     detections: {
+        id: string,
         'class': string,
         'confidence': number,
         'bbox': {
