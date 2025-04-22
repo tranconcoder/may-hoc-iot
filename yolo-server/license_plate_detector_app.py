@@ -3,7 +3,6 @@ import numpy as np
 import time
 import threading
 import socketio
-import base64
 from ultralytics import YOLO
 import io
 from PIL import Image
@@ -12,12 +11,6 @@ import os
 
 # --- Configuration ---
 # FILL IN YOUR LICENSE PLATE MODEL PATH HERE
-LICENSE_PLATE_MODEL_PATH = './models/license_plate_detector.pt'
-
-# SocketIO server configuration (same as in server.py)
-SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3000'
-ENABLE_GPU = True  # Enable GPU acceleration if available
-
 # Detection configuration
 CONFIDENCE_THRESHOLD = 0.5  # License plate detection confidence threshold
 MAX_FPS = 30  # Maximum frames per second to process

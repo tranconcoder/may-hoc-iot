@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# License Plate Recognition Consolidated Script
-
 from PIL import Image
 import cv2
 import torch
@@ -14,7 +10,9 @@ import time
 import threading
 import queue
 
-# --------- GLOBAL CONSTANTS ---------
+# ---------------------------------------------------------------------------- #
+#                               GLOBAL CONSTANTS                               #
+# ---------------------------------------------------------------------------- #
 # Get the absolute path to the model files
 MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
 DETECTOR_PATH = os.path.join(MODEL_DIR, 'LP_detector.pt')
@@ -22,15 +20,16 @@ OCR_PATH = os.path.join(MODEL_DIR, 'LP_ocr.pt')
 CONFIDENCE_THRESHOLD = 0.30  # Model confidence threshold
 
 # Image processing configuration
-INPUT_SIZE = 640  # Input size for the model (smaller = faster, but less accurate)
-SAVE_CROPS = False  # Set to False to avoid saving crop.jpg each time (speeds up processing)
-USE_HALF_PRECISION = True  # Use FP16 precision for inference if GPU is available
-ENABLE_GPU = True  # Enable GPU acceleration if available
+INPUT_SIZE = 1920
+SAVE_CROPS = False 
+USE_HALF_PRECISION = True 
+ENABLE_GPU = True 
 
 # Socket.IO configuration
-SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3000'  # Same server as in server.py
-MAX_FPS = 30  # Maximum frames per second to process
-QUEUE_SIZE = 5  # Size of processing queue
+SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3000' 
+MAX_FPS = 30 
+QUEUE_SIZE = 5 
+connected = False
 
 # Initialize Socket.IO client
 sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=5000, ssl_verify=False)
@@ -38,12 +37,14 @@ print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
 
 # Global variables
 running = True
-last_processing_time = 0
-plate_queue = queue.Queue(maxsize=QUEUE_SIZE)  # Queue for license plate processing
+last_processig_time = 0
+plate_queue = queue.Queue(maxsize=QUEUE_SIZE) 
 
 # Cached models (loaded once and reused)
 yolo_LP_detect = None
 yolo_license_plate = None
+
+model_frame_queue = queue.Queue(maxsize=10)
 
 # --------- UTILITY FUNCTIONS (from utils_rotate.py) ---------
 
@@ -219,6 +220,10 @@ def load_models():
         
         # Set model confidence threshold
         yolo_license_plate.conf = CONFIDENCE_THRESHOLD
+
+        # Start model threads
+        model_thread = threading.Thread(target=process_license_plates_thread, daemon=True)
+        model_thread.start()
     finally:
         # Restore stdout
         sys.stdout.close()
@@ -239,7 +244,7 @@ def recognize_license_plate(image_path=None, image_array=None):
     global yolo_LP_detect, yolo_license_plate
     
     # Get cached or load models
-    yolo_LP_detect, yolo_license_plate = load_models()
+    # yolo_LP_detect, yolo_license_plate = load_models()
     
     # Read the image
     if image_path is not None:
@@ -425,14 +430,19 @@ def detect_license_plate_from_car_event(vehicle_data):
 @sio.event
 def connect():
     """Handler for connection event"""
+    global connected
+
+    connected = True
     print(f"Successfully connected to Socket.IO server: {SOCKETIO_SERVER_URL}")
-    print("Waiting for 'license_plate' events with vehicle images...")
+    print("Waiting for 'violation_detect' events with vehicle images...")
 
 @sio.event
 def disconnect():
     """Handler for disconnection event"""
+    global connected, running
+    connected = False
+
     print("Disconnected from Socket.IO server")
-    global running
     running = False
 
 @sio.on('violation_detect')
@@ -452,9 +462,8 @@ def on_license_plate(data):
     buffer = data.get('buffer')
     detections = data.get('detections')
     
-    current_time = time.time()
-
     # Limit processing rate to avoid overload
+    current_time = time.time()
     if current_time - last_processing_time < 1.0/MAX_FPS:
         return  # Skip this frame to maintain reasonable frame rate
     
@@ -496,6 +505,7 @@ def process_license_plates_thread():
             try:
                 camera_id, image_id, violations, buffer, detections = plate_queue.get(block=False)
                 if camera_id is None:
+                    print(camera_id)
                     time.sleep(0.01)
                     continue
             except queue.Empty:
@@ -577,57 +587,49 @@ def process_license_plates_thread():
     
     print("License plate OCR thread stopped")
 
-# --------- MAIN FUNCTION (Entry Point) ---------
+def maintain_connection():
+    """Thread to manage Socket.IO connection and auto-reconnect"""
+    global connected, running
+    
+    while running:
+        try:
+            if not connected:
+                try:
+                    print(f"Attempting to connect to Socket.IO server at {SOCKETIO_SERVER_URL}...")
+                    sio.connect(SOCKETIO_SERVER_URL, transports=['websocket'], wait=False)
+                except Exception as e:
+                    print(f"Failed to connect: {e}")
+                    time.sleep(5)  # Wait before retry
+            time.sleep(1)  # Check connection status periodically
+        except Exception as e:
+            print(f"Connection manager error: {e}")
+            time.sleep(1)
 
 def main():
     """Main function for running the script directly"""
     global running
+
+    # Load models
+    yolo_LP_detect, yolo_license_plate = load_models()
     
-    import sys
+    # Run in SocketIO mode
+    print("Starting license plate OCR service with SocketIO...")
     
-    # Check for command-line arguments to run in traditional mode (single image)
-    if len(sys.argv) > 1 and sys.argv[1] == '--image':
-        if len(sys.argv) > 2:
-            img_file = sys.argv[2]
-        else:
-            # Default image path
-            img_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_image/119.jpg")
-        
-        # Recognize license plates
-        license_plates, img = recognize_license_plate(image_path=img_file)
-        
-        # Print the results
-        print(license_plates)
-        
-        # Display the image
-        display_image(img_file, img)
-    else:
-        # Run in SocketIO mode
-        print("Starting license plate OCR service with SocketIO...")
-        
-        # Start the processing thread
-        processing_thread = threading.Thread(target=process_license_plates_thread, daemon=True)
-        processing_thread.start()
-        print("License plate OCR thread started")
-        
-        # Connect to Socket.IO server
-        try:
-            print(f"Connecting to Socket.IO server at {SOCKETIO_SERVER_URL}")
-            sio.connect(SOCKETIO_SERVER_URL, transports=['websocket'])
-        except Exception as e:
-            print(f"Failed to connect to Socket.IO server: {e}")
-            return
-        
-        # Keep the main thread running
-        try:
-            while running:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            print("Interrupted by user. Shutting down...")
-        finally:
-            if sio.connected:
-                sio.disconnect()
-            print("License plate OCR service stopped.")
+    # Start the processing thread
+    processing_thread = threading.Thread(target=maintain_connection, daemon=True)
+    processing_thread.start()
+    print("License plate OCR thread started")
+    
+    # Keep the main thread running
+    try:
+        while running:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Interrupted by user. Shutting down...")
+    finally:
+        if sio.connected:
+            sio.disconnect()
+        print("License plate OCR service stopped.")
 
 if __name__ == "__main__":
     main()

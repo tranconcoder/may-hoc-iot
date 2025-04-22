@@ -10,31 +10,29 @@ from PIL import Image
 import queue
 
 # --- Configuration ---
-MODEL_PATH = 'yolo11n.pt'  # Using your existing model
-# MODEL_PATH = 'yolo11m.pt'  # Using your existing model
+MODEL_PATH = 'yolo11n.pt'
+# MODEL_PATH = 'yolo11m.pt'
 
-CONFIDENCE_THRESHOLD = 0.5  # Detection confidence threshold
-VEHICLE_CLASSES = ['car', 'truck', 'bus', 'motorcycle', 'bicycle']  # Vehicle classes in COCO dataset
+CONFIDENCE_THRESHOLD = 0.5 
+VEHICLE_CLASSES = ['car', 'truck', 'bus', 'motorcycle', 'bicycle'] 
 SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3000'
-ENABLE_TRACKING = True  # Enable object tracking functionality
-ENABLE_GPU = True  # Enable GPU acceleration if available
+ENABLE_TRACKING = True 
+ENABLE_GPU = True 
 
 # Add tracking-related configurations
-TRAIL_DURATION = 5.0  # Duration in seconds to show vehicle trails
-MAX_TRAIL_POINTS = 30  # Maximum number of points to store per trail
+TRAIL_DURATION = 5.0 
+MAX_TRAIL_POINTS = 30 
 
 # Add counting line configuration
-ENABLE_COUNTING_LINE = True  # Enable the vehicle counting line
-# Default position for counting line (horizontal line in the middle of the frame)
-COUNTING_LINE_POSITION = 0.5  # Position of the line as ratio of frame height (0-1)
-# Count in both directions
-BIDIRECTIONAL_COUNTING = True  # Count vehicles in both directions
+ENABLE_COUNTING_LINE = True 
+COUNTING_LINE_POSITION = 0.5 
+BIDIRECTIONAL_COUNTING = True 
 
 # Vehicle cropping configuration
-ENABLE_VEHICLE_CROPPING = True  # Enable vehicle image cropping feature
-CROP_EMIT_INTERVAL = 1.0  # Minimum interval (seconds) between emissions for the same vehicle
-CROP_IMAGE_QUALITY = 85  # JPEG quality for cropped images (1-100)
-CROP_MAX_SIZE = 300  # Maximum dimension for cropped images
+ENABLE_VEHICLE_CROPPING = True 
+CROP_EMIT_INTERVAL = 1.0 
+CROP_IMAGE_QUALITY = 85 
+CROP_MAX_SIZE = 300 
 
 # Initialize Socket.IO client
 sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=5000, ssl_verify=False)
@@ -42,10 +40,10 @@ print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
 
 # Global variables
 running = True
-connected = False  # Track connection status
+connected = False 
 model = None
 last_frame_time = 0
-MAX_FPS = 30  # Maximum frames per second
+MAX_FPS = 30 
 
 # Queue for model processing
 model_frame_queue = queue.Queue(maxsize=10)
