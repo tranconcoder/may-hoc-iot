@@ -7,10 +7,11 @@ import base64
 import io
 from PIL import Image
 import queue
-from openvino.runtime import Core
 import os
 import sys
 from pathlib import Path
+from openvino.runtime import Core, Type, Layout
+from openvino.preprocess import PrePostProcessor, ResizeAlgorithm
 
 # --- Configuration ---
 # OpenVINO model paths
@@ -18,26 +19,26 @@ MODEL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 DETECTION_MODEL_XML = os.path.join(MODEL_DIR, 'yolo11n.xml')
 DETECTION_MODEL_BIN = os.path.join(MODEL_DIR, 'yolo11n.bin')
 
-CONFIDENCE_THRESHOLD = 0.5 
-VEHICLE_CLASSES = ['car', 'truck', 'bus', 'motorcycle', 'bicycle'] 
+CONFIDENCE_THRESHOLD = 0.5
+VEHICLE_CLASSES = ['car', 'truck', 'bus', 'motorcycle', 'bicycle']
 SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3000'
-ENABLE_TRACKING = True 
-ENABLE_GPU = True 
+ENABLE_TRACKING = True
+ENABLE_GPU = True
 
 # Add tracking-related configurations
-TRAIL_DURATION = 5.0 
-MAX_TRAIL_POINTS = 30 
+TRAIL_DURATION = 5.0
+MAX_TRAIL_POINTS = 30
 
 # Add counting line configuration
-ENABLE_COUNTING_LINE = True 
-COUNTING_LINE_POSITION = 0.5 
-BIDIRECTIONAL_COUNTING = True 
+ENABLE_COUNTING_LINE = True
+COUNTING_LINE_POSITION = 0.5
+BIDIRECTIONAL_COUNTING = True
 
 # Vehicle cropping configuration
-ENABLE_VEHICLE_CROPPING = True 
-CROP_EMIT_INTERVAL = 1.0 
-CROP_IMAGE_QUALITY = 85 
-CROP_MAX_SIZE = 300 
+ENABLE_VEHICLE_CROPPING = True
+CROP_EMIT_INTERVAL = 1.0
+CROP_IMAGE_QUALITY = 85
+CROP_MAX_SIZE = 300
 
 # Initialize Socket.IO client
 sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=5000, ssl_verify=False)
@@ -45,21 +46,17 @@ print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
 
 # Global variables
 running = True
-connected = False 
+connected = False
 model = None
-exec_net = None
-input_layer = None
-output_layer = None
-class_names = None
 last_frame_time = 0
-MAX_FPS = 30 
+MAX_FPS = 30
 
 # Dictionary to manage queues and threads for each camera
 camera_queues = {}
 camera_threads = {}
 
 # Global variables for vehicle counting
-counted_vehicles = {} 
+counted_vehicles = {}
 vehicle_counts_up = {vehicle_type: 0 for vehicle_type in VEHICLE_CLASSES}
 vehicle_counts_down = {vehicle_type: 0 for vehicle_type in VEHICLE_CLASSES}
 total_counted_up = 0
@@ -86,80 +83,175 @@ def check_line_crossing(prev_pos, curr_pos, line_y):
 # Global variables for vehicle image cropping
 last_vehicle_crop_times = {}  # Store last emission time for each vehicle ID
 
-# Class for YOLO model detection with OpenVINO
 class YOLODetector:
-    def __init__(self, model_xml, model_bin, device="GPU", conf_threshold=0.5):
+    """Class for YOLO model detection with OpenVINO based on official OpenVINO notebooks"""
+    def __init__(self, model_xml, model_bin=None, device="GPU", conf_threshold=0.5):
         self.conf_threshold = conf_threshold
         self.class_names = VEHICLE_CLASSES
         self.input_size = (640, 640)  # Default YOLO input size
         
         # Load OpenVINO model
         self.ie = Core()
-        self.load_model(model_xml, model_bin, device)
+        self.load_model(model_xml, device)
         print(f"Available devices: {self.ie.available_devices}")
         
         # Dictionary for tracking
         self.tracks = {}
         self.next_id = 1
 
-    def load_model(self, model_xml, model_bin, device):
-        """Load the OpenVINO IR model"""
+    def load_model(self, model_xml, device):
+        """Load the OpenVINO IR model, handling both static and dynamic shapes"""
         try:
             # Read the model and weights from file
+            print(f"Loading model on {device}...")
             model = self.ie.read_model(model=model_xml)
             
-            # Handle dynamic shapes properly
-            # Get input info and set fixed input shapes
-            inputs = model.inputs
-            for input_layer in inputs:
-                if len(input_layer.partial_shape) == 4:  # NCHW format
-                    model.reshape({input_layer.get_any_name(): [1, 3, 640, 640]})
-                    print(f"Fixed input shape for {input_layer.get_any_name()}: [1, 3, 640, 640]")
+            # Force reshape for models with dynamic shapes
+            # Find the input with dynamic shapes and set it to a fixed size
+            for input in model.inputs:
+                if input.partial_shape.is_dynamic:
+                    print(f"Reshaping input {input.get_any_name()} to static shape")
+                    model.reshape({input.get_any_name(): [1, 3, 640, 640]})
             
             # Compile the model for the specified device
-            print(f"Loading model on {device}...")
             self.compiled_model = self.ie.compile_model(model=model, device_name=device)
             
             # Get input and output layers
             self.input_layer = next(iter(self.compiled_model.inputs))
             self.output_layer = next(iter(self.compiled_model.outputs))
             
-            # Get model input shape
-            self.input_shape = self.input_layer.shape
-            if len(self.input_shape) == 4:
-                _, _, self.input_h, self.input_w = self.input_shape
-                self.input_size = (self.input_w, self.input_h)
-                
+            # Set input size based on the model
+            self.input_h, self.input_w = 640, 640  # Default size
+            
+            # Try to get the actual shape if it's not dynamic
+            try:
+                shape = self.input_layer.shape
+                if len(shape) == 4:  # NCHW format
+                    _, _, self.input_h, self.input_w = shape
+            except Exception as e:
+                print(f"Could not get input shape (using default): {e}")
+            
+            self.input_size = (self.input_w, self.input_h)
             print(f"Model loaded successfully with input size: {self.input_size}")
+            print(f"Model output shape: {self.output_layer.shape}")
+            
         except Exception as e:
             print(f"Error loading the model: {e}")
             raise
 
     def preprocess(self, frame):
         """Preprocess the input frame for inference"""
-        # Resize and normalize the image
-        resized = cv2.resize(frame, self.input_size)
-        
-        # Convert to RGB if needed (OpenVINO models typically expect RGB)
+        # Convert to RGB (OpenVINO models typically expect RGB)
         if frame.shape[2] == 3:
-            input_img = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+            input_img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         else:
-            input_img = resized
-            
-        # Normalize to [0,1]
-        input_img = input_img.astype(np.float32) / 255.0
+            input_img = frame
         
-        # Transpose from HWC to NCHW format
-        input_tensor = np.expand_dims(np.transpose(input_img, (2, 0, 1)), 0)
+        # Resize preserving aspect ratio and pad if necessary
+        input_h, input_w = self.input_size
+        h, w = frame.shape[:2]
         
-        return input_tensor
+        # Calculate scale and new dimensions
+        scale = min(input_h / h, input_w / w)
+        new_h, new_w = int(h * scale), int(w * scale)
+        
+        # Resize the image
+        resized = cv2.resize(input_img, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+        
+        # Create padded version (top, bottom, left, right)
+        pad_h = input_h - new_h
+        pad_w = input_w - new_w
+        top = pad_h // 2
+        bottom = pad_h - top
+        left = pad_w // 2
+        right = pad_w - left
+        
+        # Add padding
+        padded = cv2.copyMakeBorder(
+            resized, top, bottom, left, right, 
+            cv2.BORDER_CONSTANT, value=(114, 114, 114)
+        )
+        
+        # Convert to float32 and normalize to 0-1
+        padded = padded.astype(np.float32) / 255.0
+        
+        # Transpose to NCHW format (batch, channels, height, width)
+        input_tensor = np.transpose(padded, (2, 0, 1))
+        input_tensor = np.expand_dims(input_tensor, 0)
+        
+        return input_tensor, (scale, (top, left))
+
+    def postprocess(self, predictions, original_shape, preprocess_info):
+        """Process output from the model to get bounding boxes"""
+        scale, (pad_t, pad_l) = preprocess_info
+        orig_h, orig_w = original_shape[:2]
+        
+        boxes = []
+        
+        # YOLOv8 output format (assumes standard YOLOv8 output)
+        if len(predictions.shape) == 3 and predictions.shape[2] > 5:  # [batch, num_detections, 5+num_classes]
+            for i in range(predictions.shape[1]):
+                confidence = float(predictions[0, i, 4])
+                
+                if confidence < self.conf_threshold:
+                    continue
+                
+                # Get class with highest confidence
+                class_scores = predictions[0, i, 5:]
+                class_id = int(np.argmax(class_scores))
+                class_conf = float(class_scores[class_id])
+                
+                if class_id >= len(VEHICLE_CLASSES):
+                    # Skip classes not in our VEHICLE_CLASSES list
+                    continue
+                    
+                # Only keep vehicle classes we're interested in (mapping COCO to our vehicle classes)
+                coco_vehicle_ids = {2: 'car', 5: 'bus', 7: 'truck', 3: 'motorcycle', 1: 'bicycle'}
+                if class_id not in coco_vehicle_ids:
+                    continue
+                    
+                # Map class_id from COCO to our vehicle class index
+                mapped_class = None
+                for idx, v_class in enumerate(VEHICLE_CLASSES):
+                    if v_class == coco_vehicle_ids.get(class_id):
+                        mapped_class = idx
+                        break
+                
+                if mapped_class is None:
+                    continue
+                
+                # Bounding box coordinates (normalized 0-1)
+                x, y, w, h = predictions[0, i, 0:4]
+                
+                # Convert from center format to corner format
+                x1 = (x - w/2)
+                y1 = (y - h/2)
+                x2 = (x + w/2)
+                y2 = (y + h/2)
+                
+                # Remove padding and rescale to original image dimensions
+                x1 = (x1 * self.input_size[0] - pad_l) / scale
+                y1 = (y1 * self.input_size[1] - pad_t) / scale
+                x2 = (x2 * self.input_size[0] - pad_l) / scale
+                y2 = (y2 * self.input_size[1] - pad_t) / scale
+                
+                # Clip bounding box to image
+                x1 = max(0, min(x1, orig_w))
+                y1 = max(0, min(y1, orig_h))
+                x2 = max(0, min(x2, orig_w))
+                y2 = max(0, min(y2, orig_h))
+                
+                # Save the detection
+                boxes.append([x1, y1, x2, y2, confidence * class_conf, mapped_class])
+        
+        return boxes
 
     def detect(self, frame, verbose=False):
         """Detect objects in a frame"""
-        original_h, original_w = frame.shape[:2]
+        original_shape = frame.shape
         
         # Preprocess the frame
-        input_tensor = self.preprocess(frame)
+        input_tensor, preprocess_info = self.preprocess(frame)
         
         # Run inference
         start_time = time.time()
@@ -167,24 +259,8 @@ class YOLODetector:
         if verbose:
             print(f"Inference time: {(time.time() - start_time) * 1000:.2f} ms")
         
-        # Process results
-        # The exact format depends on the model, this is for YOLOv5/YOLOv8 format
-        boxes = []
-        
-        # For YOLOv8 output format (assume it follows a similar structure to YOLOv5)
-        if len(results.shape) == 3:  # [batch, num_detections, 7]
-            # Each detection: [x1, y1, x2, y2, conf, class_id, ...]
-            for i in range(results.shape[1]):
-                confidence = results[0, i, 4]
-                if confidence > self.conf_threshold:
-                    class_id = int(results[0, i, 5])
-                    if class_id < len(VEHICLE_CLASSES):
-                        # Scale bounding box coordinates back to original image size
-                        x1 = results[0, i, 0] * original_w
-                        y1 = results[0, i, 1] * original_h
-                        x2 = results[0, i, 2] * original_w
-                        y2 = results[0, i, 3] * original_h
-                        boxes.append([x1, y1, x2, y2, confidence, class_id])
+        # Process detections
+        boxes = self.postprocess(results, original_shape, preprocess_info)
         
         return boxes
 
@@ -312,7 +388,7 @@ def process_frames_thread(camera_id):
             if model is None:
                 time.sleep(0.01)
                 continue
-                
+            
             # Process the frame with OpenVINO tracking
             start_time = time.time()
             results = model.track(frame, persist=True, verbose=False) if ENABLE_TRACKING else model.detect(frame, verbose=False)
@@ -334,67 +410,114 @@ def process_frames_thread(camera_id):
             # Vehicle count by type for display
             vehicle_counts = {vehicle_type: 0 for vehicle_type in VEHICLE_CLASSES}
             
-            for result in results:
-                boxes = result['boxes']
-                for i in range(len(boxes['xyxy'])):
-                    confidence = float(boxes['conf'][i])
-                    cls_id = int(boxes['cls'][i])
+            # For detect mode (not tracking)
+            if not ENABLE_TRACKING:
+                # Process raw detections
+                for box in results:
+                    x1, y1, x2, y2, confidence, cls_id = box
                     
-                    # Check if the detected object is a vehicle and meets confidence threshold
-                    if cls_id < len(VEHICLE_CLASSES) and confidence >= CONFIDENCE_THRESHOLD:
-                        # Get bounding box coordinates
-                        x1, y1, x2, y2 = map(int, boxes['xyxy'][i])
-                        
-                        # Calculate center point of the bounding box for tracking
-                        center_x = (x1 + x2) // 2
-                        center_y = (y1 + y2) // 2
-                        
-                        # Get track ID if available (for tracking)
-                        track_id = None
-                        if ENABLE_TRACKING and 'id' in boxes and boxes['id'] is not None:
-                            try:
-                                track_id = int(boxes['id'][i])
-                            except:
-                                track_id = None
-                        
-                        # Calculate relative coordinates (0-1 range)
-                        rel_x1 = x1 / width
-                        rel_y1 = y1 / height
-                        rel_x2 = x2 / width
-                        rel_y2 = y2 / height
-                        
-                        class_name = VEHICLE_CLASSES[cls_id]
-                        
-                        # Add detection to results with track_id if available
-                        detection_info = {
-                            'class': class_name,
-                            'confidence': float(confidence),
-                            'bbox': {
-                                'x1': float(rel_x1),  # Normalized coordinates (0-1)
-                                'y1': float(rel_y1),
-                                'x2': float(rel_x2),
-                                'y2': float(rel_y2),
-                                'width': float(rel_x2 - rel_x1),
-                                'height': float(rel_y2 - rel_y1)
-                            }
+                    # Check confidence threshold
+                    if confidence < CONFIDENCE_THRESHOLD:
+                        continue
+                    
+                    # Make sure class ID is valid
+                    if cls_id >= len(VEHICLE_CLASSES):
+                        continue
+                    
+                    # Calculate center point of the bounding box
+                    center_x = (x1 + x2) // 2
+                    center_y = (y1 + y2) // 2
+                    
+                    # Calculate relative coordinates (0-1 range)
+                    rel_x1 = x1 / width
+                    rel_y1 = y1 / height
+                    rel_x2 = x2 / width
+                    rel_y2 = y2 / height
+                    
+                    class_name = VEHICLE_CLASSES[int(cls_id)]
+                    
+                    # Add detection to results
+                    detection_info = {
+                        'class': class_name,
+                        'confidence': float(confidence),
+                        'bbox': {
+                            'x1': float(rel_x1),  # Normalized coordinates (0-1)
+                            'y1': float(rel_y1),
+                            'x2': float(rel_x2),
+                            'y2': float(rel_y2),
+                            'width': float(rel_x2 - rel_x1),
+                            'height': float(rel_y2 - rel_y1)
                         }
-
-                        # Add track_id if available
-                        if track_id is not None:
-                            detection_info['id'] = track_id
+                    }
+                    
+                    detected_objects.append(detection_info)
+                    
+                    # Update vehicle count
+                    vehicle_counts[class_name] += 1
+            
+            # For tracking mode
+            else:
+                for result in results:
+                    boxes = result['boxes']
+                    for i in range(len(boxes['xyxy'])):
+                        confidence = float(boxes['conf'][i])
+                        cls_id = int(boxes['cls'][i])
                         
-                        detected_objects.append(detection_info)
-                        
-                        # Update vehicle count
-                        vehicle_counts[class_name] += 1
+                        # Check if the detected object is a vehicle and meets confidence threshold
+                        if cls_id < len(VEHICLE_CLASSES) and confidence >= CONFIDENCE_THRESHOLD:
+                            # Get bounding box coordinates
+                            x1, y1, x2, y2 = map(int, boxes['xyxy'][i])
                             
-                        if track_id is not None:
-                            # Add to current tracks
-                            current_tracks[track_id] = {
-                                'position': (center_x, center_y),
-                                'time': created_at,
-                                'class': class_name
+                            # Calculate center point of the bounding box for tracking
+                            center_x = (x1 + x2) // 2
+                            center_y = (y1 + y2) // 2
+                            
+                            # Get track ID if available (for tracking)
+                            track_id = None
+                            if ENABLE_TRACKING and 'id' in boxes and boxes['id'] is not None:
+                                try:
+                                    track_id = int(boxes['id'][i])
+                                except:
+                                    track_id = None
+                            
+                            # Calculate relative coordinates (0-1 range)
+                            rel_x1 = x1 / width
+                            rel_y1 = y1 / height
+                            rel_x2 = x2 / width
+                            rel_y2 = y2 / height
+                            
+                            class_name = VEHICLE_CLASSES[cls_id]
+                            
+                            # Add detection to results with track_id if available
+                            detection_info = {
+                                'class': class_name,
+                                'confidence': float(confidence),
+                                'bbox': {
+                                    'x1': float(rel_x1),  # Normalized coordinates (0-1)
+                                    'y1': float(rel_y1),
+                                    'x2': float(rel_x2),
+                                    'y2': float(rel_y2),
+                                    'width': float(rel_x2 - rel_x1),
+                                    'height': float(rel_y2 - rel_y1)
+                                }
                             }
+
+                            # Add track_id if available
+                            if track_id is not None:
+                                detection_info['id'] = track_id
+                            
+                            detected_objects.append(detection_info)
+                            
+                            # Update vehicle count
+                            vehicle_counts[class_name] += 1
+                                
+                            if track_id is not None:
+                                # Add to current tracks
+                                current_tracks[track_id] = {
+                                    'position': (center_x, center_y),
+                                    'time': created_at,
+                                    'class': class_name
+                                }
             
             # Update vehicle tracking history and check for line crossings
             current_time = time.time()
@@ -508,6 +631,8 @@ def process_frames_thread(camera_id):
                     
         except Exception as e:
             print(f"[Camera {camera_id}] Error in processing thread: {e}")
+            import traceback
+            print(traceback.format_exc())
             time.sleep(0.1)  # Prevent tight loop if there's an error
     
     print(f"[Camera {camera_id}] Frame processing thread stopped")
@@ -547,12 +672,9 @@ def load_model():
         if not os.path.exists(DETECTION_MODEL_XML):
             print(f"Error: Model XML file not found at {DETECTION_MODEL_XML}")
             return False
-        if not os.path.exists(DETECTION_MODEL_BIN):
-            print(f"Error: Model BIN file not found at {DETECTION_MODEL_BIN}")
-            return False
             
         # Initialize our custom YOLODetector with OpenVINO
-        model = YOLODetector(DETECTION_MODEL_XML, DETECTION_MODEL_BIN, device=device, conf_threshold=CONFIDENCE_THRESHOLD)
+        model = YOLODetector(DETECTION_MODEL_XML, device=device, conf_threshold=CONFIDENCE_THRESHOLD)
         
         print(f"Model loaded successfully! Running on: {device}")
         print(f"Available classes: {VEHICLE_CLASSES}")
@@ -567,6 +689,8 @@ def load_model():
         return True
     except Exception as e:
         print(f"Failed to load model: {e}")
+        import traceback
+        print(traceback.format_exc())
         return False
 
 @sio.event
@@ -642,6 +766,8 @@ def on_image(data):
     
     except Exception as e:
         print(f"Error processing image: {e}")
+        import traceback
+        print(traceback.format_exc())
 
 def maintain_connection():
     """Thread to manage Socket.IO connection and auto-reconnect"""
@@ -668,7 +794,6 @@ def export_model_to_openvino():
     """
     try:
         from ultralytics import YOLO
-        import sys
         
         # Path to your YOLO model
         yolo_model_path = '../yolo11n.pt'
@@ -679,11 +804,10 @@ def export_model_to_openvino():
         model = YOLO(yolo_model_path)
         
         # Define the output directory
-        output_dir = Path('../models')
-        output_dir.mkdir(exist_ok=True)
+        output_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         
         # Export the model to OpenVINO format
-        success = model.export(format="openvino", dynamic=True, half=False, imgsz=640)
+        success = model.export(format="openvino", dynamic=False, half=False, imgsz=640)
         
         if success:
             print(f"Model successfully exported to OpenVINO format in {output_dir}")
@@ -695,17 +819,19 @@ def export_model_to_openvino():
             
     except Exception as e:
         print(f"Error exporting model to OpenVINO format: {e}")
+        import traceback
+        print(traceback.format_exc())
         return False
 
 def main():
     global running
     
     # Check if OpenVINO model files exist, if not try to export from PyTorch
-    if not (os.path.exists(DETECTION_MODEL_XML) and os.path.exists(DETECTION_MODEL_BIN)):
+    if not os.path.exists(DETECTION_MODEL_XML):
         print("OpenVINO model files not found. Attempting to export from PyTorch model...")
         if not export_model_to_openvino():
             print("Could not export model to OpenVINO format. Please export manually or check paths.")
-            print(f"Expected model files at: {DETECTION_MODEL_XML} and {DETECTION_MODEL_BIN}")
+            print(f"Expected model files at: {DETECTION_MODEL_XML}")
             return
     
     # Load OpenVINO model

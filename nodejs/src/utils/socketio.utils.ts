@@ -145,6 +145,7 @@ export async function handleCarDetectedEvent(this: Socket, data: any) {
         violations,
         buffer: imageBuffer.image,
         detections: data.detections,
+        image_dimensions: data.image_dimensions,
       });
     }
 
@@ -176,6 +177,8 @@ export async function handleCarDetectedEvent(this: Socket, data: any) {
 /* -------------------------------------------------------------------------- */
 export async function handleViolationLicensePlateEvent(this: Socket, data: any) {
   const socket = this;
+
+  console.log("Violation license plate data", data);
 
   socket.broadcast.emit("violation_license_plate", data);
 }

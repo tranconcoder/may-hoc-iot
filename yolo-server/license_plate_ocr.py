@@ -15,13 +15,13 @@ import queue
 # ---------------------------------------------------------------------------- #
 # Get the absolute path to the model files
 MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
-DETECTOR_PATH = os.path.join(MODEL_DIR, 'LP_detector.pt')
-OCR_PATH = os.path.join(MODEL_DIR, 'LP_ocr.pt')
+DETECTOR_PATH = os.path.join(MODEL_DIR, 'LP_detector_nano_61.pt')
+OCR_PATH = os.path.join(MODEL_DIR, 'LP_ocr_nano_62.pt')
 CONFIDENCE_THRESHOLD = 0.30  # Model confidence threshold
 
 # Image processing configuration
 INPUT_SIZE = 1920
-SAVE_CROPS = False 
+SAVE_CROPS = True
 USE_HALF_PRECISION = True 
 ENABLE_GPU = True 
 
@@ -231,7 +231,7 @@ def load_models():
     
     return yolo_LP_detect, yolo_license_plate
 
-def recognize_license_plate(image_path=None, image_array=None, valid_area=None):
+def recognize_license_plate(image_path=None, image_array=None, detections=None, violations=None):
     """
     Recognize license plates from either an image path or image array
     Args:
@@ -242,9 +242,6 @@ def recognize_license_plate(image_path=None, image_array=None, valid_area=None):
         A set of detected license plate numbers
     """
     global yolo_LP_detect, yolo_license_plate
-    
-    # Get cached or load models
-    # yolo_LP_detect, yolo_license_plate = load_models()
     
     # Read the image
     if image_path is not None:
@@ -260,12 +257,12 @@ def recognize_license_plate(image_path=None, image_array=None, valid_area=None):
         return set(), None
     
     # Resize image if it's too large (for faster processing)
-    h, w = img.shape[:2]
-    if max(h, w) > 1920:  # If the image is larger than Full HD
-        scale = 1920 / max(h, w)
-        new_w = int(w * scale)
-        new_h = int(h * scale)
-        img = cv2.resize(img, (new_w, new_h))
+    frame_height, frame_width = img.shape[:2]
+    if max(frame_height, frame_width) > 1920:  # If the image is larger than Full HD
+        scale = 1920 / max(frame_height, frame_width)
+        new_frame_width = int(frame_width * scale)
+        new_frame_height = int(frame_height * scale)
+        img = cv2.resize(img, (new_frame_width, new_frame_height))
     
     # Create a copy for visualization
     vis_img = img.copy()
@@ -275,119 +272,87 @@ def recognize_license_plate(image_path=None, image_array=None, valid_area=None):
     
     # Process detection results
     list_plates = plates.pandas().xyxy[0].values.tolist()
-    list_read_plates = set()
+    list_read_plates = dict()
     
-    if len(list_plates) == 0:
-        # If no license plate detected, try to read directly from the image
-        # Only do this for smaller images to avoid processing time on large images
-        if max(h, w) <= 1280:
-            lp = read_plate(yolo_license_plate, img)
-            if lp != "unknown":
-                list_read_plates.add(lp)
-    else:
-        # Process each detected license plate
-        for plate in list_plates:
-            # Only process if confidence is above threshold
-            confidence = float(plate[4])
-            if confidence < CONFIDENCE_THRESHOLD:
-                continue
-                
-            flag = 0
-            x = int(plate[0])  # xmin
-            y = int(plate[1])  # ymin
-            w = int(plate[2] - plate[0])  # xmax - xmin
-            h = int(plate[3] - plate[1])  # ymax - ymin  
-            
-            # Ensure crop coordinates are within image boundaries
-            x = max(0, x)
-            y = max(0, y)
-            w = min(w, img.shape[1] - x)
-            h = min(h, img.shape[0] - y)
-            
-            # Skip if crop dimensions are too small
-            if w < 20 or h < 10:
-                continue
+    # Process each detected license plate
+    violation_ids = [violation.get("id") for violation in violations]
+    valid_areas = [detection for detection in detections if detection.get("id") in violation_ids]
 
-            # Skip if crop is outside valid area
-            if valid_area is not None:
-                if x < valid_area.get("x1") or x + w > valid_area.get("x2") or y < valid_area.get("y1") or y + h > valid_area.get("y2"):
-                    continue
+    for plate in list_plates:
+        # Only process if confidence is above threshold
+        confidence = float(plate[4])
+        if confidence < CONFIDENCE_THRESHOLD:
+            continue
             
-            # Crop the license plate
-            crop_img = img[y:y+h, x:x+w]
-            
-            # Draw rectangle around the license plate on the visualization image
-            cv2.rectangle(vis_img, (int(plate[0]), int(plate[1])), (int(plate[2]), int(plate[3])), color=(0, 0, 225), thickness=2)
-            
-            # Save the cropped image (for debugging) - only if enabled
-            if SAVE_CROPS:
-                crop_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "crop.jpg")
-                cv2.imwrite(crop_file, crop_img)
-            
-            # Optimize the deskew process - try fewer orientations for speed
-            # First try without deskew, which is fastest
-            lp = read_plate(yolo_license_plate, crop_img)
-            if lp != "unknown":
-                list_read_plates.add(lp)
-                # Add confidence and position information to the plate
-                cv2.putText(vis_img, lp, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
+        flag = 0
+        x = int(plate[0])  # xmin
+        y = int(plate[1])  # ymin
+        w = int(plate[2] - plate[0])  # xmax - xmin
+        h = int(plate[3] - plate[1])  # ymax - ymin  
+        
+        # Ensure crop coordinates are within image boundaries
+        x = max(0, x)
+        y = max(0, y)
+        w = min(w, img.shape[1] - x)
+        h = min(h, img.shape[0] - y)
+        
+        # Skip if crop dimensions are too small
+        if w < 20 or h < 10:
+            continue
+
+        # Skip if license plate is outside valid area
+        vehicle_id = None
+        if valid_areas is not None:
+            is_inside_valid_area = False
+
+            for valid_area in valid_areas:
+                x1 = valid_area.get("bbox").get("x1") * frame_width
+                x2 = valid_area.get("bbox").get("x2") * frame_width
+                y1 = valid_area.get("bbox").get("y1") * frame_height
+                y2 = valid_area.get("bbox").get("y2") * frame_height
+
+                if x >= x1 and x + w <= x2 and y >= y1 and y + h <= y2:
+                    is_inside_valid_area = True
+                    vehicle_id = valid_area.get("id")
+                    break
+
+            if not is_inside_valid_area:
                 continue
-            
-            # If not successful, try deskew with fewer combinations for better speed
-            for cc in range(0, 2):
-                lp = read_plate(yolo_license_plate, deskew(crop_img, cc, 0))
-                if lp != "unknown":
-                    list_read_plates.add(lp)
-                    # Add the recognized text to the visualization
-                    cv2.putText(vis_img, lp, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
-                    flag = 1
-                    break
-                if flag == 1:
-                    break
+        
+        # Crop the license plate
+        crop_img = img[y:y+h, x:x+w]
+        
+        # Draw rectangle around the license plate on the visualization image
+        cv2.rectangle(vis_img, (int(plate[0]), int(plate[1])), (int(plate[2]), int(plate[3])), color=(0, 0, 225), thickness=2)
+        
+        # Save the cropped image (for debugging) - only if enabled
+        if SAVE_CROPS:
+            crop_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "crop.jpg")
+            cv2.imwrite(crop_file, crop_img)
+        
+        # Optimize the deskew process - try fewer orientations for speed
+        # First try without deskew, which is fastest
+        lp = read_plate(yolo_license_plate, crop_img)
+        if lp != "unknown":
+            list_read_plates[vehicle_id] = lp
+            # Add confidence and position information to the plate
+            cv2.putText(vis_img, lp, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
+            continue
+        
+        # If not successful, try deskew with fewer combinations for better speed
+        for cc in range(0, 2):
+            lp = read_plate(yolo_license_plate, deskew(crop_img, cc, 0))
+            if lp != "unknown":
+                list_read_plates[vehicle_id] = lp
+                # Add the recognized text to the visualization
+                cv2.putText(vis_img, lp, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
+                flag = 1
+                break
+            if flag == 1:
+                break
     
     return list_read_plates, img
 
-def display_image(img_file, img):
-    """Display the image with the original size or resized"""
-    try:
-        # For PIL Image
-        if isinstance(img, np.ndarray):
-            # Convert OpenCV image to PIL Image
-            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            pil_img = Image.fromarray(img_rgb)
-        else:
-            # If it's already a PIL Image, use it directly
-            pil_img = img
-            
-        # Resize the image for display
-        basewidth = 500
-        wpercent = (basewidth/float(pil_img.size[0]))
-        hsize = int((float(pil_img.size[1])*float(wpercent)))
-        
-        # Use appropriate resize method based on PIL version
-        try:
-            # For newer Pillow versions (9.0.0+)
-            from PIL import Image
-            pil_img = pil_img.resize((basewidth, hsize), Image.Resampling.LANCZOS)
-        except AttributeError:
-            # For older Pillow versions
-            pil_img = pil_img.resize((basewidth, hsize), Image.LANCZOS)
-            
-        # Display the image
-        try:
-            from IPython.display import display
-            display(pil_img)
-        except ImportError:
-            # If not in IPython environment, save the result
-            pil_img.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), "result.jpg"))
-            print("Saved result to 'result.jpg'")
-            
-        # Return the resized PIL image
-        return pil_img
-        
-    except Exception as e:
-        print(f"Error displaying image: {e}")
-        return None
 
 def detect_license_plate_from_car_event(vehicle_data):
     """
@@ -466,7 +431,7 @@ def on_license_plate(data):
     violations = data.get('violations')
     buffer = data.get('buffer')
     detections = data.get('detections')
-    
+
     # Limit processing rate to avoid overload
     current_time = time.time()
     if current_time - last_processing_time < 1.0/MAX_FPS:
@@ -539,8 +504,7 @@ def process_license_plates_thread():
             start_time = time.time()
             
             # Use our optimized recognition with cached models
-            valid_area = detections.get('bbox')
-            license_plates, marked_img = recognize_license_plate(image_array=img, valid_area=valid_area)
+            license_plates, marked_img = recognize_license_plate(image_array=img, detections=detections, violations=violations)
 
             print(license_plates)
             
@@ -549,11 +513,14 @@ def process_license_plates_thread():
             
             # # Prepare response with recognition results and include the original data
             response = {
-                'vehicle_id': vehicle_id,
+                'camera_id': camera_id,
+                'image_id': image_id,
                 'inference_time': inference_time,
-                'license_plate': list(license_plates) if license_plates else ["UNKNOWN"],
-                'original_data': original_data  # Include original data for reference
+                'license_plates': list(license_plates) if license_plates else ["UNKNOWN"],
+                'violations': violations,
             }
+
+            print(response)
             
             # # Encode the marked image with license plate boxes
             # if marked_img is not None:

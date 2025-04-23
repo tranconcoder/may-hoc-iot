@@ -8,7 +8,6 @@ export function runSocketIOService(server: HTTPsServer): SocketIOServer {
   io.on("connection", async (socket: Socket) => {
     console.log(`SOCKET.IO CLIENT CONNECTED: ${socket.id}`);
 
-
     /* -------------------------------------------------------------------------- */
     /*                              Join room handler                             */
     /* -------------------------------------------------------------------------- */
@@ -34,13 +33,10 @@ export function runSocketIOService(server: HTTPsServer): SocketIOServer {
     /* -------------------- Set 'car_detected' event handler -------------------- */
     socket.on("car_detected", handleEvent("car_detected").bind(socket));
 
-    /* -------------------- Set 'license_plate' event handler -------------------- */
-    socket.on("license_plate", handleEvent("license_plate").bind(socket));
-
-    /* ------------------ Set 'license_plate_ocr' event handler ------------------ */
+    /* ----------------- Set 'violation_license_plate' event handler ------------- */
     socket.on(
-      "license_plate_ocr",
-      handleEvent("license_plate_ocr").bind(socket)
+      "violation_license_plate",
+      handleEvent("violation_license_plate").bind(socket)
     );
 
     socket.on("disconnect", () => {
