@@ -520,37 +520,13 @@ def process_license_plates_thread():
                 'violations': violations,
             }
 
-            print(response)
-            
-            # # Encode the marked image with license plate boxes
-            # if marked_img is not None:
-            #     _, buffer = cv2.imencode('.jpg', marked_img)
-            #     response['recognized_image'] = buffer.tobytes()
-            
-            # # Emit license plate OCR results using 'license_plate_ocr' event
-            # sio.emit('license_plate_ocr', response)
-            
-            # # Print detection summary with improved formatting
-            # if license_plates:
-            #     plate_text = ", ".join(license_plates)
-            #     print(f"\n{'='*60}")
-            #     print(f"✅ BIỂN SỐ XE NHẬN DIỆN THÀNH CÔNG")
-            #     print(f"{'='*60}")
-            #     print(f"🚗 Vehicle ID: {vehicle_id}")
-            #     print(f"🔢 License Plate: {plate_text}")
-            #     print(f"⏱️ Thời gian xử lý: {inference_time:.2f}ms")
-            #     print(f"🕒 Thời gian: {time.strftime('%H:%M:%S %d-%m-%Y', time.localtime())}")
-            #     print(f"{'='*60}")
-            # else:
-            #     print(f"\n{'='*60}")
-            #     print(f"❌ KHÔNG THỂ NHẬN DIỆN BIỂN SỐ XE")
-            #     print(f"{'='*60}")
-            #     print(f"🚗 Vehicle ID: {vehicle_id}")
-            #     print(f"⏱️ Thời gian xử lý: {inference_time:.2f}ms")
-            #     print(f"🕒 Thời gian: {time.strftime('%H:%M:%S %d-%m-%Y', time.localtime())}")
-            #     print(f"{'='*60}")
-            
-            # print(f"📤 Đã gửi dữ liệu qua event 'license_plate_ocr'")
+            # Show detected license plates in the command line
+            print(f"[LicensePlateOCR] Camera: {camera_id}, Image: {image_id}, "
+                  f"Plates: {response['license_plates']}, "
+                  f"Inference Time: {inference_time:.2f}ms")
+
+            # Emit license plate OCR results using 'license_plate_ocr' event
+            sio.emit('violation_license_plate', response)
             
         except Exception as e:
             print(f"Error in license plate OCR thread: {e}")

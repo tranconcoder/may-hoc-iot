@@ -5,6 +5,7 @@ import cameraModel from "@/models/camera.model.js";
 import violationService from "@/services/violation.service.js";
 import cameraImageModel from "@/models/cameraImage.model.js";
 import { TrafficViolation } from "@/enums/trafficViolation.model.js";
+import { ViolationLicensePlate } from "@/models/violationLicensePlate.model.js";
 
 /* -------------------------------------------------------------------------- */
 /*                            Use strategy pattern                            */
@@ -60,7 +61,7 @@ export async function handleLeaveCameraEvent(this: Socket, cameraId: string) {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                          Handle 'image' event handler                       */
+/*                          Handle 'image' event handler                      */
 /* -------------------------------------------------------------------------- */
 export async function handleImageEvent(
   this: Socket,
@@ -145,7 +146,6 @@ export async function handleCarDetectedEvent(this: Socket, data: any) {
         violations,
         buffer: imageBuffer.image,
         detections: data.detections,
-        image_dimensions: data.image_dimensions,
       });
     }
 
@@ -175,7 +175,7 @@ export async function handleCarDetectedEvent(this: Socket, data: any) {
 /* -------------------------------------------------------------------------- */
 /*                Handle 'violation_license_plate' event handler              */
 /* -------------------------------------------------------------------------- */
-export async function handleViolationLicensePlateEvent(this: Socket, data: any) {
+export async function handleViolationLicensePlateEvent(this: Socket, data: ViolationLicensePlate) {
   const socket = this;
 
   console.log("Violation license plate data", data);
