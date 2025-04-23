@@ -37,7 +37,7 @@ print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
 
 # Global variables
 running = True
-last_processig_time = 0
+last_processing_time = 0
 plate_queue = queue.Queue(maxsize=QUEUE_SIZE) 
 
 # Cached models (loaded once and reused)
@@ -607,7 +607,7 @@ def maintain_connection():
 
 def main():
     """Main function for running the script directly"""
-    global running
+    global running, yolo_LP_detect, yolo_license_plate
 
     # Load models
     yolo_LP_detect, yolo_license_plate = load_models()
