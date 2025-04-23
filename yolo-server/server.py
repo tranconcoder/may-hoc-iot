@@ -45,15 +45,12 @@ model = None
 last_frame_time = 0
 MAX_FPS = 30 
 
-# Queue for model processing
-model_frame_queue = queue.Queue(maxsize=10)
-
-# Global variables for tracking
-vehicle_tracks = {}  # Dictionary to store tracking information: {track_id: [positions]}
+# Dictionary to manage queues and threads for each camera
+camera_queues = {}
+camera_threads = {}
 
 # Global variables for vehicle counting
-counted_vehicles = {}  # Dictionary to store counted vehicle IDs to avoid double counting
-# Separate counts by direction
+counted_vehicles = {} 
 vehicle_counts_up = {vehicle_type: 0 for vehicle_type in VEHICLE_CLASSES}
 vehicle_counts_down = {vehicle_type: 0 for vehicle_type in VEHICLE_CLASSES}
 total_counted_up = 0
@@ -80,29 +77,31 @@ def check_line_crossing(prev_pos, curr_pos, line_y):
 # Global variables for vehicle image cropping
 last_vehicle_crop_times = {}  # Store last emission time for each vehicle ID
 
-def process_frames_thread():
-    """Thread function to process frames with the model in the background"""
-    global running, model, vehicle_tracks, counted_vehicles
-    global vehicle_counts_up, vehicle_counts_down, total_counted_up, total_counted_down
-    global counting_line_y, counting_line_start_x, counting_line_end_x
-    global last_vehicle_crop_times
-    
-    print("Starting frame processing thread")
-    
+def process_frames_thread(camera_id):
+    """Thread function to process frames for a specific camera"""
+    global running, model
+    # Each camera will have its own tracking/counter state
+    vehicle_tracks = {}
+    counted_vehicles = {}
+    vehicle_counts_up = {vehicle_type: 0 for vehicle_type in VEHICLE_CLASSES}
+    vehicle_counts_down = {vehicle_type: 0 for vehicle_type in VEHICLE_CLASSES}
+    total_counted_up = 0
+    total_counted_down = 0
+    counting_line_y = None
+    counting_line_start_x = None
+    counting_line_end_x = None
+    last_vehicle_crop_times = {}
+    print(f"Starting frame processing thread for camera {camera_id}")
     while running:
         try:
-            # Try to get a frame from the model queue, non-blocking
             try:
-                frame_data = model_frame_queue.get(block=False)
+                frame_data = camera_queues[camera_id].get(block=True, timeout=0.1)
                 if frame_data is None:
                     time.sleep(0.01)
                     continue
             except queue.Empty:
-                time.sleep(0.01)
                 continue
-            
             frame, cameraId, imageId, created_at, track_line_y = frame_data
-            
             # Skip processing if model isn't loaded
             if model is None:
                 time.sleep(0.01)
@@ -120,7 +119,7 @@ def process_frames_thread():
                 counting_line_y = int(height * COUNTING_LINE_POSITION)
                 counting_line_start_x = 0
                 counting_line_end_x = width
-                print(f"Counting line initialized at y={counting_line_y}")
+                print(f"[Camera {camera_id}] Counting line initialized at y={counting_line_y}")
             
             # Process detection results
             detected_objects = []
@@ -229,7 +228,7 @@ def process_frames_thread():
                                 
                             # Add to list of new crossings for highlighting
                             new_crossings.append((track_id, crossing_direction))
-                            print(f"Vehicle {track_id} ({current_class}) crossed {crossing_name}. " +
+                            print(f"[Camera {camera_id}] Vehicle {track_id} ({current_class}) crossed {crossing_name}. " +
                                   f"Up: {total_counted_up}, Down: {total_counted_down}")
                 
                 # Add new position
@@ -293,19 +292,19 @@ def process_frames_thread():
             # Emit detection results back to the server
             if len(detected_objects) > 0:
                 sio.emit('car_detected', response)
-            print(f"Processed image, found {len(detected_objects)} vehicles, inference time: {inference_time:.2f}ms")
+            print(f"[Camera {camera_id}] Processed image, found {len(detected_objects)} vehicles, inference time: {inference_time:.2f}ms")
             
             # Display vehicle count summary
             if detected_objects:
                 count_summary = ", ".join([f"{count} {v_type}{'s' if count != 1 else ''}" 
                                          for v_type, count in vehicle_counts.items() if count > 0])
-                print(f"Vehicle counts: {count_summary}")
+                print(f"[Camera {camera_id}] Vehicle counts: {count_summary}")
                     
         except Exception as e:
-            print(f"Error in processing thread: {e}")
+            print(f"[Camera {camera_id}] Error in processing thread: {e}")
             time.sleep(0.1)  # Prevent tight loop if there's an error
     
-    print("Frame processing thread stopped")
+    print(f"[Camera {camera_id}] Frame processing thread stopped")
 
 def load_model():
     global model
@@ -352,9 +351,11 @@ def load_model():
         print(f"Vehicle class names: {[model.names[id] for id in vehicle_class_ids]}")
         
         # Start the processing thread
-        processing_thread = threading.Thread(target=process_frames_thread, daemon=True)
-        processing_thread.start()
-        print("Frame processing thread started")
+        for cameraId in camera_queues.keys():
+            t = threading.Thread(target=process_frames_thread, args=(cameraId,), daemon=True)
+            camera_threads[cameraId] = t
+            t.start()
+        print("Frame processing threads started")
             
         return True
     except Exception as e:
@@ -385,12 +386,6 @@ def disconnect():
 def on_image(data):
     global last_frame_time
     
-    # Limit frame processing rate to avoid overload
-    current_time = time.time()
-    if current_time - last_frame_time < 1.0/MAX_FPS:
-        return  # Skip this frame to maintain reasonable frame rate
-    
-    last_frame_time = current_time
     image = data['buffer']
     cameraId = data['cameraId']
     imageId = data['imageId']
@@ -433,9 +428,16 @@ def on_image(data):
         #     scale = max_dimension / max(width, height)
         #     frame = cv2.resize(frame, (int(width * scale), int(height * scale)))
         
+        # Create queue and thread for new cameraId if not exist
+        if cameraId not in camera_queues:
+            camera_queues[cameraId] = queue.Queue(maxsize=10)
+            t = threading.Thread(target=process_frames_thread, args=(cameraId,), daemon=True)
+            camera_threads[cameraId] = t
+            t.start()
+        
         # Add the frame to the model processing queue
         try:
-            model_frame_queue.put((frame.copy(), cameraId, imageId, created_at, track_line_y), block=False)
+            camera_queues[cameraId].put((frame.copy(), cameraId, imageId, created_at, track_line_y), block=False)
         except queue.Full:
             # If model queue is full, just discard this frame for processing
             pass
