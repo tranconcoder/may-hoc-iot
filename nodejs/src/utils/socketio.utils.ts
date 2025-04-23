@@ -10,187 +10,172 @@ import { TrafficViolation } from "@/enums/trafficViolation.model.js";
 /*                            Use strategy pattern                            */
 /* -------------------------------------------------------------------------- */
 const strategy = {
-	/* ---------------------------- Join room handler --------------------------- */
-	join_camera: handleJoinCameraEvent,
-	join_all_camera: handleJoinAllCameraEvent,
-	leave_camera: handleLeaveCameraEvent,
+  /* ---------------------------- Join room handler --------------------------- */
+  join_camera: handleJoinCameraEvent,
+  join_all_camera: handleJoinAllCameraEvent,
+  leave_camera: handleLeaveCameraEvent,
 
-	/* ------------------------------ Event handler ----------------------------- */
-	image: handleImageEvent,
-	traffic_light: handleTrafficLightEvent,
-	car_detected: handleCarDetectedEvent,
-	license_plate: handleLicensePlateEvent,
-	license_plate_ocr: handleLicensePlateOcrEvent,
+  /* ------------------------------ Event handler ----------------------------- */
+  image: handleImageEvent,
+  traffic_light: handleTrafficLightEvent,
+  car_detected: handleCarDetectedEvent,
+  violation_license_plate: handleViolationLicensePlateEvent,
 };
 
 export default function handleEvent(event: keyof typeof strategy) {
-	const handler = strategy[event];
+  const handler = strategy[event];
 
-	return handler;
+  return handler;
 }
-
 
 /* -------------------------------------------------------------------------- */
 /*                          Handle 'join_camera' event handler                */
 /* -------------------------------------------------------------------------- */
 export async function handleJoinCameraEvent(this: Socket, cameraId: string) {
-	const socket = this
-	socket.join(`camera_${cameraId}`);
+  const socket = this;
+  socket.join(`camera_${cameraId}`);
 }
 
 /* -------------------------------------------------------------------------- */
 /*                          Handle 'join_all_camera' event handler          */
 /* -------------------------------------------------------------------------- */
 export async function handleJoinAllCameraEvent(this: Socket) {
-	const socket = this;
+  const socket = this;
 
-	console.log("join_all_camera by client:", socket.id);
+  console.log("join_all_camera by client:", socket.id);
 
-	const cameraIds = await cameraModel
-		.find(
-			{},
-			{ _id: 1 }
-		)
-		.lean();
+  const cameraIds = await cameraModel.find({}, { _id: 1 }).lean();
 
-	cameraIds.forEach((id) => {
-		socket.join(`camera_${id._id}`);
-	})
+  cameraIds.forEach((id) => {
+    socket.join(`camera_${id._id}`);
+  });
 }
 
 /* -------------------------------------------------------------------------- */
 /*                          Handle 'leave_camera' event handler              */
 /* -------------------------------------------------------------------------- */
 export async function handleLeaveCameraEvent(this: Socket, cameraId: string) {
-	const socket = this;
-	socket.leave(`camera_${cameraId}`);
+  const socket = this;
+  socket.leave(`camera_${cameraId}`);
 }
 
 /* -------------------------------------------------------------------------- */
 /*                          Handle 'image' event handler                       */
 /* -------------------------------------------------------------------------- */
-export async function handleImageEvent(this: Socket, data: {
-	cameraId: string;
-	imageId: string;
-	width: number;
-	height: number;
-	buffer: Buffer;
-	created_at: number;
-	track_line_y: number;
-}) {
-	const socket = this;
+export async function handleImageEvent(
+  this: Socket,
+  data: {
+    cameraId: string;
+    imageId: string;
+    width: number;
+    height: number;
+    buffer: Buffer;
+    created_at: number;
+    track_line_y: number;
+  }
+) {
+  const socket = this;
 
-	socket.broadcast.emit("image", {
-		cameraId: data.cameraId,
-		imageId: data.imageId,
-		width: data.width,
-		height: data.height,
-		buffer: data.buffer,
-		created_at: data.created_at,
-		track_line_y: data.track_line_y,
-	})
+  socket.broadcast.emit("image", {
+    cameraId: data.cameraId,
+    imageId: data.imageId,
+    width: data.width,
+    height: data.height,
+    buffer: data.buffer,
+    created_at: data.created_at,
+    track_line_y: data.track_line_y,
+  });
 }
 
 /* -------------------------------------------------------------------------- */
 /*                      Handle 'traffic_light' event handler                      */
 /* -------------------------------------------------------------------------- */
 export async function handleTrafficLightEvent(this: Socket, data: any) {
-	const socket = this;
+  const socket = this;
 
-	let maxDetection = { confidence: 0 };
-	data.detections.forEach((element: any) => {
-		if (maxDetection.confidence < element.confidence) {
-			maxDetection = element;
-		}
-	});
+  let maxDetection = { confidence: 0 };
+  data.detections.forEach((element: any) => {
+    if (maxDetection.confidence < element.confidence) {
+      maxDetection = element;
+    }
+  });
 
-	socket.broadcast.emit("traffic_light", {
-		cameraId: data.cameraId,
-		imageId: data.imageId,
-		traffic_status: data.traffic_status,
-		detection: maxDetection,
-		inference_time: data.inference_time,
-		image_dimensions: data.image_dimensions,
-		created_at: data.created_at,
-	});
+  socket.broadcast.emit("traffic_light", {
+    cameraId: data.cameraId,
+    imageId: data.imageId,
+    traffic_status: data.traffic_status,
+    detection: maxDetection,
+    inference_time: data.inference_time,
+    image_dimensions: data.image_dimensions,
+    created_at: data.created_at,
+  });
 
-	console.log("Traffic light detection data", data.traffic_status);
+  console.log("Traffic light detection data", data.traffic_status);
 
-	trafficLightModel.create(data).catch((err) => {
-		console.log("Traffic light detection creation failed", err);
-	});
+  trafficLightModel.create(data).catch((err) => {
+    console.log("Traffic light detection creation failed", err);
+  });
 }
 
 /* -------------------------------------------------------------------------- */
 /*                      Handle 'car_detected' event handler                      */
 /* -------------------------------------------------------------------------- */
 export async function handleCarDetectedEvent(this: Socket, data: any) {
-	const socket = this;
+  const socket = this;
 
-	// Forward vehicle detection data to all clients with original event name
-	socket.broadcast.emit("car_detected", data);
+  // Forward vehicle detection data to all clients with original event name
+  socket.broadcast.emit("car_detected", data);
 
-	try {
-		const imageBuffer = await cameraImageModel.findById(data.image_id);
-		if (!imageBuffer) throw new Error("Not found image buffer!");
+  try {
+    const imageBuffer = await cameraImageModel.findById(data.image_id);
+    if (!imageBuffer) throw new Error("Not found image buffer!");
 
-		const violations = [
-			/* --------------------------- Red light violation -------------------------- */
-			...(await violationService.detectRedLightViolation(data)).map((id) => ({
-				id,
-				type: TrafficViolation.RED_LIGHT_VIOLATION,
-			})),
-		]
+    const violations = [
+      /* --------------------------- Red light violation -------------------------- */
+      ...(await violationService.detectRedLightViolation(data)).map((id) => ({
+        id,
+        type: TrafficViolation.RED_LIGHT_VIOLATION,
+      })),
+    ];
 
-		if (violations.length > 0) {
-			socket.broadcast.emit("violation_detect", {
-				camera_id: data.camera_id,
-				image_id: data.image_id,
-				violations,
-				buffer: imageBuffer.image,
-				detections: data.detections,
-			});
-		}
+    if (violations.length > 0) {
+      socket.broadcast.emit("violation_detect", {
+        camera_id: data.camera_id,
+        image_id: data.image_id,
+        violations,
+        buffer: imageBuffer.image,
+        detections: data.detections,
+      });
+    }
 
-		carDetectionModel
-			.create({
-				camera_id: data.camera_id,
-				image_id: data.image_id,
-				created_at: data.created_at,
-				detections: data.detections,
-				inference_time: data.inference_time,
-				image_dimensions: data.image_dimensions,
-				vehicle_count: data.vehicle_count,
-				tracks: data.tracks,
-				new_crossings: data.new_crossings,
-			})
-			.then((newCarDetection) => {
-				console.log("Car detection created successfully");
-			})
-			.catch((err) => {
-				throw new Error("Car detection creation failed: " + err);
-			});
-	} catch (error: any) {
-		console.log("Error handleGiaoThongEvent: ", error);
-	}
+    carDetectionModel
+      .create({
+        camera_id: data.camera_id,
+        image_id: data.image_id,
+        created_at: data.created_at,
+        detections: data.detections,
+        inference_time: data.inference_time,
+        image_dimensions: data.image_dimensions,
+        vehicle_count: data.vehicle_count,
+        tracks: data.tracks,
+        new_crossings: data.new_crossings,
+      })
+      .then((newCarDetection) => {
+        console.log("Car detection created successfully");
+      })
+      .catch((err) => {
+        throw new Error("Car detection creation failed: " + err);
+      });
+  } catch (error: any) {
+    console.log("Error handleGiaoThongEvent: ", error);
+  }
 }
 
 /* -------------------------------------------------------------------------- */
-/*                      Handle 'license_plate' event handler                  */
+/*                Handle 'violation_license_plate' event handler              */
 /* -------------------------------------------------------------------------- */
-export async function handleLicensePlateEvent(this: Socket, data: any) {
-	const socket = this;
+export async function handleViolationLicensePlateEvent(this: Socket, data: any) {
+  const socket = this;
 
-	// Forward license plate detection data to all clients (including sender)
-	socket.broadcast.emit("license_plate", data);
+  socket.broadcast.emit("violation_license_plate", data);
 }
-
-/* -------------------------------------------------------------------------- */
-/*                      Handle 'license_plate_ocr' event handler            */
-/* -------------------------------------------------------------------------- */
-export async function handleLicensePlateOcrEvent(this: Socket, data: any) {
-	const socket = this;
-
-	// Forward license plate detection data to all clients (including sender)
-	socket.broadcast.emit("license_plate_detect", data);
-} 

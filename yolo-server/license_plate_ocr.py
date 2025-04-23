@@ -50,48 +50,48 @@ model_frame_queue = queue.Queue(maxsize=10)
 
 def changeContrast(img):
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-    l_channel, a, b = cv2.split(lab)
+    l_channel, a_channel, b_channel = cv2.split(lab)
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-    cl = clahe.apply(l_channel)
-    limg = cv2.merge((cl,a,b))
-    enhanced_img = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
+    enhanced_l_channel = clahe.apply(l_channel)
+    enhanced_lab_img = cv2.merge((enhanced_l_channel, a_channel, b_channel))
+    enhanced_img = cv2.cvtColor(enhanced_lab_img, cv2.COLOR_LAB2BGR)
     return enhanced_img
 
 def rotate_image(image, angle):
     image_center = tuple(np.array(image.shape[1::-1]) / 2)
-    rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
-    result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
-    return result
+    rotation_matrix = cv2.getRotationMatrix2D(image_center, angle, 1.0)
+    rotated_image = cv2.warpAffine(image, rotation_matrix, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+    return rotated_image
 
-def compute_skew(src_img, center_thres):
+def compute_skew(src_img, center_threshold):
     if len(src_img.shape) == 3:
-        h, w, _ = src_img.shape
+        height, width, _ = src_img.shape
     elif len(src_img.shape) == 2:
-        h, w = src_img.shape
+        height, width = src_img.shape
     else:
-        print('upsupported image type')
-    img = cv2.medianBlur(src_img, 3)
-    edges = cv2.Canny(img,  threshold1 = 30,  threshold2 = 100, apertureSize = 3, L2gradient = True)
-    lines = cv2.HoughLinesP(edges, 1, math.pi/180, 30, minLineLength=w / 1.5, maxLineGap=h/3.0)
+        print('Unsupported image type')
+    blurred_img = cv2.medianBlur(src_img, 3)
+    edges = cv2.Canny(blurred_img, threshold1=30, threshold2=100, apertureSize=3, L2gradient=True)
+    lines = cv2.HoughLinesP(edges, 1, math.pi/180, 30, minLineLength=width/1.5, maxLineGap=height/3.0)
     if lines is None:
         return 1
 
-    min_line = 100
-    min_line_pos = 0
-    for i in range (len(lines)):
+    min_line_y = 100
+    min_line_position = 0
+    for i in range(len(lines)):
         for x1, y1, x2, y2 in lines[i]:
             center_point = [((x1+x2)/2), ((y1+y2)/2)]
-            if center_thres == 1:
+            if center_threshold == 1:
                 if center_point[1] < 7:
                     continue
-            if center_point[1] < min_line:
-                min_line = center_point[1]
-                min_line_pos = i
+            if center_point[1] < min_line_y:
+                min_line_y = center_point[1]
+                min_line_position = i
 
     angle = 0.0
     nlines = lines.size
     cnt = 0
-    for x1, y1, x2, y2 in lines[min_line_pos]:
+    for x1, y1, x2, y2 in lines[min_line_position]:
         ang = np.arctan2(y2 - y1, x2 - x1)
         if math.fabs(ang) <= 30: # excluding extreme rotations
             angle += ang
@@ -231,7 +231,7 @@ def load_models():
     
     return yolo_LP_detect, yolo_license_plate
 
-def recognize_license_plate(image_path=None, image_array=None):
+def recognize_license_plate(image_path=None, image_array=None, valid_area=None):
     """
     Recognize license plates from either an image path or image array
     Args:
@@ -307,6 +307,11 @@ def recognize_license_plate(image_path=None, image_array=None):
             # Skip if crop dimensions are too small
             if w < 20 or h < 10:
                 continue
+
+            # Skip if crop is outside valid area
+            if valid_area is not None:
+                if x < valid_area.get("x1") or x + w > valid_area.get("x2") or y < valid_area.get("y1") or y + h > valid_area.get("y2"):
+                    continue
             
             # Crop the license plate
             crop_img = img[y:y+h, x:x+w]
@@ -534,7 +539,8 @@ def process_license_plates_thread():
             start_time = time.time()
             
             # Use our optimized recognition with cached models
-            license_plates, marked_img = recognize_license_plate(image_array=img)
+            valid_area = detections.get('bbox')
+            license_plates, marked_img = recognize_license_plate(image_array=img, valid_area=valid_area)
 
             print(license_plates)
             
@@ -542,14 +548,12 @@ def process_license_plates_thread():
             inference_time = (time.time() - start_time) * 1000  # ms
             
             # # Prepare response with recognition results and include the original data
-            # response = {
-            #     'vehicle_id': vehicle_id,
-            #     'timestamp': time.time(),
-            #     'inference_time': inference_time,
-            #     'license_plates': list(license_plates) if license_plates else ["UNKNOWN"],
-            #     'recognized_image': None,  # Will be populated below
-            #     'original_data': original_data  # Include original data for reference
-            # }
+            response = {
+                'vehicle_id': vehicle_id,
+                'inference_time': inference_time,
+                'license_plate': list(license_plates) if license_plates else ["UNKNOWN"],
+                'original_data': original_data  # Include original data for reference
+            }
             
             # # Encode the marked image with license plate boxes
             # if marked_img is not None:
