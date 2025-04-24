@@ -1,4 +1,4 @@
-{{!-- Trang thêm camera đơn giản --}}
+{{! Trang thêm camera đơn giản }}
 
 <link rel="stylesheet" href="/public/css/add-camera.css" />
 
@@ -6,62 +6,157 @@
   <div class="page-header">
     <div class="header-left">
       <a href="/views/cameras" class="btn-back">
-        <i class="fas fa-arrow-left"></i> Quay lại danh sách camera
+        <i class="fas fa-arrow-left"></i>
+        Quay lại danh sách camera
       </a>
       <h1 class="page-title">Thêm Camera Mới</h1>
     </div>
   </div>
-  
+
   <div class="form-container">
     <div id="alert-container"></div>
-    
+
     <form id="addCameraForm">
       <div class="form-group">
-        <label for="camera_name">Tên camera <span class="text-danger">*</span></label>
-        <input type="text" class="form-control" id="camera_name" name="camera_name" required>
+        <label for="camera_name">Tên camera
+          <span class="text-danger">*</span></label>
+        <input
+          type="text"
+          class="form-control"
+          id="camera_name"
+          name="camera_name"
+          required
+        />
         <div class="invalid-feedback">Vui lòng nhập tên camera</div>
       </div>
-      
+
       <div class="form-group">
-        <label for="camera_location">Địa điểm lắp đặt <span class="text-danger">*</span></label>
-        <input type="text" class="form-control" id="camera_location" name="camera_location" required>
+        <label for="camera_location">Địa điểm lắp đặt
+          <span class="text-danger">*</span></label>
+        <input
+          type="text"
+          class="form-control"
+          id="camera_location"
+          name="camera_location"
+          required
+        />
         <div class="invalid-feedback">Vui lòng nhập địa điểm lắp đặt camera</div>
       </div>
 
       <div class="form-group">
-        <label for="trackline_y">Trackline Y (%) <span class="text-danger">*</span></label>
+        <label for="trackline_y">Trackline Y (%)
+          <span class="text-danger">*</span></label>
         <div class="trackline-container">
           <div class="camera-preview-container">
             <div class="image-upload">
               <label for="camera-image-upload" class="upload-label">
-                <i class="fas fa-upload"></i> Tải lên hình ảnh
+                <i class="fas fa-upload"></i>
+                Tải lên hình ảnh
               </label>
-              <input type="file" id="camera-image-upload" accept="image/*" class="hidden-input">
+              <input
+                type="file"
+                id="camera-image-upload"
+                accept="image/*"
+                class="hidden-input"
+              />
             </div>
             <div class="preview-area" id="camera-preview-area">
               <!-- Default preview with 16:9 ratio -->
-              <img src="/public/images/camera-preview-default.jpg" id="preview-image" alt="Camera Preview">
+              <img
+                src="/public/images/camera-preview-default.jpg"
+                id="preview-image"
+                alt="Camera Preview"
+              />
               <div class="trackline" id="trackline-indicator"></div>
+
+              <!-- Lane points markers container -->
+              <div
+                class="lane-points-container"
+                id="lane-points-container"
+              ></div>
             </div>
             <div class="trackline-controls">
-              <input type="range" class="form-control-range" id="trackline_y_slider" min="0" max="100" value="50">
+              <input
+                type="range"
+                class="form-control-range"
+                id="trackline_y_slider"
+                min="0"
+                max="100"
+                value="50"
+              />
               <div class="value-display">
                 <span id="trackline_y_value">50</span>%
               </div>
             </div>
           </div>
+
+          <div class="form-text text-muted mb-2">
+            <i class="fas fa-info-circle"></i>
+            Nhấn vào ảnh để tạo các điểm phân làn. Nhấn giữ và kéo để di chuyển
+            các điểm.
+          </div>
+
+          <div class="lane-points-controls mb-3">
+            <button
+              type="button"
+              id="add-lane-point"
+              class="btn btn-sm btn-outline-primary mr-2"
+            >
+              <i class="fas fa-plus"></i>
+              Thêm điểm phân làn
+            </button>
+            <button
+              type="button"
+              id="clear-lane-points"
+              class="btn btn-sm btn-outline-danger"
+            >
+              <i class="fas fa-trash"></i>
+              Xóa tất cả điểm
+            </button>
+          </div>
         </div>
-        <input type="hidden" id="trackline_y" name="trackline_y" value="50" required>
+        <input
+          type="hidden"
+          id="trackline_y"
+          name="trackline_y"
+          value="50"
+          required
+        />
+        <input
+          type="hidden"
+          id="lane_track_points"
+          name="lane_track_points"
+          value="[]"
+        />
         <div class="invalid-feedback">Vui lòng thiết lập vị trí trackline Y</div>
-        <small class="form-text text-muted">Giá trị trackline Y dùng để xác định vị trí theo dõi (tính bằng % chiều cao)</small>
+        <small class="form-text text-muted">Giá trị trackline Y dùng để xác định
+          vị trí theo dõi (tính bằng % chiều cao)</small>
       </div>
-      
+
+      <!-- Phần cấu hình phương tiện cho từng làn xe -->
+      <div class="form-group">
+        <label>Cấu hình phương tiện cho từng làn</label>
+        <div class="lane-vehicles-container" id="lane-vehicles-container">
+          <!-- Lane vehicle configuration will be generated dynamically -->
+          <div class="text-muted mb-2">Hãy thêm các điểm phân làn để cấu hình
+            phương tiện cho từng làn</div>
+        </div>
+        <input
+          type="hidden"
+          id="lane_vehicles"
+          name="lane_vehicles"
+          value="[]"
+        />
+      </div>
+
       <div class="btn-group">
         <button type="button" id="cancelBtn" class="btn btn-secondary">
-          <i class="fas fa-times"></i> Hủy
+          <i class="fas fa-times"></i>
+          Hủy
         </button>
         <button type="submit" id="saveBtn" class="btn btn-primary">
-          <i class="fas fa-save"></i> Lưu camera
+          <i class="fas fa-save"></i>
+          Lưu camera
         </button>
       </div>
     </form>

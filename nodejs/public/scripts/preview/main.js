@@ -1,11 +1,10 @@
-
-const SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3001';
+const SOCKETIO_SERVER_URL = "wss://172.28.31.150:3001";
 const MAX_LOG_ENTRIES = 50;
 const FRAME_RATE_LIMIT = 30; // Max frames per second to process
 
 // Canvas setup
-const canvas = document.getElementById('preview-canvas');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById("preview-canvas");
+const ctx = canvas.getContext("2d");
 const carCanvas = document.getElementById("car-canvas");
 const carCtx = carCanvas.getContext("2d");
 
@@ -483,256 +482,281 @@ function drawCarImage() {
 
 // Draw waiting message when no image is available
 function drawWaitingMessage(message) {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.font = '18px Arial';
-    ctx.fillStyle = 'white';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+  ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.font = "18px Arial";
+  ctx.fillStyle = "white";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(message, canvas.width / 2, canvas.height / 2);
 }
 
 // Draw traffic sign detection overlays
 function drawTrafficSignOverlays(offsetX, offsetY, drawWidth, drawHeight) {
-    const detections = latestTrafficSignData.detections;
-    
-    detections.forEach(detection => {
-        const bbox = detection.bbox;
-        const className = detection.class;
-        const confidence = detection.confidence;
-        
-        // Get color for this class
-        const color = getColorForClass(className);
-        const colorString = `rgb(${color.r}, ${color.g}, ${color.b})`;
-        
-        // Calculate pixel coordinates based on relative coordinates
-        const x1 = offsetX + (bbox.x1 * drawWidth);
-        const y1 = offsetY + (bbox.y1 * drawHeight);
-        const x2 = offsetX + (bbox.x2 * drawWidth);
-        const y2 = offsetY + (bbox.y2 * drawHeight);
-        const boxWidth = x2 - x1;
-        const boxHeight = y2 - y1;
-        
-        // Draw bounding box
-        ctx.strokeStyle = colorString;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x1, y1, boxWidth, boxHeight);
-        
-        // Draw label background
-        const label = `${className}: ${confidence.toFixed(2)}`;
-        ctx.font = '14px Arial';
-        const labelWidth = ctx.measureText(label).width + 10;
-        const labelHeight = 20;
-        
-        ctx.fillStyle = colorString;
-        ctx.fillRect(x1, y1 - labelHeight, labelWidth, labelHeight);
-        
-        // Calculate text color based on background brightness
-        const brightness = (color.r * 0.299 + color.g * 0.587 + color.b * 0.114) / 255;
-        const textColor = brightness > 0.5 ? 'black' : 'white';
-        
-        // Draw label text
-        ctx.fillStyle = textColor;
-        ctx.fillText(label, x1 + 5, y1 - 5);
-    });
+  const detections = latestTrafficSignData.detections;
+
+  detections.forEach((detection) => {
+    const bbox = detection.bbox;
+    const className = detection.class;
+    const confidence = detection.confidence;
+
+    // Get color for this class
+    const color = getColorForClass(className);
+    const colorString = `rgb(${color.r}, ${color.g}, ${color.b})`;
+
+    // Calculate pixel coordinates based on relative coordinates
+    const x1 = offsetX + bbox.x1 * drawWidth;
+    const y1 = offsetY + bbox.y1 * drawHeight;
+    const x2 = offsetX + bbox.x2 * drawWidth;
+    const y2 = offsetY + bbox.y2 * drawHeight;
+    const boxWidth = x2 - x1;
+    const boxHeight = y2 - y1;
+
+    // Draw bounding box
+    ctx.strokeStyle = colorString;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x1, y1, boxWidth, boxHeight);
+
+    // Draw label background
+    const label = `${className}: ${confidence.toFixed(2)}`;
+    ctx.font = "14px Arial";
+    const labelWidth = ctx.measureText(label).width + 10;
+    const labelHeight = 20;
+
+    ctx.fillStyle = colorString;
+    ctx.fillRect(x1, y1 - labelHeight, labelWidth, labelHeight);
+
+    // Calculate text color based on background brightness
+    const brightness =
+      (color.r * 0.299 + color.g * 0.587 + color.b * 0.114) / 255;
+    const textColor = brightness > 0.5 ? "black" : "white";
+
+    // Draw label text
+    ctx.fillStyle = textColor;
+    ctx.fillText(label, x1 + 5, y1 - 5);
+  });
 }
 
 // Draw vehicle detection overlays
 function drawVehicleOverlays(offsetX, offsetY, drawWidth, drawHeight) {
-    // Draw counting line if available
-    if (latestVehicleData.counting_line && latestVehicleData.counting_line.y !== null) {
-        const lineY = offsetY + (latestVehicleData.counting_line.y / latestVehicleData.image_dimensions.height) * drawHeight;
-        const startX = offsetX;
-        const endX = offsetX + drawWidth;
-        
+  // Draw counting line if available
+  if (
+    latestVehicleData.counting_line &&
+    latestVehicleData.counting_line.y !== null
+  ) {
+    const lineY =
+      offsetY +
+      (latestVehicleData.counting_line.y /
+        latestVehicleData.image_dimensions.height) *
+        drawHeight;
+    const startX = offsetX;
+    const endX = offsetX + drawWidth;
+
+    ctx.beginPath();
+    ctx.moveTo(startX, lineY);
+    ctx.lineTo(endX, lineY);
+    ctx.strokeStyle = "rgba(0, 255, 255, 0.8)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Add label for counting line
+    ctx.font = "14px Arial";
+    ctx.fillStyle = "rgba(0, 255, 255, 1)";
+    ctx.fillText("Vehicle Counting Line", startX + 10, lineY - 5);
+  }
+
+  // Draw tracks if available
+  if (latestVehicleData.tracks && latestVehicleData.tracks.length > 0) {
+    latestVehicleData.tracks.forEach((track) => {
+      if (track.positions && track.positions.length >= 2) {
+        // Get vehicle type color
+        let color;
+        const vehicleClass = track.class;
+
+        switch (vehicleClass) {
+          case "car":
+            color = "rgba(0, 255, 0, 0.8)"; // Green
+            break;
+          case "truck":
+            color = "rgba(0, 0, 255, 0.8)"; // Blue
+            break;
+          case "bus":
+            color = "rgba(255, 0, 0, 0.8)"; // Red
+            break;
+          case "motorcycle":
+            color = "rgba(255, 255, 0, 0.8)"; // Yellow
+            break;
+          case "bicycle":
+            color = "rgba(255, 0, 255, 0.8)"; // Purple
+            break;
+          default:
+            color = "rgba(255, 255, 0, 0.8)"; // Default yellow
+        }
+
+        // Draw trail lines
         ctx.beginPath();
-        ctx.moveTo(startX, lineY);
-        ctx.lineTo(endX, lineY);
-        ctx.strokeStyle = 'rgba(0, 255, 255, 0.8)';
+
+        // Sort positions by time
+        const sortedPositions = [...track.positions].sort(
+          (a, b) => a.time - b.time
+        );
+
+        for (let i = 0; i < sortedPositions.length - 1; i++) {
+          const pos1 = sortedPositions[i];
+          const pos2 = sortedPositions[i + 1];
+
+          // Calculate screen coordinates
+          const x1 =
+            offsetX +
+            (pos1.x / latestVehicleData.image_dimensions.width) * drawWidth;
+          const y1 =
+            offsetY +
+            (pos1.y / latestVehicleData.image_dimensions.height) * drawHeight;
+          const x2 =
+            offsetX +
+            (pos2.x / latestVehicleData.image_dimensions.width) * drawWidth;
+          const y2 =
+            offsetY +
+            (pos2.y / latestVehicleData.image_dimensions.height) * drawHeight;
+
+          if (i === 0) {
+            ctx.moveTo(x1, y1);
+          }
+
+          ctx.lineTo(x2, y2);
+
+          // For the last position, draw the ID
+          if (i === sortedPositions.length - 2) {
+            ctx.font = "12px Arial";
+            ctx.fillStyle = color;
+            ctx.fillText(`ID:${track.id}`, x2 + 5, y2);
+          }
+        }
+
+        ctx.strokeStyle = color;
         ctx.lineWidth = 2;
         ctx.stroke();
-        
-        // Add label for counting line
-        ctx.font = '14px Arial';
-        ctx.fillStyle = 'rgba(0, 255, 255, 1)';
-        ctx.fillText("Vehicle Counting Line", startX + 10, lineY - 5);
-    }
-    
-    // Draw tracks if available
-    if (latestVehicleData.tracks && latestVehicleData.tracks.length > 0) {
-        latestVehicleData.tracks.forEach(track => {
-            if (track.positions && track.positions.length >= 2) {
-                // Get vehicle type color
-                let color;
-                const vehicleClass = track.class;
-                
-                switch (vehicleClass) {
-                    case 'car':
-                        color = 'rgba(0, 255, 0, 0.8)'; // Green
-                        break;
-                    case 'truck':
-                        color = 'rgba(0, 0, 255, 0.8)'; // Blue
-                        break;
-                    case 'bus':
-                        color = 'rgba(255, 0, 0, 0.8)'; // Red
-                        break;
-                    case 'motorcycle':
-                        color = 'rgba(255, 255, 0, 0.8)'; // Yellow
-                        break;
-                    case 'bicycle':
-                        color = 'rgba(255, 0, 255, 0.8)'; // Purple
-                        break;
-                    default:
-                        color = 'rgba(255, 255, 0, 0.8)'; // Default yellow
-                }
-                
-                // Draw trail lines
-                ctx.beginPath();
-                
-                // Sort positions by time
-                const sortedPositions = [...track.positions].sort((a, b) => a.time - b.time);
-                
-                for (let i = 0; i < sortedPositions.length - 1; i++) {
-                    const pos1 = sortedPositions[i];
-                    const pos2 = sortedPositions[i + 1];
-                    
-                    // Calculate screen coordinates
-                    const x1 = offsetX + (pos1.x / latestVehicleData.image_dimensions.width) * drawWidth;
-                    const y1 = offsetY + (pos1.y / latestVehicleData.image_dimensions.height) * drawHeight;
-                    const x2 = offsetX + (pos2.x / latestVehicleData.image_dimensions.width) * drawWidth;
-                    const y2 = offsetY + (pos2.y / latestVehicleData.image_dimensions.height) * drawHeight;
-                    
-                    if (i === 0) {
-                        ctx.moveTo(x1, y1);
-                    }
-                    
-                    ctx.lineTo(x2, y2);
-                    
-                    // For the last position, draw the ID
-                    if (i === sortedPositions.length - 2) {
-                        ctx.font = '12px Arial';
-                        ctx.fillStyle = color;
-                        ctx.fillText(`ID:${track.id}`, x2 + 5, y2);
-                    }
-                }
-                
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
-        });
-    }
-    
-    // Draw vehicle bounding boxes
-    latestVehicleData.detections.forEach(detection => {
-        const bbox = detection.bbox;
-        const className = detection.class;
-        const confidence = detection.confidence;
-        const trackId = detection.track_id;
-        
-        // Choose color based on vehicle type
-        let colorString;
-        switch (className) {
-            case 'car':
-                colorString = 'rgb(0, 255, 0)'; // Green
-                break;
-            case 'truck':
-                colorString = 'rgb(0, 0, 255)'; // Blue
-                break;
-            case 'bus':
-                colorString = 'rgb(255, 0, 0)'; // Red
-                break;
-            case 'motorcycle':
-                colorString = 'rgb(255, 255, 0)'; // Yellow
-                break;
-            case 'bicycle':
-                colorString = 'rgb(255, 0, 255)'; // Purple
-                break;
-            default:
-                colorString = 'rgb(0, 255, 0)'; // Default green
-        }
-        
-        // Calculate pixel coordinates based on relative coordinates
-        const x1 = offsetX + (bbox.x1 * drawWidth);
-        const y1 = offsetY + (bbox.y1 * drawHeight);
-        const x2 = offsetX + (bbox.x2 * drawWidth);
-        const y2 = offsetY + (bbox.y2 * drawHeight);
-        const boxWidth = x2 - x1;
-        const boxHeight = y2 - y1;
-        
-        // Draw bounding box
-        ctx.strokeStyle = colorString;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x1, y1, boxWidth, boxHeight);
-        
-        // Draw label background
-        let label = `${className}: ${confidence.toFixed(2)}`;
-        if (trackId !== undefined) {
-            label += ` ID:${trackId}`;
-        }
-        
-        ctx.font = '14px Arial';
-        const labelWidth = ctx.measureText(label).width + 10;
-        const labelHeight = 20;
-        
-        ctx.fillStyle = colorString;
-        ctx.fillRect(x1, y1 - labelHeight, labelWidth, labelHeight);
-        
-        // Determine optimal text color based on background
-        let textColor;
-        switch (className) {
-            case 'car':
-            case 'motorcycle':
-                textColor = 'black';
-                break;
-            default:
-                textColor = 'white';
-        }
-        
-        // Draw label text
-        ctx.fillStyle = textColor;
-        ctx.fillText(label, x1 + 5, y1 - 5);
+      }
     });
-    
-    // Draw counters for up/down if available
-    if (latestVehicleData.vehicle_count) {
-        const totalUp = latestVehicleData.vehicle_count.total_up || 0;
-        const totalDown = latestVehicleData.vehicle_count.total_down || 0;
-        
-        if (latestVehicleData.counting_line && latestVehicleData.counting_line.y !== null) {
-            const lineY = offsetY + (latestVehicleData.counting_line.y / latestVehicleData.image_dimensions.height) * drawHeight;
-            
-            // Up counter (right side)
-            const upX = offsetX + drawWidth - 150;
-            const upY = lineY - 100;
-            
-            ctx.fillStyle = 'rgba(0, 255, 0, 0.7)';
-            ctx.fillRect(upX, upY, 130, 70);
-            
-            ctx.font = 'bold 16px Arial';
-            ctx.fillStyle = 'black';
-            ctx.fillText('▲ UP COUNT', upX + 10, upY + 25);
-            
-            ctx.font = 'bold 24px Arial';
-            ctx.fillText(`${totalUp}`, upX + 10, upY + 55);
-            
-            // Down counter (left side)
-            const downX = offsetX + 20;
-            const downY = lineY + 30;
-            
-            ctx.fillStyle = 'rgba(255, 165, 0, 0.7)';
-            ctx.fillRect(downX, downY, 130, 70);
-            
-            ctx.font = 'bold 16px Arial';
-            ctx.fillStyle = 'black';
-            ctx.fillText('▼ DOWN COUNT', downX + 10, downY + 25);
-            
-            ctx.font = 'bold 24px Arial';
-            ctx.fillText(`${totalDown}`, downX + 10, downY + 55);
-        }
+  }
+
+  // Draw vehicle bounding boxes
+  latestVehicleData.detections.forEach((detection) => {
+    const bbox = detection.bbox;
+    const className = detection.class;
+    const confidence = detection.confidence;
+    const trackId = detection.track_id;
+
+    // Choose color based on vehicle type
+    let colorString;
+    switch (className) {
+      case "car":
+        colorString = "rgb(0, 255, 0)"; // Green
+        break;
+      case "truck":
+        colorString = "rgb(0, 0, 255)"; // Blue
+        break;
+      case "bus":
+        colorString = "rgb(255, 0, 0)"; // Red
+        break;
+      case "motorcycle":
+        colorString = "rgb(255, 255, 0)"; // Yellow
+        break;
+      case "bicycle":
+        colorString = "rgb(255, 0, 255)"; // Purple
+        break;
+      default:
+        colorString = "rgb(0, 255, 0)"; // Default green
     }
+
+    // Calculate pixel coordinates based on relative coordinates
+    const x1 = offsetX + bbox.x1 * drawWidth;
+    const y1 = offsetY + bbox.y1 * drawHeight;
+    const x2 = offsetX + bbox.x2 * drawWidth;
+    const y2 = offsetY + bbox.y2 * drawHeight;
+    const boxWidth = x2 - x1;
+    const boxHeight = y2 - y1;
+
+    // Draw bounding box
+    ctx.strokeStyle = colorString;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x1, y1, boxWidth, boxHeight);
+
+    // Draw label background
+    let label = `${className}: ${confidence.toFixed(2)}`;
+    if (trackId !== undefined) {
+      label += ` ID:${trackId}`;
+    }
+
+    ctx.font = "14px Arial";
+    const labelWidth = ctx.measureText(label).width + 10;
+    const labelHeight = 20;
+
+    ctx.fillStyle = colorString;
+    ctx.fillRect(x1, y1 - labelHeight, labelWidth, labelHeight);
+
+    // Determine optimal text color based on background
+    let textColor;
+    switch (className) {
+      case "car":
+      case "motorcycle":
+        textColor = "black";
+        break;
+      default:
+        textColor = "white";
+    }
+
+    // Draw label text
+    ctx.fillStyle = textColor;
+    ctx.fillText(label, x1 + 5, y1 - 5);
+  });
+
+  // Draw counters for up/down if available
+  if (latestVehicleData.vehicle_count) {
+    const totalUp = latestVehicleData.vehicle_count.total_up || 0;
+    const totalDown = latestVehicleData.vehicle_count.total_down || 0;
+
+    if (
+      latestVehicleData.counting_line &&
+      latestVehicleData.counting_line.y !== null
+    ) {
+      const lineY =
+        offsetY +
+        (latestVehicleData.counting_line.y /
+          latestVehicleData.image_dimensions.height) *
+          drawHeight;
+
+      // Up counter (right side)
+      const upX = offsetX + drawWidth - 150;
+      const upY = lineY - 100;
+
+      ctx.fillStyle = "rgba(0, 255, 0, 0.7)";
+      ctx.fillRect(upX, upY, 130, 70);
+
+      ctx.font = "bold 16px Arial";
+      ctx.fillStyle = "black";
+      ctx.fillText("▲ UP COUNT", upX + 10, upY + 25);
+
+      ctx.font = "bold 24px Arial";
+      ctx.fillText(`${totalUp}`, upX + 10, upY + 55);
+
+      // Down counter (left side)
+      const downX = offsetX + 20;
+      const downY = lineY + 30;
+
+      ctx.fillStyle = "rgba(255, 165, 0, 0.7)";
+      ctx.fillRect(downX, downY, 130, 70);
+
+      ctx.font = "bold 16px Arial";
+      ctx.fillStyle = "black";
+      ctx.fillText("▼ DOWN COUNT", downX + 10, downY + 25);
+
+      ctx.font = "bold 24px Arial";
+      ctx.fillText(`${totalDown}`, downX + 10, downY + 55);
+    }
+  }
 }
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener("DOMContentLoaded", init);

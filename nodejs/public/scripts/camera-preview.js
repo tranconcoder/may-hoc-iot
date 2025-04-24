@@ -1,21 +1,21 @@
 const MAX_LOG_ENTRIES = 50;
-const SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3000';
+const SOCKETIO_SERVER_URL = "wss://172.28.31.150:3000";
 
 // DOM Elements
-const cameraListEl = document.getElementById('camera-list');
-const previewCanvas = document.getElementById('preview-canvas');
-const waitingMessage = document.getElementById('waiting-message');
-const statusIndicator = document.getElementById('status-indicator');
-const statusText = document.getElementById('status-text');
-const totalVehiclesEl = document.getElementById('total-vehicles');
-const processingTimeEl = document.getElementById('processing-time');
-const vehiclesUpEl = document.getElementById('vehicles-up');
-const vehiclesDownEl = document.getElementById('vehicles-down');
-const vehicleTypesEl = document.getElementById('vehicle-types');
-const logContainerEl = document.getElementById('log-container');
+const cameraListEl = document.getElementById("camera-list");
+const previewCanvas = document.getElementById("preview-canvas");
+const waitingMessage = document.getElementById("waiting-message");
+const statusIndicator = document.getElementById("status-indicator");
+const statusText = document.getElementById("status-text");
+const totalVehiclesEl = document.getElementById("total-vehicles");
+const processingTimeEl = document.getElementById("processing-time");
+const vehiclesUpEl = document.getElementById("vehicles-up");
+const vehiclesDownEl = document.getElementById("vehicles-down");
+const vehicleTypesEl = document.getElementById("vehicle-types");
+const logContainerEl = document.getElementById("log-container");
 
 // Canvas context
-const ctx = previewCanvas.getContext('2d');
+const ctx = previewCanvas.getContext("2d");
 
 // State variables
 let socket = null;
@@ -26,93 +26,94 @@ let colorMap = new Map(); // For consistent colors based on class names
 
 // Vehicle class icons (for stats display)
 const vehicleIcons = {
-  car: 'fa-car',
-  truck: 'fa-truck',
-  bus: 'fa-bus',
-  motorcycle: 'fa-motorcycle',
-  bicycle: 'fa-bicycle'
+  car: "fa-car",
+  truck: "fa-truck",
+  bus: "fa-bus",
+  motorcycle: "fa-motorcycle",
+  bicycle: "fa-bicycle",
 };
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   socket = io(SOCKETIO_SERVER_URL, {
-    transports: ['websocket'],
+    transports: ["websocket"],
     reconnection: true,
     reconnectionAttempts: 5,
     reconnectionDelay: 1000,
     upgrade: false,
-
   });
 
   fetchCameraList();
   setupResizeHandling();
 
-  socket.on('connect', () => {
+  socket.on("connect", () => {
     updateConnectionStatus(true);
-    addLogEntry('Connected to Socket.IO server');
+    addLogEntry("Connected to Socket.IO server");
   });
 
-  socket.on('disconnect', () => {
+  socket.on("disconnect", () => {
     updateConnectionStatus(false);
-    addLogEntry('Disconnected from Socket.IO server');
+    addLogEntry("Disconnected from Socket.IO server");
   });
 
-  socket.on('image', handleImageData);
-  socket.on('car_detected', handleDetectionData);
+  socket.on("image", handleImageData);
+  socket.on("car_detected", handleDetectionData);
 });
 
 // Fetch the list of cameras from the API
 function fetchCameraList() {
-  fetch('/api/camera/all')
-    .then(response => response.json())
-    .then(data => {
+  fetch("/api/camera/all")
+    .then((response) => response.json())
+    .then((data) => {
       if (data.statusCode === 200 && data.metadata) {
         renderCameraList(data.metadata);
       } else {
-        showError('Failed to load camera list');
+        showError("Failed to load camera list");
       }
     })
-    .catch(error => {
-      console.error('Error fetching camera list:', error);
-      showError('Could not connect to the server');
+    .catch((error) => {
+      console.error("Error fetching camera list:", error);
+      showError("Could not connect to the server");
     });
 }
 
 // Render the camera list UI
 function renderCameraList(cameras) {
-  cameraListEl.innerHTML = '';
+  cameraListEl.innerHTML = "";
 
   if (!cameras || cameras.length === 0) {
     cameraListEl.innerHTML = '<div class="no-cameras">No cameras found</div>';
     return;
   }
 
-  cameras.forEach(camera => {
-    const cameraEl = document.createElement('div');
-    cameraEl.className = 'camera-item';
+  cameras.forEach((camera) => {
+    const cameraEl = document.createElement("div");
+    cameraEl.className = "camera-item";
     cameraEl.dataset.id = camera._id;
     cameraEl.innerHTML = `
       <div class="camera-name">${camera.camera_name}</div>
       <div class="camera-location">${camera.camera_location}</div>
     `;
 
-    cameraEl.addEventListener('click', () => selectCamera(camera));
+    cameraEl.addEventListener("click", () => selectCamera(camera));
     cameraListEl.appendChild(cameraEl);
   });
 
-  addLogEntry('Camera list loaded successfully');
+  addLogEntry("Camera list loaded successfully");
 }
 
 // Handle camera selection
 function selectCamera(camera) {
   // Update UI to show selected camera
-  document.querySelectorAll('.camera-item').forEach(el => {
-    el.classList.remove('active');
+  document.querySelectorAll(".camera-item").forEach((el) => {
+    el.classList.remove("active");
   });
 
-  const selectedEl = document.querySelector(`.camera-item[data-id="${camera._id}"]`);
+  const selectedEl = document.querySelector(
+    `.camera-item[data-id="${camera._id}"]`
+  );
   if (selectedEl) {
-    selectedEl.classList.add('active');
+    selectedEl.classList.add("active");
   }
 
   if (selectedCamera) {
@@ -130,8 +131,8 @@ function selectCamera(camera) {
   latestDetections = null;
 
   // Update UI
-  waitingMessage.textContent = 'Connecting to camera stream...';
-  waitingMessage.style.display = 'flex';
+  waitingMessage.textContent = "Connecting to camera stream...";
+  waitingMessage.style.display = "flex";
 
   addLogEntry(`Selected camera: ${camera.camera_name}`);
 }
@@ -139,13 +140,13 @@ function selectCamera(camera) {
 // Update connection status UI
 function updateConnectionStatus(isConnected) {
   if (isConnected) {
-    statusIndicator.classList.add('connected');
-    statusText.textContent = 'Connected';
+    statusIndicator.classList.add("connected");
+    statusText.textContent = "Connected";
   } else {
-    statusIndicator.classList.remove('connected');
-    statusText.textContent = 'Disconnected';
-    waitingMessage.textContent = 'Connection lost. Reconnecting...';
-    waitingMessage.style.display = 'flex';
+    statusIndicator.classList.remove("connected");
+    statusText.textContent = "Disconnected";
+    waitingMessage.textContent = "Connection lost. Reconnecting...";
+    waitingMessage.style.display = "flex";
   }
 }
 
@@ -161,7 +162,7 @@ function handleImageData(data) {
 
     // Convert base64 image to displayable format
     let imageBytes;
-    if (typeof data.buffer === 'string') {
+    if (typeof data.buffer === "string") {
       // If it's base64 encoded
       imageBytes = atob(data.buffer);
     } else if (data.buffer instanceof ArrayBuffer) {
@@ -172,7 +173,7 @@ function handleImageData(data) {
     }
 
     // Create blob and convert to image
-    const blob = new Blob([imageBytes], { type: 'image/jpeg' });
+    const blob = new Blob([imageBytes], { type: "image/jpeg" });
     const imageUrl = URL.createObjectURL(blob);
 
     const img = new Image();
@@ -182,11 +183,11 @@ function handleImageData(data) {
         trackLineY: data.track_line_y,
         width: data.width,
         height: data.height,
-        timestamp: data.created_at
+        timestamp: data.created_at,
       };
 
       // Hide waiting message now that we have an image
-      waitingMessage.style.display = 'none';
+      waitingMessage.style.display = "none";
 
       // Draw the frame
       drawScene();
@@ -195,7 +196,6 @@ function handleImageData(data) {
       URL.revokeObjectURL(imageUrl);
     };
     img.src = imageUrl;
-
   } catch (error) {
     addLogEntry(`Error processing image: ${error.message}`);
   }
@@ -203,7 +203,7 @@ function handleImageData(data) {
 
 // Handle incoming detection data
 function handleDetectionData(data) {
-  console.log({ data })
+  console.log({ data });
 
   try {
     if (!data) return;
@@ -221,7 +221,6 @@ function handleDetectionData(data) {
 
     // Draw the scene with detections
     drawScene();
-
   } catch (error) {
     addLogEntry(`Error processing detection data: ${error.message}`);
   }
@@ -244,14 +243,14 @@ function updateStatistics(data) {
     vehiclesDownEl.textContent = data.vehicle_count.total_down || 0;
 
     // Vehicle types breakdown
-    vehicleTypesEl.innerHTML = '';
+    vehicleTypesEl.innerHTML = "";
     if (data.vehicle_count.current) {
       Object.entries(data.vehicle_count.current).forEach(([type, count]) => {
         if (count > 0) {
-          const iconClass = vehicleIcons[type] || 'fa-car';
+          const iconClass = vehicleIcons[type] || "fa-car";
 
-          const vehicleItem = document.createElement('div');
-          vehicleItem.className = 'vehicle-type-item';
+          const vehicleItem = document.createElement("div");
+          vehicleItem.className = "vehicle-type-item";
           vehicleItem.innerHTML = `
             <div class="vehicle-type-icon">
               <i class="fas ${iconClass}"></i>
@@ -304,21 +303,21 @@ function drawTrackingLine(trackLineYPercent, canvasWidth, canvasHeight) {
   ctx.beginPath();
   ctx.moveTo(0, y);
   ctx.lineTo(canvasWidth, y);
-  ctx.strokeStyle = 'rgba(0, 255, 255, 0.8)';
+  ctx.strokeStyle = "rgba(0, 255, 255, 0.8)";
   ctx.lineWidth = 2;
   ctx.setLineDash([5, 5]);
   ctx.stroke();
   ctx.setLineDash([]);
 
   // Add label
-  ctx.font = '12px Arial';
-  ctx.fillStyle = 'rgba(0, 255, 255, 1)';
-  ctx.fillText('Counting Line', 10, y - 5);
+  ctx.font = "12px Arial";
+  ctx.fillStyle = "rgba(0, 255, 255, 1)";
+  ctx.fillText("Counting Line", 10, y - 5);
 }
 
 // Draw detection boxes
 function drawDetections(detections, canvasWidth, canvasHeight) {
-  detections.forEach(detection => {
+  detections.forEach((detection) => {
     const bbox = detection.bbox;
     const className = detection.class;
     const confidence = detection.confidence;
@@ -342,7 +341,7 @@ function drawDetections(detections, canvasWidth, canvasHeight) {
 
     // Draw label background
     const label = `${className}: ${confidence.toFixed(2)}`;
-    ctx.font = '12px Arial';
+    ctx.font = "12px Arial";
     const labelWidth = ctx.measureText(label).width + 10;
     const labelHeight = 20;
 
@@ -350,8 +349,9 @@ function drawDetections(detections, canvasWidth, canvasHeight) {
     ctx.fillRect(x1, y1 - labelHeight, labelWidth, labelHeight);
 
     // Calculate text color based on background brightness
-    const brightness = (color.r * 0.299 + color.g * 0.587 + color.b * 0.114) / 255;
-    const textColor = brightness > 0.5 ? 'black' : 'white';
+    const brightness =
+      (color.r * 0.299 + color.g * 0.587 + color.b * 0.114) / 255;
+    const textColor = brightness > 0.5 ? "black" : "white";
 
     // Draw label text
     ctx.fillStyle = textColor;
@@ -361,37 +361,39 @@ function drawDetections(detections, canvasWidth, canvasHeight) {
 
 // Draw vehicle tracks
 function drawTracks(tracks, canvasWidth, canvasHeight) {
-  tracks.forEach(track => {
+  tracks.forEach((track) => {
     if (track.positions && track.positions.length >= 2) {
       // Choose color based on vehicle class
       let color;
       const vehicleClass = track.class;
 
       switch (vehicleClass) {
-        case 'car':
-          color = 'rgba(0, 255, 0, 0.8)'; // Green
+        case "car":
+          color = "rgba(0, 255, 0, 0.8)"; // Green
           break;
-        case 'truck':
-          color = 'rgba(0, 0, 255, 0.8)'; // Blue
+        case "truck":
+          color = "rgba(0, 0, 255, 0.8)"; // Blue
           break;
-        case 'bus':
-          color = 'rgba(255, 0, 0, 0.8)'; // Red
+        case "bus":
+          color = "rgba(255, 0, 0, 0.8)"; // Red
           break;
-        case 'motorcycle':
-          color = 'rgba(255, 255, 0, 0.8)'; // Yellow
+        case "motorcycle":
+          color = "rgba(255, 255, 0, 0.8)"; // Yellow
           break;
-        case 'bicycle':
-          color = 'rgba(255, 0, 255, 0.8)'; // Purple
+        case "bicycle":
+          color = "rgba(255, 0, 255, 0.8)"; // Purple
           break;
         default:
-          color = 'rgba(255, 165, 0, 0.8)'; // Orange
+          color = "rgba(255, 165, 0, 0.8)"; // Orange
       }
 
       // Draw track line
       ctx.beginPath();
 
       // Sort positions by time (just to be sure)
-      const sortedPositions = [...track.positions].sort((a, b) => a.time - b.time);
+      const sortedPositions = [...track.positions].sort(
+        (a, b) => a.time - b.time
+      );
 
       // Draw trail
       for (let i = 0; i < sortedPositions.length; i++) {
@@ -407,7 +409,7 @@ function drawTracks(tracks, canvasWidth, canvasHeight) {
 
         // For the last position, draw the ID
         if (i === sortedPositions.length - 1) {
-          ctx.font = '12px Arial';
+          ctx.font = "12px Arial";
           ctx.fillStyle = color;
           ctx.fillText(`ID:${track.id}`, x + 5, y - 5);
         }
@@ -431,9 +433,9 @@ function getColorForClass(className) {
     }
 
     // Convert to RGB color
-    const r = (hash & 0xFF);
-    const g = ((hash >> 8) & 0xFF);
-    const b = ((hash >> 16) & 0xFF);
+    const r = hash & 0xff;
+    const g = (hash >> 8) & 0xff;
+    const b = (hash >> 16) & 0xff;
 
     colorMap.set(className, { r, g, b });
   }
@@ -443,7 +445,7 @@ function getColorForClass(className) {
 
 // Handle window resize
 function setupResizeHandling() {
-  window.addEventListener('resize', resizeCanvas);
+  window.addEventListener("resize", resizeCanvas);
   resizeCanvas();
 }
 
@@ -462,8 +464,8 @@ function resizeCanvas() {
 // Add entry to the log display
 function addLogEntry(message) {
   const timestamp = new Date().toLocaleTimeString();
-  const entry = document.createElement('div');
-  entry.className = 'log-entry';
+  const entry = document.createElement("div");
+  entry.className = "log-entry";
   entry.textContent = `[${timestamp}] ${message}`;
 
   logContainerEl.appendChild(entry);

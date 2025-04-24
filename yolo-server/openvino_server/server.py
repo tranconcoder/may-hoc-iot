@@ -21,7 +21,7 @@ DETECTION_MODEL_BIN = os.path.join(MODEL_DIR, 'yolo11n.bin')
 
 CONFIDENCE_THRESHOLD = 0.5
 VEHICLE_CLASSES = ['car', 'truck', 'bus', 'motorcycle', 'bicycle']
-SOCKETIO_SERVER_URL = 'wss://100.121.193.6:3000'
+SOCKETIO_SERVER_URL = 'wss://172.28.31.150:3000'
 ENABLE_TRACKING = True
 ENABLE_GPU = True
 
