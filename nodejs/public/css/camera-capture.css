@@ -1,0 +1,595 @@
+/* Camera Capture CSS Styles */
+
+.capture-container {
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.video-container {
+  position: relative;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #000;
+}
+
+.camera-feed {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.webcam-placeholder {
+  width: 100%;
+  height: 480px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #222;
+  color: #fff;
+  font-size: 1.2rem;
+  border-radius: 8px;
+}
+
+.controls {
+  padding: 15px;
+  background-color: #fff;
+  border-radius: 8px;
+  margin-top: 15px;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.control-btn {
+  margin: 5px;
+  padding: 10px 20px;
+}
+
+.camera-selector {
+  margin-bottom: 20px;
+}
+
+.camera-item {
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.camera-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.camera-item.active {
+  border-color: #28a745;
+  box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+}
+
+.camera-name {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.camera-location {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.recording-indicator {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #dc3545;
+  display: none;
+  animation: blink 1s infinite;
+}
+
+.license-plate-overlay {
+  position: absolute;
+  border: 3px dashed #ffcc00;
+  background: rgba(255, 204, 0, 0.2);
+  display: none;
+  pointer-events: none;
+}
+
+.simulation-controls {
+  padding: 15px;
+  background-color: #fff;
+  border-radius: 8px;
+  margin-top: 15px;
+}
+
+.simulation-control-group {
+  margin-bottom: 15px;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.upload-progress {
+  height: 5px;
+  margin-top: 10px;
+  display: none;
+}
+
+.upload-result {
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 5px;
+  display: none;
+}
+
+.upload-success {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.upload-error {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+/* Shared layout styles */
+.camera-capture-page {
+  padding: 20px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 1.8rem;
+  margin: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.btn-back {
+  margin-right: 15px;
+  display: inline-flex;
+  align-items: center;
+  color: #0d6efd;
+  text-decoration: none;
+}
+
+.btn-back i {
+  margin-right: 5px;
+}
+
+.content-container {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 20px;
+}
+
+/* Control panel styles */
+.control-panel {
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.camera-selection-panel,
+.simulation-panel {
+  padding: 15px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.camera-selection-panel h3,
+.simulation-panel h3 {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+}
+
+.camera-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.camera-item {
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.camera-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.camera-item.active {
+  border-color: #28a745;
+  box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+}
+
+.camera-name {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.camera-location {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.loading-indicator {
+  text-align: center;
+  color: #6c757d;
+  padding: 15px;
+}
+
+.loading-indicator i {
+  margin-right: 8px;
+}
+
+/* Simulation controls */
+.simulation-controls {
+  padding: 15px;
+  background-color: #fff;
+  border-radius: 8px;
+  margin-top: 15px;
+}
+
+.simulation-control-group {
+  margin-bottom: 15px;
+}
+
+.simulation-control-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.custom-range {
+  width: 100%;
+}
+
+.speed-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  color: #6c757d;
+}
+
+/* Traffic light controls */
+.traffic-light-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.traffic-light-btn {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  color: white;
+  font-weight: bold;
+}
+
+.traffic-light-btn.red {
+  background-color: #dc3545;
+}
+
+.traffic-light-btn.yellow {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.traffic-light-btn.green {
+  background-color: #198754;
+}
+
+.traffic-light-btn.active {
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
+}
+
+/* Preview panel styles */
+.preview-panel {
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-container {
+  position: relative;
+  width: 100%;
+  background-color: #000;
+}
+
+.stream-status {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #dc3545;
+  margin-right: 5px;
+}
+
+.status-indicator.connected {
+  background-color: #198754;
+}
+
+.video-display {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  background-color: #222;
+  overflow: hidden;
+}
+
+#camera-feed,
+#overlay-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#overlay-canvas {
+  z-index: 5;
+  pointer-events: none;
+}
+
+#webcam-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  font-size: 1.2rem;
+  z-index: 1;
+}
+
+.recording-indicator {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #dc3545;
+  display: none;
+  animation: blink 1s infinite;
+  z-index: 10;
+}
+
+.license-plate-overlay {
+  position: absolute;
+  border: 3px dashed #ffcc00;
+  background: rgba(255, 204, 0, 0.2);
+  display: none;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* AI Detection panel */
+.ai-detection-panel {
+  padding: 15px;
+  background-color: #fff;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.ai-detection-panel h3 {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+}
+
+.detection-results {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.detection-item {
+  border: 1px solid #e9ecef;
+  border-radius: 5px;
+  padding: 10px;
+}
+
+.detection-item .label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 5px;
+  color: #6c757d;
+}
+
+.detection-item .value {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.detection-item .confidence {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin-left: 5px;
+}
+
+.detection-item .violation {
+  color: #dc3545;
+}
+
+/* Traffic light overlay */
+.traffic-light-overlay {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  z-index: 10;
+}
+
+.traffic-light {
+  width: 40px;
+  background-color: #333;
+  border-radius: 10px;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.traffic-light .light {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  margin: 0 auto;
+}
+
+.traffic-light .light.red {
+  background-color: #661a20;
+}
+
+.traffic-light .light.yellow {
+  background-color: #665e1a;
+}
+
+.traffic-light .light.green {
+  background-color: #1a6631;
+}
+
+.traffic-light .light.active.red {
+  background-color: #dc3545;
+  box-shadow: 0 0 15px rgba(220, 53, 69, 0.8);
+}
+
+.traffic-light .light.active.yellow {
+  background-color: #ffc107;
+  box-shadow: 0 0 15px rgba(255, 193, 7, 0.8);
+}
+
+.traffic-light .light.active.green {
+  background-color: #198754;
+  box-shadow: 0 0 15px rgba(25, 135, 84, 0.8);
+}
+
+/* Recording controls */
+.recording-controls {
+  padding: 15px;
+  background-color: #fff;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.controls-left,
+.controls-right {
+  display: flex;
+  gap: 10px;
+}
+
+.upload-progress {
+  height: 5px;
+  margin: 0;
+  display: none;
+}
+
+.upload-result {
+  margin: 15px;
+  padding: 10px;
+  border-radius: 5px;
+  display: none;
+}
+
+.upload-success {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.upload-error {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+/* Recorded videos */
+.recorded-videos {
+  padding: 15px;
+  background-color: #fff;
+  flex: 1;
+  min-height: 100px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.recorded-videos h3 {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .content-container {
+    grid-template-columns: 1fr;
+  }
+
+  .detection-results {
+    grid-template-columns: 1fr;
+  }
+}

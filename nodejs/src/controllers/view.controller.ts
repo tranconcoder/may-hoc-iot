@@ -1,4 +1,4 @@
-import { RequestHandler } from "express"
+import { RequestHandler } from "express";
 
 export default new (class ViewController {
   /* ----------------------------- Home Page ----------------------------- */
@@ -137,7 +137,7 @@ export default new (class ViewController {
     });
   };
 
-  /* ----------------------------- View Camera Detail Page ----------------------------- */ 
+  /* ----------------------------- View Camera Detail Page ----------------------------- */
   viewCameraDetail: RequestHandler = (req, res, next) => {
     const { cameraId } = req.params;
 
@@ -163,8 +163,7 @@ export default new (class ViewController {
     res.render("pages/camera-preview", {
       layout: "traffic-dashboard",
       pageTitle: "Xem trực tiếp từ Camera AI",
-      styles: ["/css/camera-preview.css"]
+      styles: ["/css/camera-preview.css"],
     });
   };
-
 })();

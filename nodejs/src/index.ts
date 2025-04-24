@@ -1,26 +1,26 @@
 // Express app
-import express from 'express';
-import session, { SessionOptions } from 'express-session';
-import handleRoute from '@/routes/index.js';
-import bodyParser from 'body-parser';
+import express from "express";
+import session, { SessionOptions } from "express-session";
+import handleRoute from "@/routes/index.js";
+import bodyParser from "body-parser";
 
 // Handlebars
-import path from 'path';
-import SetupHandlebars from '@/services/handlebars.service.js';
+import path from "path";
+import SetupHandlebars from "@/services/handlebars.service.js";
 
 // Https server
-import fs from 'fs';
-import https from 'https';
+import fs from "fs";
+import https from "https";
 
 // Websocket Server
-import runWebsocketService from '@/services/websocket.service.js';
-import { WebSocketServer } from 'ws';
+import runWebsocketService from "@/services/websocket.service.js";
+import { WebSocketServer } from "ws";
 
 // Services
-import * as ffmpegService from '@/services/ffmpeg.service.js';
+import * as ffmpegService from "@/services/ffmpeg.service.js";
 
 // Morgan
-import morgan from 'morgan';
+import morgan from "morgan";
 
 // Environments
 import { envConfig } from "@/config/index.js";
@@ -28,9 +28,9 @@ import { envConfig } from "@/config/index.js";
 // Secure
 import cors from "cors";
 import { createServer } from "http"; // Import createServer from http
-import { runSocketIOService } from '@/services/socketio.service.js';
-import DBCore from '@/core/db.core.js';
-import HandleErrorService from '@/services/handleError.service.js';
+import { runSocketIOService } from "@/services/socketio.service.js";
+import DBCore from "@/core/db.core.js";
+import HandleErrorService from "@/services/handleError.service.js";
 
 // Constants
 const { HOST, PORT } = envConfig;
@@ -101,8 +101,14 @@ app.use(bodyParser.json());
 // STATIC FILES
 //
 app.use("/public", express.static(path.join(import.meta.dirname, "../public")));
-app.use("/css", express.static(path.join(import.meta.dirname, "../public/css")));
-app.use("/scripts", express.static(path.join(import.meta.dirname, "../public/scripts")));
+app.use(
+  "/css",
+  express.static(path.join(import.meta.dirname, "../public/css"))
+);
+app.use(
+  "/scripts",
+  express.static(path.join(import.meta.dirname, "../public/scripts"))
+);
 
 //
 // HANDLEBARS
@@ -138,13 +144,13 @@ app.use(HandleErrorService.middleware);
 //
 // Use httpServer.listen (which now has both ws and socket.io attached)
 httpsServer.listen(PORT, HOST, () => {
-  console.log(
-    `Server is running on https://${HOST}:${PORT}`
-  );
+  console.log(`Server is running on https://${HOST}:${PORT}`);
 });
 
 httpsWs.listen(3001, HOST, () => {
-  console.log(`Server (with WebSocket and Socket.IO) is running on https://${HOST}:3001`);
+  console.log(
+    `Server (with WebSocket and Socket.IO) is running on https://${HOST}:3001`
+  );
 });
 
 export { wss, httpsServer, HOST, PORT, io };
