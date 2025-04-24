@@ -110,15 +110,17 @@ window.addEventListener("load", () => {
   cameraSelect.addEventListener("change", () => {
     selectedCameraId = cameraSelect.value;
     localStorage.setItem("cameraId", selectedCameraId);
-    
+
     // Tự động lấy API key từ camera đã chọn
     const selectedCamera = getSelectedCamera();
     if (selectedCamera && selectedCamera.camera_api_key) {
       apiKeyInput.value = selectedCamera.camera_api_key;
       localStorage.setItem("apiKey", selectedCamera.camera_api_key);
-      addLog(`Đã tự động cập nhật API key cho camera: ${getSelectedCameraName()}`);
+      addLog(
+        `Đã tự động cập nhật API key cho camera: ${getSelectedCameraName()}`
+      );
     }
-    
+
     addLog(`Đã chọn camera: ${getSelectedCameraName()}`);
   });
 
@@ -212,11 +214,30 @@ async function loadCameraList() {
     if (savedCameraId && cameras.some((cam) => cam._id === savedCameraId)) {
       cameraSelect.value = savedCameraId;
       selectedCameraId = savedCameraId;
+
+      // Sử dụng API key của camera đã chọn
+      const selectedCamera = getSelectedCamera();
+      if (selectedCamera && selectedCamera.camera_api_key) {
+        apiKeyInput.value = selectedCamera.camera_api_key;
+        localStorage.setItem("apiKey", selectedCamera.camera_api_key);
+        addLog(
+          `Đã sử dụng API key từ camera đã lưu: ${selectedCamera.camera_name}`
+        );
+      }
     } else if (cameras.length > 0) {
       // Chọn camera đầu tiên nếu không có camera nào được lưu trước đó
       cameraSelect.value = cameras[0]._id;
       selectedCameraId = cameras[0]._id;
       localStorage.setItem("cameraId", selectedCameraId);
+
+      // Tự động sử dụng API key của camera đầu tiên
+      if (cameras[0].camera_api_key) {
+        apiKeyInput.value = cameras[0].camera_api_key;
+        localStorage.setItem("apiKey", cameras[0].camera_api_key);
+        addLog(
+          `Đã tự động sử dụng API key từ camera mặc định: ${cameras[0].camera_name}`
+        );
+      }
     }
 
     addLog(`Đã tải ${cameras.length} camera`);
