@@ -309,6 +309,72 @@ html {
   z-index: 5;
 }
 
+.size-input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.size-input-group input[type="range"] {
+  flex-grow: 1;
+}
+
+.size-input-group span {
+  font-weight: bold;
+  color: #2c3e50;
+  min-width: 30px;
+  text-align: center;
+}
+
+.vehicle-size-options {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 14px;
+  color: #555;
+}
+
+.radio-option input {
+  margin-right: 5px;
+}
+
+.radio-option span {
+  line-height: 1.2;
+}
+
+.size-presets {
+  display: flex;
+  gap: 5px;
+  margin-top: 8px;
+  justify-content: space-between;
+}
+
+.size-preset {
+  background-color: #f1f1f1;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.size-preset:hover {
+  background-color: #e0e0e0;
+}
+
+.size-preset.active {
+  background-color: #3498db;
+  border-color: #2980b9;
+  color: white;
+}
+
 /* Responsive Adjustments */
 @media (max-width: 950px) {
   .simulation-content {

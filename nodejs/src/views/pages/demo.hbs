@@ -1,397 +1,67 @@
-<!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Demo Page</title>
-    <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-        }
-        body {
-            padding: 10px;
-            box-sizing: border-box;
-        }
-        .container {
-            display: flex;
-            flex-direction: row;
-            gap: 10px;
-            height: calc(100vh - 20px);
-        }
-        .area {
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .area:first-child {
-            flex: 4;
-            position: relative; /* For positioning the car */
-            overflow: hidden; /* Keep the car within the area */
-            background-image: url('https://www.wikihow.com/images/thumb/8/89/Use-the-Center-Turning-Lane-Step-1-Version-4.jpg/v4-460px-Use-the-Center-Turning-Lane-Step-1-Version-4.jpg'); /* Updated road background */
-            background-size: cover;
-            background-position: center;
-        }
-        
-        /* Car styles */
-        #car-container {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 400px; /* Increased from 300px to 400px for a larger car */
-            transition: bottom 0.5s ease;
-            z-index: 10;
-        }
-        
-        #car-image {
-            width: 100%;
-            height: auto;
-        }
-        
-        /* Car control styles */
-        .car-controls {
-            position: absolute;
-            bottom: 0;
-            right: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 20;
-            background-color: rgba(0,0,0,0.6);
-            padding: 15px 5px;
-            border-radius: 10px;
-            height: 90%; /* Nearly full height but with some margin */
-            width: 60px; /* Narrower container */
-        }
-        
-        /* Vertical slider styling */
-        .position-slider-container {
-            height: 100%; /* Full height */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .position-slider {
-            -webkit-appearance: none;
-            width: 300px; /* Fixed length instead of 100vh */
-            height: 20px;
-            background: #d3d3d3;
-            outline: none;
-            border-radius: 10px;
-            transform: rotate(-90deg);
-            transform-origin: center;
-        }
-        
-        .position-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 30px;
-            height: 30px;
-            background: #2196F3;
-            cursor: pointer;
-            border-radius: 50%;
-            border: 2px solid white;
-        }
-        
-        .position-slider::-moz-range-thumb {
-            width: 30px;
-            height: 30px;
-            background: #2196F3;
-            cursor: pointer;
-            border-radius: 50%;
-            border: 2px solid white;
-        }
-        
-        .slider-label {
-            color: white;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        .area:last-child {
-            flex: 1.5; /* Increased width for traffic light area */
-            padding: 5px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .area-title {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 2px; /* Reduced margin */
-        }
-        /* Share Button Styles */
-        .share-btn {
-            padding: 12px;
-            background-color: #2196F3;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 5px 0;
-            font-size: 16px;
-            font-weight: bold;
-        }
-        #video-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            margin-top: 5px;
-            overflow: hidden;
-            background: #000;
-            border-radius: 5px;
-        }
-        #shared-screen {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            background-color: #000;
-        }
-
-        /* Compact styles for better screen usage */
-        .tab-pane h3 {
-            margin-top: 0;
-            margin-bottom: 5px;
-            font-size: 16px;
-        }
-        .tab-pane p {
-            margin: 5px 0;
-            font-size: 14px;
-        }
-
-        /* Traffic Light Styles - Enhanced */
-        .traffic-light-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start; /* Changed from center to flex-start */
-            height: 100%;
-            width: 100%;
-            padding: 0;
-        }
-        .traffic-light {
-            width: 140px; 
-            height: 380px;
-            background-color: #333;
-            border-radius: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-around;
-            padding: 20px 0;
-            margin-bottom: 30px; /* Increased margin to prevent overlap */
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
-            border: 5px solid #222;
-            position: relative;
-            max-height: 65%; /* Limit height to prevent overlap */
-        }
-        .traffic-light:before { /* Add pole */
-            content: '';
-            position: absolute;
-            width: 20px;
-            height: 60px;
-            background: #222;
-            bottom: -60px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-        .traffic-light:after { /* Add base */
-            content: '';
-            position: absolute;
-            width: 60px;
-            height: 10px;
-            background: #222;
-            bottom: -70px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-radius: 5px;
-        }
-        .light {
-            width: 100px; /* Larger lights */
-            height: 100px; /* Larger lights */
-            border-radius: 50%;
-            background-color: #555;
-            margin: 5px 0;
-            border: 3px solid #222; /* Add border to lights */
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5); /* Inner shadow */
-            position: relative; /* For reflection effect */
-            overflow: hidden; /* For reflection effect */
-        }
-        .light:before { /* Add light reflection */
-            content: '';
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            background-color: rgba(255,255,255,0.2);
-            border-radius: 50%;
-            top: 20px;
-            left: 20px;
-        }
-        .red.active {
-            background-color: #ff0000;
-            box-shadow: 0 0 30px #ff0000, inset 0 0 15px rgba(255,255,255,0.3); /* Enhanced glow */
-        }
-        .yellow.active {
-            background-color: #ffff00;
-            box-shadow: 0 0 30px #ffff00, inset 0 0 15px rgba(255,255,255,0.3); /* Enhanced glow */
-        }
-        .green.active {
-            background-color: #00ff00;
-            box-shadow: 0 0 30px #00ff00, inset 0 0 15px rgba(255,255,255,0.3); /* Enhanced glow */
-        }
-        .controls {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            width: 100%;
-            padding: 10px 0;
-            margin-top: 20px; /* Add margin to prevent overlap with traffic light */
-        }
-        .control-btn {
-            padding: 15px; /* Larger buttons */
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            color: white;
-            font-size: 18px; /* Larger text */
-            font-weight: bold;
-            width: 100%;
-            margin: 0;
-            transition: all 0.2s ease; /* Smooth transition */
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2); /* Button shadow */
-        }
-        .control-btn:hover {
-            transform: translateY(-2px); /* Button hover effect */
-            box-shadow: 0 6px 8px rgba(0,0,0,0.3);
-        }
-        .control-btn:active {
-            transform: translateY(1px); /* Button press effect */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        .btn-red {
-            background-color: #ff0000;
-        }
-        .btn-yellow {
-            background-color: #ffcc00;
-        }
-        .btn-green {
-            background-color: #4CAF50;
-        }
-    </style>
-</head>
-<body>
+    <link rel="stylesheet" href="/css/demo.css" />
+  </head>
+  <body>
     <div class="container">
-        <!-- Area 1: Car Simulation -->
-        <div class="area">
-            <div class="area-title">Car Simulation</div>
-            <div class="video-section">
-                <div id="car-simulation-area">
-                    <div id="car-container">
-                        <img id="car-image" src="https://otoso1.com.vn/wp-content/uploads/2019/05/otoso1-lam-bien-so-dai-1.jpg" alt="Car with Vietnamese License Plate">
-                    </div>
-                    <div class="car-controls">
-                        <div class="position-slider-container">
-                            <input type="range" min="0" max="100" value="0" class="position-slider" id="position-slider">
-                        </div>
-                    </div>
-                    <div id="violation-indicator">RED LIGHT VIOLATION!</div>
-                    <div id="position-indicator">Position: <span id="position-value">0</span>%</div>
-                </div>
+      <!-- Area 1: Car Simulation -->
+      <div class="area">
+        <div class="area-title">Car Simulation</div>
+        <div class="video-section">
+          <div id="car-simulation-area">
+            <div id="car-container">
+              <img
+                id="car-image"
+                src="https://otoso1.com.vn/wp-content/uploads/2019/05/otoso1-lam-bien-so-dai-1.jpg"
+                alt="Car with Vietnamese License Plate"
+              />
             </div>
+            <!-- Add zoom controls -->
+            <div class="zoom-controls">
+              <button class="zoom-btn" id="zoom-out">-</button>
+              <div class="car-size-display"><span
+                  id="car-size"
+                >100</span>%</div>
+              <button class="zoom-btn" id="zoom-in">+</button>
+            </div>
+            <div id="violation-indicator">RED LIGHT VIOLATION!</div>
+            <div id="position-indicator">Position:
+              <span id="position-value">0</span>%, X:
+              <span id="position-x">50</span>%</div>
+          </div>
         </div>
+      </div>
 
-        <!-- Area 2: Traffic Light Control -->
-        <div class="area">
-            <div class="area-title">Traffic Light Control</div>
-            <div class="traffic-light-container">
-                <div class="traffic-light">
-                    <div class="light red" id="red-light"></div>
-                    <div class="light yellow" id="yellow-light"></div>
-                    <div class="light green" id="green-light"></div>
-                </div>
-                <div class="controls">
-                    <button class="control-btn btn-red" onclick="activateLight('red')">Red Light</button>
-                    <button class="control-btn btn-yellow" onclick="activateLight('yellow')">Yellow Light</button>
-                    <button class="control-btn btn-green" onclick="activateLight('green')">Green Light</button>
-                </div>
-            </div>
+      <!-- Area 2: Traffic Light Control -->
+      <div class="area">
+        <div class="area-title">Traffic Light Control</div>
+        <div class="traffic-light-container">
+          <div class="traffic-light">
+            <div class="light red" id="red-light"></div>
+            <div class="light yellow" id="yellow-light"></div>
+            <div class="light green" id="green-light"></div>
+          </div>
+          <div class="controls">
+            <button
+              class="control-btn btn-red"
+              onclick="activateLight('red')"
+            >Red Light</button>
+            <button
+              class="control-btn btn-yellow"
+              onclick="activateLight('yellow')"
+            >Yellow Light</button>
+            <button
+              class="control-btn btn-green"
+              onclick="activateLight('green')"
+            >Green Light</button>
+          </div>
         </div>
+      </div>
     </div>
 
-    <script>
-        // Car movement functionality
-        const carContainer = document.getElementById('car-container');
-        const positionSlider = document.getElementById('position-slider');
-        const violationIndicator = document.getElementById('violation-indicator');
-        const positionValue = document.getElementById('position-value');
-        
-        // Initial car position (0% = bottom, 100% = top)
-        let carPosition = 0;
-        
-        // Update car position based on slider
-        positionSlider.addEventListener('input', function() {
-            carPosition = this.value;
-            updateCarPosition();
-        });
-        
-        // Update car position
-        function updateCarPosition() {
-            carContainer.style.bottom = carPosition + '%';
-            positionValue.textContent = carPosition;
-            positionSlider.value = carPosition;
-            
-            // Check for red light violation
-            const isRedActive = document.getElementById('red-light').classList.contains('active');
-            
-            // Consider it a violation if the car is between 40% and 60% position when red light is on
-            if (isRedActive && carPosition > 40 && carPosition < 60) {
-                violationIndicator.style.display = 'block';
-            } else {
-                violationIndicator.style.display = 'none';
-            }
-        }
-        
-        // Keep keyboard controls for easier demonstration
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowUp') {
-                if (carPosition < 100) {
-                    carPosition = Math.min(100, parseInt(carPosition) + 5);
-                    updateCarPosition();
-                }
-            } else if (e.key === 'ArrowDown') {
-                if (carPosition > 0) {
-                    carPosition = Math.max(0, parseInt(carPosition) - 5);
-                    updateCarPosition();
-                }
-            }
-        });
-
-        // Traffic light functionality
-        function activateLight(color) {
-            // Reset all lights
-            document.getElementById('red-light').classList.remove('active');
-            document.getElementById('yellow-light').classList.remove('active');
-            document.getElementById('green-light').classList.remove('active');
-            
-            // Activate the selected light
-            document.getElementById(color + '-light').classList.add('active');
-            
-            // Check for red light violation after light change
-            updateCarPosition();
-        }
-    </script>
-</body>
+    <script src="/scripts/demo/main.js"></script>
+  </body>
 </html>

@@ -38,6 +38,29 @@
             accept="image/*"
           />
         </div>
+
+        <!-- Thay đổi từ điều chỉnh kích thước cụ thể sang phần trăm -->
+        <div class="form-group">
+          <label for="vehicleSizePercent">Kích thước xe (%):</label>
+          <div class="size-input-group">
+            <input
+              type="range"
+              id="vehicleSizePercent"
+              min="10"
+              max="400"
+              value="100"
+              class="form-control-range"
+            />
+            <span id="vehicleSizeValue">100</span>%
+          </div>
+          <div class="size-presets">
+            <button class="size-preset" data-size="50">50%</button>
+            <button class="size-preset" data-size="100">100%</button>
+            <button class="size-preset" data-size="200">200%</button>
+            <button class="size-preset" data-size="300">300%</button>
+          </div>
+        </div>
+
         <div class="form-group">
           <label>Hoặc chọn xe có sẵn:</label>
           <div class="vehicle-presets">

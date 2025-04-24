@@ -15,9 +15,13 @@ document.addEventListener("DOMContentLoaded", function () {
     laneMarkingColor: "#fff",
     trafficLightWidth: 40,
     trafficLightHeight: 100,
-    vehicleWidth: 60,
-    vehicleHeight: 30,
+    vehicleDefaultWidth: 60, // Kích thước mặc định cho xe
+    vehicleDefaultHeight: 30,
+    vehicleSizePercent: 100, // Phần trăm kích thước so với mặc định
     isVertical: true, // Thêm cấu hình để vẽ làn đường theo chiều dọc
+    bottomToTop: true, // Thêm cấu hình cho hướng di chuyển từ dưới lên trên
+    keepAspectRatio: false, // Giữ tỷ lệ khi thay đổi kích thước
+    originalImageRatio: 2.0, // Tỷ lệ mặc định (sẽ được cập nhật khi tải ảnh)
   };
 
   // Các elements DOM
@@ -35,12 +39,19 @@ document.addEventListener("DOMContentLoaded", function () {
   const presetVehicles = document.querySelectorAll(".preset-vehicle");
   const eventsContainer = document.getElementById("eventsContainer");
 
+  // Thanh trượt kích thước phần trăm và nút preset
+  const vehicleSizePercentInput = document.getElementById("vehicleSizePercent");
+  const vehicleSizeValue = document.getElementById("vehicleSizeValue");
+  const sizePresetButtons = document.querySelectorAll(".size-preset");
+
   // Các biến trạng thái của ứng dụng
-  let laneCount = parseInt(laneCountInput.value);
+  let laneCount = parseInt(laneCountInput.value) || 2; // Đảm bảo laneCount có giá trị mặc định
   let lanes = [];
   let trafficLights = [];
   let vehicles = [];
   let selectedVehicleImage = null;
+  let selectedVehicleOriginalWidth = 0;
+  let selectedVehicleOriginalHeight = 0;
   let simulationRunning = false;
   let simulationSpeed = parseInt(simulationSpeedInput.value);
   let animationId = null;
@@ -48,6 +59,15 @@ document.addEventListener("DOMContentLoaded", function () {
   let draggedItem = null;
   let dragOffsetX = 0;
   let dragOffsetY = 0;
+
+  // Khởi tạo canvas trước
+  initCanvas();
+
+  // Sau đó khởi tạo các thành phần khác
+  initLanes();
+
+  // Cập nhật kích thước phần trăm ban đầu
+  updateVehicleSizePercent();
 
   // Tạo hình ảnh xe mẫu
   createVehiclePreviewImages();
@@ -59,11 +79,12 @@ document.addEventListener("DOMContentLoaded", function () {
     green: createTrafficLightImage("green"),
   };
 
-  // Khởi tạo canvas và sự kiện
-  initCanvas();
+  // Thiết lập sự kiện
   setupEventListeners();
-  initLanes();
+
+  // Vẽ cảnh sau khi mọi thứ đã được khởi tạo
   drawScene();
+
   addLogEvent("Hệ thống mô phỏng tuyến đường đã sẵn sàng");
 
   /**
@@ -182,6 +203,11 @@ document.addEventListener("DOMContentLoaded", function () {
           img.src = e.target.result;
           img.onload = function () {
             selectedVehicleImage = img;
+
+            // Lưu kích thước gốc của ảnh
+            selectedVehicleOriginalWidth = img.width;
+            selectedVehicleOriginalHeight = img.height;
+
             // Bỏ chọn các xe có sẵn
             presetVehicles.forEach((el) => el.classList.remove("selected"));
             addLogEvent("Đã tải lên hình ảnh xe tùy chỉnh");
@@ -256,6 +282,123 @@ document.addEventListener("DOMContentLoaded", function () {
     canvas.addEventListener("dragstart", function (e) {
       e.preventDefault();
     });
+
+    // Sự kiện khi thay đổi kích thước phần trăm
+    vehicleSizePercentInput.addEventListener("input", function () {
+      const percent = parseInt(this.value);
+      config.vehicleSizePercent = percent;
+      vehicleSizeValue.textContent = percent;
+
+      // Cập nhật lại ảnh mẫu và vẽ lại cảnh
+      createVehiclePreviewImages();
+      drawScene();
+
+      // Cập nhật trạng thái active của các nút preset
+      updateActivePresetButton(percent);
+    });
+
+    // Sự kiện khi nhấn nút preset kích thước
+    sizePresetButtons.forEach((button) => {
+      button.addEventListener("click", function () {
+        const percent = parseInt(this.dataset.size);
+
+        // Cập nhật giá trị thanh trượt và cấu hình
+        config.vehicleSizePercent = percent;
+        vehicleSizePercentInput.value = percent;
+        vehicleSizeValue.textContent = percent;
+
+        // Cập nhật trạng thái active của các nút
+        updateActivePresetButton(percent);
+
+        // Cập nhật lại ảnh mẫu và vẽ lại cảnh
+        createVehiclePreviewImages();
+        drawScene();
+      });
+    });
+
+    // Thêm sự kiện cho điều chỉnh kích thước phương tiện
+    vehicleWidthInput.addEventListener("input", function () {
+      const width = parseInt(this.value);
+      config.vehicleWidth = width;
+      vehicleWidthValue.textContent = width;
+
+      if (config.keepAspectRatio && selectedVehicleImage) {
+        // Tự động điều chỉnh chiều cao để giữ tỷ lệ
+        const newHeight = Math.round(width / config.originalImageRatio);
+        config.vehicleHeight = newHeight;
+        vehicleHeightInput.value = newHeight;
+        vehicleHeightValue.textContent = newHeight;
+      }
+
+      createVehiclePreviewImages(); // Tạo lại hình ảnh mẫu với kích thước mới
+      drawScene(); // Cập nhật lại giao diện
+    });
+
+    vehicleHeightInput.addEventListener("input", function () {
+      const height = parseInt(this.value);
+      config.vehicleHeight = height;
+      vehicleHeightValue.textContent = height;
+
+      if (config.keepAspectRatio && selectedVehicleImage) {
+        // Tự động điều chỉnh chiều rộng để giữ tỷ lệ
+        const newWidth = Math.round(height * config.originalImageRatio);
+        config.vehicleWidth = newWidth;
+        vehicleWidthInput.value = newWidth;
+        vehicleWidthValue.textContent = newWidth;
+      }
+
+      createVehiclePreviewImages(); // Tạo lại hình ảnh mẫu với kích thước mới
+      drawScene(); // Cập nhật lại giao diện
+    });
+
+    // Xử lý sự kiện khi thay đổi chế độ tỷ lệ
+    fixedSizeRadio.addEventListener("change", function () {
+      if (this.checked) {
+        config.keepAspectRatio = false;
+      }
+    });
+
+    keepRatioRadio.addEventListener("change", function () {
+      if (this.checked) {
+        config.keepAspectRatio = true;
+        if (selectedVehicleImage) {
+          // Cập nhật chiều cao dựa trên tỷ lệ hiện tại và chiều rộng
+          const newHeight = Math.round(
+            config.vehicleWidth / config.originalImageRatio
+          );
+          config.vehicleHeight = newHeight;
+          vehicleHeightInput.value = newHeight;
+          vehicleHeightValue.textContent = newHeight;
+          createVehiclePreviewImages();
+          drawScene();
+        }
+      }
+    });
+  }
+
+  /**
+   * Cập nhật trạng thái active của nút preset kích thước
+   */
+  function updateActivePresetButton(percent) {
+    sizePresetButtons.forEach((button) => {
+      const btnSize = parseInt(button.dataset.size);
+      if (btnSize === percent) {
+        button.classList.add("active");
+      } else {
+        button.classList.remove("active");
+      }
+    });
+  }
+
+  /**
+   * Cập nhật cấu hình kích thước phần trăm
+   */
+  function updateVehicleSizePercent() {
+    config.vehicleSizePercent = parseInt(vehicleSizePercentInput.value);
+    vehicleSizeValue.textContent = vehicleSizePercentInput.value;
+
+    // Cập nhật trạng thái active của các nút preset
+    updateActivePresetButton(config.vehicleSizePercent);
   }
 
   /**
@@ -620,6 +763,27 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**
+   * Tính toán kích thước thực tế dựa trên phần trăm
+   */
+  function calculateVehicleSize(originalWidth, originalHeight) {
+    if (selectedVehicleImage && selectedVehicleOriginalWidth > 0) {
+      // Nếu có ảnh đã tải lên, sử dụng kích thước gốc của ảnh
+      const scaleFactor = config.vehicleSizePercent / 100;
+      return {
+        width: Math.round(originalWidth * scaleFactor),
+        height: Math.round(originalHeight * scaleFactor),
+      };
+    } else {
+      // Sử dụng kích thước mặc định cho xe mẫu
+      const scaleFactor = config.vehicleSizePercent / 100;
+      return {
+        width: Math.round(config.vehicleDefaultWidth * scaleFactor),
+        height: Math.round(config.vehicleDefaultHeight * scaleFactor),
+      };
+    }
+  }
+
+  /**
    * Thêm một phương tiện mới
    */
   function addVehicle() {
@@ -628,39 +792,84 @@ document.addEventListener("DOMContentLoaded", function () {
     // Chọn làn ngẫu nhiên
     const laneIndex = Math.floor(Math.random() * lanes.length);
 
+    // Tính toán kích thước dựa trên phần trăm
+    const vehicleSize = calculateVehicleSize(
+      selectedVehicleOriginalWidth || config.vehicleDefaultWidth,
+      selectedVehicleOriginalHeight || config.vehicleDefaultHeight
+    );
+
     let vehicle;
 
     if (config.isVertical) {
-      // Với làn dọc, xe đặt ở đầu làn (phía trên)
+      // Với làn dọc
       const laneX = lanes[laneIndex].x;
-      vehicle = {
-        x: laneX + (config.laneWidth - config.vehicleWidth) / 2, // Căn giữa xe theo chiều ngang của làn
-        y: 50, // Bắt đầu từ phía trên
-        image: selectedVehicleImage,
-        speed: Math.random() * 2 + 1,
-        lane: laneIndex,
-        stopped: false,
-        // Xoay xe khi làn dọc
-        rotated: true,
-      };
+
+      if (config.bottomToTop) {
+        // Xe bắt đầu từ dưới lên trên
+        vehicle = {
+          x: laneX + (config.laneWidth - vehicleSize.width) / 2, // Căn giữa xe theo chiều ngang của làn
+          y: canvas.height - vehicleSize.height - 50, // Bắt đầu từ phía dưới
+          image: selectedVehicleImage,
+          speed: Math.random() * 2 + 1,
+          lane: laneIndex,
+          stopped: false,
+          rotated: false, // Không xoay ảnh
+          width: vehicleSize.width,
+          height: vehicleSize.height,
+          originalWidth:
+            selectedVehicleOriginalWidth || config.vehicleDefaultWidth,
+          originalHeight:
+            selectedVehicleOriginalHeight || config.vehicleDefaultHeight,
+          sizePercent: config.vehicleSizePercent,
+        };
+      } else {
+        // Xe bắt đầu từ trên xuống dưới
+        vehicle = {
+          x: laneX + (config.laneWidth - vehicleSize.width) / 2,
+          y: 50, // Bắt đầu từ phía trên
+          image: selectedVehicleImage,
+          speed: Math.random() * 2 + 1,
+          lane: laneIndex,
+          stopped: false,
+          rotated: false,
+          width: vehicleSize.width,
+          height: vehicleSize.height,
+          originalWidth:
+            selectedVehicleOriginalWidth || config.vehicleDefaultWidth,
+          originalHeight:
+            selectedVehicleOriginalHeight || config.vehicleDefaultHeight,
+          sizePercent: config.vehicleSizePercent,
+        };
+      }
     } else {
-      // Với làn ngang (cách cũ)
+      // Với làn ngang
       const laneY = lanes[laneIndex].y;
       vehicle = {
         x: 50, // Bắt đầu từ bên trái
-        y: laneY + (config.laneWidth - config.vehicleHeight) / 2,
+        y: laneY + (config.laneWidth - vehicleSize.height) / 2,
         image: selectedVehicleImage,
         speed: Math.random() * 2 + 1,
         lane: laneIndex,
         stopped: false,
         rotated: false,
+        width: vehicleSize.width,
+        height: vehicleSize.height,
+        originalWidth:
+          selectedVehicleOriginalWidth || config.vehicleDefaultWidth,
+        originalHeight:
+          selectedVehicleOriginalHeight || config.vehicleDefaultHeight,
+        sizePercent: config.vehicleSizePercent,
       };
     }
 
     vehicles.push(vehicle);
     drawScene();
 
-    addLogEvent(`Đã thêm phương tiện mới vào làn ${laneIndex + 1}`);
+    addLogEvent(
+      `Đã thêm phương tiện mới vào làn ${laneIndex + 1} (kích thước: ${
+        config.vehicleSizePercent
+      }%)`
+    );
   }
 
   /**
@@ -782,17 +991,28 @@ document.addEventListener("DOMContentLoaded", function () {
         config.trafficLightHeight
       );
 
-      // Vẽ đường ngang đại diện cho đường dừng khi đèn đỏ
+      // Vẽ đường ngang đại diện cho đường dừng khi đèn đỏ hoặc vàng
       if (light.state === "red" || light.state === "yellow") {
         ctx.strokeStyle = light.state === "red" ? "#ff0000" : "#ffaa00";
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 5; // Tăng độ đậm của đường dừng
         ctx.beginPath();
-        ctx.moveTo(light.x - 20, light.y + config.trafficLightHeight);
+        // Tăng khoảng cách xuống 10px để không bị khuất
+        ctx.moveTo(light.x - 30, light.y + config.trafficLightHeight + 10);
         ctx.lineTo(
-          light.x + config.trafficLightWidth + 20,
-          light.y + config.trafficLightHeight
+          light.x + config.trafficLightWidth + 30,
+          light.y + config.trafficLightHeight + 10
         );
         ctx.stroke();
+
+        // Thêm hiệu ứng bóng đổ cho đường dừng
+        ctx.shadowColor =
+          light.state === "red"
+            ? "rgba(255, 0, 0, 0.5)"
+            : "rgba(255, 170, 0, 0.5)";
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
       }
     });
   }
@@ -802,39 +1022,14 @@ document.addEventListener("DOMContentLoaded", function () {
    */
   function drawVehicles() {
     vehicles.forEach((vehicle) => {
-      if (config.isVertical && vehicle.rotated) {
-        // Lưu trạng thái canvas hiện tại
-        ctx.save();
-
-        // Dịch chuyển tâm vẽ đến giữa xe
-        const centerX = vehicle.x + config.vehicleWidth / 2;
-        const centerY = vehicle.y + config.vehicleHeight / 2;
-        ctx.translate(centerX, centerY);
-
-        // Xoay 90 độ theo chiều kim đồng hồ
-        ctx.rotate(Math.PI / 2);
-
-        // Vẽ xe sau khi xoay
-        ctx.drawImage(
-          vehicle.image,
-          -config.vehicleHeight / 2,
-          -config.vehicleWidth / 2,
-          config.vehicleHeight,
-          config.vehicleWidth
-        );
-
-        // Khôi phục trạng thái canvas
-        ctx.restore();
-      } else {
-        // Vẽ xe bình thường (không xoay)
-        ctx.drawImage(
-          vehicle.image,
-          vehicle.x,
-          vehicle.y,
-          config.vehicleWidth,
-          config.vehicleHeight
-        );
-      }
+      // Vẽ xe bình thường (không xoay)
+      ctx.drawImage(
+        vehicle.image,
+        vehicle.x,
+        vehicle.y,
+        vehicle.width,
+        vehicle.height
+      );
     });
   }
 
@@ -882,12 +1077,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (!hasCollision && !hasRedLight) {
         if (config.isVertical) {
-          // Di chuyển xe xuống dưới với làn dọc
-          vehicle.y += vehicle.speed * (simulationSpeed / 5);
+          if (config.bottomToTop) {
+            // Di chuyển xe từ dưới lên trên
+            vehicle.y -= vehicle.speed * (simulationSpeed / 5);
 
-          // Nếu xe đi ra khỏi màn hình, đặt lại vị trí về phía trên
-          if (vehicle.y > canvas.height) {
-            vehicle.y = -config.vehicleHeight;
+            // Nếu xe đi ra khỏi màn hình phía trên, đặt lại vị trí về phía dưới
+            if (vehicle.y < -config.vehicleHeight) {
+              vehicle.y = canvas.height;
+            }
+          } else {
+            // Di chuyển xe xuống dưới (cách cũ)
+            vehicle.y += vehicle.speed * (simulationSpeed / 5);
+
+            // Nếu xe đi ra khỏi màn hình, đặt lại vị trí về phía trên
+            if (vehicle.y > canvas.height) {
+              vehicle.y = -config.vehicleHeight;
+            }
           }
         } else {
           // Di chuyển xe sang phải với làn ngang
@@ -950,21 +1155,28 @@ document.addEventListener("DOMContentLoaded", function () {
       if (otherVehicle.lane !== vehicle.lane) continue;
 
       if (config.isVertical) {
-        // Kiểm tra nếu xe phía dưới và đủ gần
-        if (
-          otherVehicle.y > vehicle.y &&
-          otherVehicle.y -
-            (vehicle.y +
-              (vehicle.rotated ? config.vehicleWidth : config.vehicleHeight)) <
-            20
-        ) {
-          return true;
+        if (config.bottomToTop) {
+          // Kiểm tra nếu xe phía trên và đủ gần (khi di chuyển từ dưới lên trên)
+          if (
+            otherVehicle.y < vehicle.y &&
+            vehicle.y - (otherVehicle.y + otherVehicle.height) < 20
+          ) {
+            return true;
+          }
+        } else {
+          // Kiểm tra nếu xe phía dưới và đủ gần (khi di chuyển từ trên xuống dưới - cách cũ)
+          if (
+            otherVehicle.y > vehicle.y &&
+            otherVehicle.y - (vehicle.y + vehicle.height) < 20
+          ) {
+            return true;
+          }
         }
       } else {
-        // Kiểm tra nếu xe phía trước và đủ gần (cách cũ)
+        // Kiểm tra nếu xe phía trước và đủ gần (làn ngang - cách cũ)
         if (
           otherVehicle.x > vehicle.x &&
-          otherVehicle.x - (vehicle.x + config.vehicleWidth) < 20
+          otherVehicle.x - (vehicle.x + vehicle.width) < 20
         ) {
           return true;
         }
@@ -982,22 +1194,29 @@ document.addEventListener("DOMContentLoaded", function () {
       if (light.state !== "red" && light.state !== "yellow") continue;
 
       if (config.isVertical) {
-        // Với làn dọc, kiểm tra vị trí y của xe và đèn
-        const lightY = light.y + config.trafficLightHeight;
-        const vehicleBottom =
-          vehicle.y +
-          (vehicle.rotated ? config.vehicleWidth : config.vehicleHeight);
-        const distanceToLight = Math.abs(vehicleBottom - lightY);
+        if (config.bottomToTop) {
+          // Với làn dọc đi từ dưới lên, kiểm tra vị trí y của xe và đèn
+          const lightY = light.y; // Phần trên của đèn
+          const vehicleTop = vehicle.y;
+          const distanceToLight = Math.abs(vehicleTop - lightY);
 
-        if (distanceToLight < 20) {
-          return true;
+          if (distanceToLight < 20) {
+            return true;
+          }
+        } else {
+          // Với làn dọc đi từ trên xuống (cách cũ)
+          const lightY = light.y + config.trafficLightHeight;
+          const vehicleBottom = vehicle.y + vehicle.height;
+          const distanceToLight = Math.abs(vehicleBottom - lightY);
+
+          if (distanceToLight < 20) {
+            return true;
+          }
         }
       } else {
-        // Với làn ngang, kiểm tra vị trí x của xe và đèn (cách cũ)
+        // Với làn ngang (cách cũ)
         const lightX = light.x + config.trafficLightWidth / 2;
-        const distanceToLight = Math.abs(
-          vehicle.x + config.vehicleWidth - lightX
-        );
+        const distanceToLight = Math.abs(vehicle.x + vehicle.width - lightX);
 
         if (distanceToLight < 20) {
           return true;
@@ -1107,44 +1326,50 @@ document.addEventListener("DOMContentLoaded", function () {
    * Tạo hình ảnh xe mẫu bằng canvas
    */
   function createVehiclePreviewImages() {
+    // Tính toán kích thước cho xe mẫu
+    const vehicleSize = calculateVehicleSize(
+      config.vehicleDefaultWidth,
+      config.vehicleDefaultHeight
+    );
+
     // Tạo hình xe 1
     const car1Canvas = document.createElement("canvas");
-    car1Canvas.width = config.vehicleWidth;
-    car1Canvas.height = config.vehicleHeight;
+    car1Canvas.width = vehicleSize.width;
+    car1Canvas.height = vehicleSize.height;
     const car1Ctx = car1Canvas.getContext("2d");
 
     car1Ctx.fillStyle = "#3498db";
-    car1Ctx.fillRect(0, 0, config.vehicleWidth, config.vehicleHeight);
+    car1Ctx.fillRect(0, 0, vehicleSize.width, vehicleSize.height);
     car1Ctx.fillStyle = "#2980b9";
     car1Ctx.fillRect(
-      config.vehicleWidth * 0.7,
+      vehicleSize.width * 0.7,
       0,
-      config.vehicleWidth * 0.3,
-      config.vehicleHeight
+      vehicleSize.width * 0.3,
+      vehicleSize.height
     );
 
     // Cửa sổ
     car1Ctx.fillStyle = "#ccc";
     car1Ctx.fillRect(
-      config.vehicleWidth * 0.4,
-      config.vehicleHeight * 0.2,
-      config.vehicleWidth * 0.2,
-      config.vehicleHeight * 0.3
+      vehicleSize.width * 0.4,
+      vehicleSize.height * 0.2,
+      vehicleSize.width * 0.2,
+      vehicleSize.height * 0.3
     );
 
     // Bánh xe
     car1Ctx.fillStyle = "#333";
     car1Ctx.fillRect(
-      config.vehicleWidth * 0.1,
-      config.vehicleHeight * 0.8,
-      config.vehicleWidth * 0.15,
-      config.vehicleHeight * 0.2
+      vehicleSize.width * 0.1,
+      vehicleSize.height * 0.8,
+      vehicleSize.width * 0.15,
+      vehicleSize.height * 0.2
     );
     car1Ctx.fillRect(
-      config.vehicleWidth * 0.7,
-      config.vehicleHeight * 0.8,
-      config.vehicleWidth * 0.15,
-      config.vehicleHeight * 0.2
+      vehicleSize.width * 0.7,
+      vehicleSize.height * 0.8,
+      vehicleSize.width * 0.15,
+      vehicleSize.height * 0.2
     );
 
     const car1Image = new Image();
@@ -1156,37 +1381,37 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Tạo hình xe 2
     const car2Canvas = document.createElement("canvas");
-    car2Canvas.width = config.vehicleWidth;
-    car2Canvas.height = config.vehicleHeight;
+    car2Canvas.width = vehicleSize.width;
+    car2Canvas.height = vehicleSize.height;
     const car2Ctx = car2Canvas.getContext("2d");
 
     car2Ctx.fillStyle = "#e74c3c";
-    car2Ctx.fillRect(0, 0, config.vehicleWidth, config.vehicleHeight);
+    car2Ctx.fillRect(0, 0, vehicleSize.width, vehicleSize.height);
     car2Ctx.fillStyle = "#c0392b";
-    car2Ctx.fillRect(0, 0, config.vehicleWidth * 0.2, config.vehicleHeight);
+    car2Ctx.fillRect(0, 0, vehicleSize.width * 0.2, vehicleSize.height);
 
     // Cửa sổ
     car2Ctx.fillStyle = "#ccc";
     car2Ctx.fillRect(
-      config.vehicleWidth * 0.3,
-      config.vehicleHeight * 0.2,
-      config.vehicleWidth * 0.3,
-      config.vehicleHeight * 0.3
+      vehicleSize.width * 0.3,
+      vehicleSize.height * 0.2,
+      vehicleSize.width * 0.3,
+      vehicleSize.height * 0.3
     );
 
     // Bánh xe
     car2Ctx.fillStyle = "#333";
     car2Ctx.fillRect(
-      config.vehicleWidth * 0.15,
-      config.vehicleHeight * 0.8,
-      config.vehicleWidth * 0.15,
-      config.vehicleHeight * 0.2
+      vehicleSize.width * 0.15,
+      vehicleSize.height * 0.8,
+      vehicleSize.width * 0.15,
+      vehicleSize.height * 0.2
     );
     car2Ctx.fillRect(
-      config.vehicleWidth * 0.7,
-      config.vehicleHeight * 0.8,
-      config.vehicleWidth * 0.15,
-      config.vehicleHeight * 0.2
+      vehicleSize.width * 0.7,
+      vehicleSize.height * 0.8,
+      vehicleSize.width * 0.15,
+      vehicleSize.height * 0.2
     );
 
     const car2Image = new Image();
@@ -1198,48 +1423,48 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Tạo hình xe tải
     const truckCanvas = document.createElement("canvas");
-    truckCanvas.width = config.vehicleWidth;
-    truckCanvas.height = config.vehicleHeight;
+    truckCanvas.width = vehicleSize.width;
+    truckCanvas.height = vehicleSize.height;
     const truckCtx = truckCanvas.getContext("2d");
 
     truckCtx.fillStyle = "#27ae60";
-    truckCtx.fillRect(0, 0, config.vehicleWidth * 0.3, config.vehicleHeight);
+    truckCtx.fillRect(0, 0, vehicleSize.width * 0.3, vehicleSize.height);
     truckCtx.fillStyle = "#2ecc71";
     truckCtx.fillRect(
-      config.vehicleWidth * 0.3,
-      config.vehicleHeight * 0.2,
-      config.vehicleWidth * 0.7,
-      config.vehicleHeight * 0.8
+      vehicleSize.width * 0.3,
+      vehicleSize.height * 0.2,
+      vehicleSize.width * 0.7,
+      vehicleSize.height * 0.8
     );
 
     // Cửa sổ
     truckCtx.fillStyle = "#ccc";
     truckCtx.fillRect(
-      config.vehicleWidth * 0.05,
-      config.vehicleHeight * 0.2,
-      config.vehicleWidth * 0.2,
-      config.vehicleHeight * 0.3
+      vehicleSize.width * 0.05,
+      vehicleSize.height * 0.2,
+      vehicleSize.width * 0.2,
+      vehicleSize.height * 0.3
     );
 
     // Bánh xe
     truckCtx.fillStyle = "#333";
     truckCtx.fillRect(
-      config.vehicleWidth * 0.1,
-      config.vehicleHeight * 0.8,
-      config.vehicleWidth * 0.15,
-      config.vehicleHeight * 0.2
+      vehicleSize.width * 0.1,
+      vehicleSize.height * 0.8,
+      vehicleSize.width * 0.15,
+      vehicleSize.height * 0.2
     );
     truckCtx.fillRect(
-      config.vehicleWidth * 0.5,
-      config.vehicleHeight * 0.8,
-      config.vehicleWidth * 0.15,
-      config.vehicleHeight * 0.2
+      vehicleSize.width * 0.5,
+      vehicleSize.height * 0.8,
+      vehicleSize.width * 0.15,
+      vehicleSize.height * 0.2
     );
     truckCtx.fillRect(
-      config.vehicleWidth * 0.7,
-      config.vehicleHeight * 0.8,
-      config.vehicleWidth * 0.15,
-      config.vehicleHeight * 0.2
+      vehicleSize.width * 0.7,
+      vehicleSize.height * 0.8,
+      vehicleSize.width * 0.15,
+      vehicleSize.height * 0.2
     );
 
     const truckImage = new Image();
@@ -1248,5 +1473,27 @@ document.addEventListener("DOMContentLoaded", function () {
     // Thay thế src của ảnh mẫu
     const truckElement = document.querySelector('[data-vehicle="truck"]');
     if (truckElement) truckElement.src = truckImage.src;
+  }
+
+  /**
+   * Cập nhật kích thước phương tiện từ giá trị thanh trượt
+   */
+  function updateVehicleSizes() {
+    // Cập nhật giá trị config từ input
+    config.vehicleWidth = parseInt(vehicleWidthInput.value);
+    config.vehicleHeight = parseInt(vehicleHeightInput.value);
+
+    // Hiển thị giá trị
+    vehicleWidthValue.textContent = vehicleWidthInput.value;
+    vehicleHeightValue.textContent = vehicleHeightInput.value;
+
+    // Cập nhật trạng thái giữ tỷ lệ
+    config.keepAspectRatio = keepRatioRadio.checked;
+
+    if (selectedVehicleImage && config.keepAspectRatio) {
+      // Cập nhật tỷ lệ hình ảnh
+      config.originalImageRatio =
+        selectedVehicleImage.width / selectedVehicleImage.height;
+    }
   }
 });
