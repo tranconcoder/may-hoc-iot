@@ -516,7 +516,7 @@ def process_license_plates_thread():
                 'camera_id': camera_id,
                 'image_id': image_id,
                 'inference_time': inference_time,
-                'license_plates': list(license_plates) if license_plates else ["UNKNOWN"],
+                'license_plates': license_plates,
                 'violations': violations,
             }
 

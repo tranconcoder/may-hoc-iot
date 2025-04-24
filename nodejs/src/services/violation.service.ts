@@ -3,13 +3,11 @@ import trafficLightService from "./trafficLight.service.js";
 import { TrafficLightEnum } from "@/enums/trafficLight.enum.js";
 import { Detect } from "./violation.service.d.js";
 import { CarEnum } from "@/enums/car.enum.js";
+import { TrafficViolation } from "@/enums/trafficViolation.model.js";
 
 export default new (class ViolationService {
-  async detectRedLightViolation(data: Detect) {
+  async detectRedLightViolation(data: Detect, camera: CameraModel) {
     let { camera_id, detections, tracks, image_dimensions } = data;
-
-    const camera = await cameraModel.findById(camera_id);
-    if (!camera) throw new Error("Not found camera!");
 
     const detectionIds = detections.map((detection) => detection.id);
     const track_line_y = camera.camera_track_line_y;
@@ -65,14 +63,40 @@ export default new (class ViolationService {
     return vehicleIds;
   }
 
-  async laneEncroachment(data: Detect) {
-    const { camera_id, detections, tracks, image_dimensions } = data;
-    const camera = await cameraModel.findById(camera_id);
+  async laneEncroachment(
+    detections: Detect["detections"],
+    camera: CameraModel
+  ) {
+    const { camera_lane_track_point, camera_lane_vehicles } = camera;
 
-    if (!camera) throw new Error("Not found camera!");
-    if (!camera.camera_lane_vehicles[0].includes(CarEnum.ANY)) return [];
+    const vehicleViolationIds = [];
 
-    const detectionIds = detections.map((detection) => detection.id);
-    const laneTrackPoint = camera.camera_lane_track_point;
+    for (const detection of detections) {
+      const { id, class: vehicleClass, bbox } = detection;
+      const { x1, x2 } = bbox;
+      const laneStartIndex = camera_lane_track_point.findIndex(
+        (item) => item > x1
+      );
+      const laneEndIndex = camera_lane_track_point.findIndex(
+        (item) => item > x2
+      );
+
+      const vehiclesInLane = camera_lane_vehicles.slice(
+        laneStartIndex,
+        laneEndIndex + 1
+      );
+
+      const isViolation = vehiclesInLane.some(
+        (laneVehicle) =>
+          !laneVehicle.includes(CarEnum.ANY) &&
+          !laneVehicle.includes(detection.class as CarEnum)
+      );
+
+      if (isViolation) {
+        vehicleViolationIds.push(id);
+      }
+    }
+
+    return vehicleViolationIds;
   }
 })();

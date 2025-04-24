@@ -127,16 +127,27 @@ export async function handleCarDetectedEvent(this: Socket, data: any) {
   // Forward vehicle detection data to all clients with original event name
   socket.broadcast.emit("car_detected", data);
 
+  const camera = await cameraModel.findById(data.camera_id);
+  if (!camera) throw new Error("Not found camera!");
+
   try {
     const imageBuffer = await cameraImageModel.findById(data.image_id);
     if (!imageBuffer) throw new Error("Not found image buffer!");
 
     const violations = [
       /* --------------------------- Red light violation -------------------------- */
-      ...(await violationService.detectRedLightViolation(data)).map((id) => ({
-        id,
-        type: TrafficViolation.RED_LIGHT_VIOLATION,
-      })),
+      ...(await violationService.detectRedLightViolation(data, camera)).map(
+        (id) => ({
+          id,
+          type: TrafficViolation.RED_LIGHT_VIOLATION,
+        })
+      ),
+      ...(await violationService.laneEncroachment(data.detections, camera)).map(
+        (id) => ({
+          id,
+          type: TrafficViolation.LANE_ENCROACHMENT,
+        })
+      ),
     ];
 
     if (violations.length > 0) {
@@ -175,7 +186,10 @@ export async function handleCarDetectedEvent(this: Socket, data: any) {
 /* -------------------------------------------------------------------------- */
 /*                Handle 'violation_license_plate' event handler              */
 /* -------------------------------------------------------------------------- */
-export async function handleViolationLicensePlateEvent(this: Socket, data: ViolationLicensePlate) {
+export async function handleViolationLicensePlateEvent(
+  this: Socket,
+  data: ViolationLicensePlate
+) {
   const socket = this;
 
   console.log("Violation license plate data", data);
