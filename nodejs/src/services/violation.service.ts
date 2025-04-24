@@ -66,5 +66,12 @@ export default new (class ViolationService {
 
   async laneEncroachment(data: Detect) {
     const { camera_id, detections, tracks, image_dimensions } = data;
+    const camera = await cameraModel.findById(camera_id);
+
+    if (!camera) throw new Error("Not found camera!");
+    const detectionIds = detections.map((detection) => detection.id);
+    const laneTrackPoint = camera.camera_lane_track_point;
+
+    if (!laneTrackPoint) return [];
   }
 })();

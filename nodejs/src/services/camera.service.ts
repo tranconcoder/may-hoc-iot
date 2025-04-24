@@ -12,7 +12,7 @@ export default new (class CameraService {
   ) {
     const apiKey = crypto.randomBytes(32).toString("hex");
 
-    const result = await cameraModel.create({
+    return await cameraModel.create({
       camera_name,
       camera_location,
       camera_track_line_y,
@@ -21,8 +21,6 @@ export default new (class CameraService {
       camera_lane_track_point,
       camera_lane_vehicles,
     });
-
-    return _.omit(result, "camera_api_key");
   }
 
   /* -------------------------------------------------------------------------- */

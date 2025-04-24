@@ -83,8 +83,20 @@
               />
             </div>
             <div>
-              <label for="cameraId">Camera ID:</label>
-              <input type="text" id="cameraId" placeholder="Nhập Camera ID" />
+              <label for="cameraSelect">Camera:</label>
+              <div class="camera-select-container">
+                <select id="cameraSelect" class="camera-dropdown">
+                  <option value="" disabled selected>Đang tải danh sách
+                    camera...</option>
+                </select>
+                <button
+                  id="refreshCameraList"
+                  type="button"
+                  class="refresh-btn"
+                >
+                  <i class="fas fa-sync-alt"></i>
+                </button>
+              </div>
             </div>
             <div>
               <label for="apiKey">API Key:</label>
@@ -171,7 +183,6 @@
     </div>
 
     <!-- JavaScript Libraries -->
-    <script src="/scripts/capture/anti-throttle.js"></script>
     <script src="/scripts/capture/capture-engine.js"></script>
     <script src="/scripts/capture/main.js"></script>
     <script>

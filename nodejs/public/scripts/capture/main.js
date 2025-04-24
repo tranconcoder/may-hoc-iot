@@ -2,7 +2,6 @@
 const DEFAULT_WEBSOCKET_URL = "100.121.193.6:3001";
 const DEFAULT_API_KEY =
   "0e1f4b7dc39c63e9dbbfbf5afc2e50f9deb625507cada47b203117c82362d1d2";
-const DEFAULT_CAMERA_ID = "68027ecbc11ceedc95d734df";
 
 // DOM Elements
 let startBtn,
@@ -19,7 +18,11 @@ let frameRateSelect,
   fpsModeSelect,
   fpsLimitContainer;
 let sourceTypeSelect; // Biến cho việc chọn nguồn ghi hình
-let cameraIdInput, apiKeyInput, websocketUrlInput; // Biến cho các trường nhập kết nối
+let cameraSelect, apiKeyInput, websocketUrlInput, refreshCameraListBtn; // Biến cho các trường nhập kết nối
+
+// Camera list
+let cameras = [];
+let selectedCameraId = "";
 
 // WebSocket connection
 let socket = null;
@@ -93,26 +96,44 @@ window.addEventListener("load", () => {
   sourceTypeSelect = document.getElementById("sourceType"); // Khởi tạo biến cho việc chọn nguồn ghi hình
 
   // Khởi tạo các trường nhập WebSocket
-  cameraIdInput = document.getElementById("cameraId");
+  cameraSelect = document.getElementById("cameraSelect");
   apiKeyInput = document.getElementById("apiKey");
   websocketUrlInput = document.getElementById("websocketUrl");
+  refreshCameraListBtn = document.getElementById("refreshCameraList");
 
   // Tải các giá trị đã lưu trước đó từ localStorage nếu có
-  cameraIdInput.value = localStorage.getItem("cameraId") || DEFAULT_CAMERA_ID;
-  apiKeyInput.value = localStorage.getItem("apiKey") || DEFAULT_API_KEY;
+  // apiKeyInput.value = DEFAULT_API_KEY;
   websocketUrlInput.value =
     localStorage.getItem("websocketUrl") || DEFAULT_WEBSOCKET_URL;
 
-  // Thêm sự kiện lưu giá trị khi người dùng thay đổi
-  cameraIdInput.addEventListener("change", () => {
-    localStorage.setItem("cameraId", cameraIdInput.value);
+  // Sự kiện khi chọn camera
+  cameraSelect.addEventListener("change", () => {
+    selectedCameraId = cameraSelect.value;
+    localStorage.setItem("cameraId", selectedCameraId);
+    
+    // Tự động lấy API key từ camera đã chọn
+    const selectedCamera = getSelectedCamera();
+    if (selectedCamera && selectedCamera.camera_api_key) {
+      apiKeyInput.value = selectedCamera.camera_api_key;
+      localStorage.setItem("apiKey", selectedCamera.camera_api_key);
+      addLog(`Đã tự động cập nhật API key cho camera: ${getSelectedCameraName()}`);
+    }
+    
+    addLog(`Đã chọn camera: ${getSelectedCameraName()}`);
   });
+
+  // Thêm sự kiện lưu giá trị khi người dùng thay đổi
   apiKeyInput.addEventListener("change", () => {
     localStorage.setItem("apiKey", apiKeyInput.value);
   });
   websocketUrlInput.addEventListener("change", () => {
     localStorage.setItem("websocketUrl", websocketUrlInput.value);
     addLog(`WebSocket URL updated to: ${websocketUrlInput.value}`);
+  });
+
+  // Thêm sự kiện cho nút refresh danh sách camera
+  refreshCameraListBtn.addEventListener("click", () => {
+    loadCameraList();
   });
 
   // Update FPS control visibility based on mode selection
@@ -132,6 +153,9 @@ window.addEventListener("load", () => {
   // Event listeners for buttons
   startBtn.addEventListener("click", startCapture);
   stopBtn.addEventListener("click", stopCapture);
+
+  // Tải danh sách camera
+  loadCameraList();
 
   // Initialize
   addLog("Page loaded. Ready to start capture.");
@@ -155,6 +179,89 @@ window.addEventListener("load", () => {
   createNoSleepVideo();
 });
 
+// Hàm lấy danh sách camera từ API
+async function loadCameraList() {
+  try {
+    // Hiển thị trạng thái đang tải
+    cameraSelect.innerHTML =
+      '<option value="" disabled selected>Đang tải danh sách camera...</option>';
+    refreshCameraListBtn.classList.add("loading");
+    addLog("Đang tải danh sách camera...");
+
+    // Gọi API để lấy danh sách camera
+    const response = await fetch("/api/camera/all");
+
+    if (!response.ok) {
+      throw new Error(`Không thể lấy danh sách camera: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.metadata || !Array.isArray(data.metadata)) {
+      throw new Error("Dữ liệu camera không hợp lệ");
+    }
+
+    // Lưu danh sách camera
+    cameras = data.metadata;
+
+    // Cập nhật dropdown
+    populateCameraDropdown(cameras);
+
+    // Khôi phục camera đã chọn trước đó nếu có
+    const savedCameraId = localStorage.getItem("cameraId");
+    if (savedCameraId && cameras.some((cam) => cam._id === savedCameraId)) {
+      cameraSelect.value = savedCameraId;
+      selectedCameraId = savedCameraId;
+    } else if (cameras.length > 0) {
+      // Chọn camera đầu tiên nếu không có camera nào được lưu trước đó
+      cameraSelect.value = cameras[0]._id;
+      selectedCameraId = cameras[0]._id;
+      localStorage.setItem("cameraId", selectedCameraId);
+    }
+
+    addLog(`Đã tải ${cameras.length} camera`);
+  } catch (error) {
+    addLog(`Lỗi khi tải danh sách camera: ${error.message}`);
+    cameraSelect.innerHTML =
+      '<option value="" disabled selected>Không thể tải danh sách camera</option>';
+    console.error("Error loading cameras:", error);
+  } finally {
+    refreshCameraListBtn.classList.remove("loading");
+  }
+}
+
+// Hàm cập nhật dropdown camera
+function populateCameraDropdown(cameraList) {
+  if (!cameraSelect) return;
+
+  cameraSelect.innerHTML = "";
+
+  if (!cameraList || cameraList.length === 0) {
+    cameraSelect.innerHTML =
+      '<option value="" disabled selected>Không có camera nào</option>';
+    return;
+  }
+
+  cameraList.forEach((camera) => {
+    const option = document.createElement("option");
+    option.value = camera._id;
+    option.textContent = `${camera.camera_name} (${camera.camera_location})`;
+    cameraSelect.appendChild(option);
+  });
+}
+
+// Hàm lấy thông tin camera hiện tại được chọn
+function getSelectedCamera() {
+  if (!selectedCameraId || cameras.length === 0) return null;
+  return cameras.find((camera) => camera._id === selectedCameraId);
+}
+
+// Hàm lấy tên camera hiện tại được chọn
+function getSelectedCameraName() {
+  const camera = getSelectedCamera();
+  return camera ? camera.camera_name : "Chưa chọn camera";
+}
+
 // Tạo video ngầm để ngăn browser throttling
 function createNoSleepVideo() {
   noSleepVideo = document.createElement("video");
@@ -165,7 +272,7 @@ function createNoSleepVideo() {
   noSleepVideo.setAttribute("autoplay", "");
   noSleepVideo.setAttribute(
     "src",
-    "data:video/mp4;base64,AAAAIGZ0eXBtcDQyAAAAAG1wNDJtcDQxaXNvbWF2YzEAAATKbW9vdgAAAGxtdmhkAAAAANLEP5XSxD+VAAB1MAAAdU4AAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAACFpb2RzAAAAABCAgIAQAE////9//w6AgIAEAAAAAQAABDV0cmFrAAAAXHRraGQAAAAH0sQ/ldLEP5UAAAABAAAAAAAAdU4AAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAACFpb2RzAAAAABCAgIAQAE////9//w6AgIAEAAAAAQAABDV0cmFrAAAAXHRraGQAAAAH0sQ/ldLEP5UAAAABAAAAAAAAdU4AAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAIhaWRzbwAAABBAgIAQAE////9//w6AgIAEAAAAAQAABDV0cmFrAAAAXHRraGQAAAAH0sQ/ldLEP5UAAAABAAAAAAAAdU4AAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAIhaWRzbwAAABBAgIAQAE////9//w6AgIAEAAAAAQAABDV0cmFrAAAAXHRraGQAAAAH0sQ/ldLEP5UAAAABAAAAAAAAdU4AAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAIhaWRzb"
+    "data:video/mp4;base64,AAAAIGZ0eXBtcDQyAAAAAG1wNDJtcDQxaXNvbWF2YzEAAATKbW9vdgAAAGxtdmhkAAAAANLEP5XSxD+VAAB1MAAAdU4AAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAACFpb2RzAAAAABCAgIAQAE////9//w6AgIAEAAAAAQAABDV0cmFrAAAAXHRraGQAAAAH0sQ/ldLEP5UAAAABAAAAAAAAdU4AAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAACFpb2RzAAAAABCAgIAQAE////9//w6AgIAEAAAAAQAABDV0cmFrAAAAXHRraGQAAAAH0sQ/ldLEP5UAAAABAAAAAAAAdU4AAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAIhaWRzbwAAABBAgIAQAE////9//w6AgIAEAAAAAQAABDV0cmFrAAAAXHRraGQAAAAH0sQ/ldLEP5UAAAABAAAAAAAAdU4AAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAIhaWRzbwAAABBAgIAQAE////9//w6AgIAEAAAAAQAABDV0cmFrAAAAXHRraGQAAAAH0sQ/ldLEP5UAAAABAAAAAAAAdU4AAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAIhaWRzb"
   );
   noSleepVideo.style.display = "none";
   document.body.appendChild(noSleepVideo);
@@ -183,8 +290,13 @@ function addLog(message) {
 // Tạo URL WebSocket từ thông tin người dùng nhập
 function buildWebSocketUrl() {
   const websocketServer = websocketUrlInput.value || DEFAULT_WEBSOCKET_URL;
-  const cameraId = cameraIdInput.value || DEFAULT_CAMERA_ID;
+  const cameraId = selectedCameraId;
   const apiKey = apiKeyInput.value || DEFAULT_API_KEY;
+
+  if (!cameraId) {
+    addLog("Lỗi: Vui lòng chọn camera trước khi kết nối");
+    return null;
+  }
 
   return `wss://${websocketServer}?cameraId=${cameraId}&apiKey=${apiKey}`;
 }
@@ -192,8 +304,16 @@ function buildWebSocketUrl() {
 // Start screen capture
 async function startCapture() {
   try {
+    // Kiểm tra xem đã chọn camera chưa
+    if (!selectedCameraId) {
+      addLog("Vui lòng chọn camera trước khi bắt đầu ghi hình");
+      return;
+    }
+
     // Cập nhật URL WebSocket dựa trên thông tin người dùng nhập
     wsUrl = buildWebSocketUrl();
+
+    if (!wsUrl) return;
 
     // Connect to WebSocket if not connected
     if (!socket || socket.readyState !== WebSocket.OPEN) {
@@ -292,7 +412,7 @@ async function startCapture() {
 
       startBtn.disabled = true;
       stopBtn.disabled = false;
-      addLog("Screen capture started");
+      addLog(`Đã bắt đầu ghi hình với camera: ${getSelectedCameraName()}`);
 
       // Thiết lập xử lý cho các sự kiện nền của các tab browser để luôn duy trì hiệu suất cao
       enableContinuousHighPerformanceMode();
