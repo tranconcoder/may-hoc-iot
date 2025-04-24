@@ -7,6 +7,10 @@ viewsRouter.get("/", viewController.homePage);
 
 viewsRouter.get("/capture", viewController.capturePage);
 
+viewsRouter.get("/simulation", (req, res) => {
+  res.render("pages/traffic-simulation");
+});
+
 viewsRouter.get("/preview", viewController.cameraPreviewPage);
 
 viewsRouter.get("/cameras", viewController.cameraManagementPage);

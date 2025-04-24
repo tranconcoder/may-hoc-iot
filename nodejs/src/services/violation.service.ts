@@ -2,6 +2,7 @@ import cameraModel, { CameraModel } from "@/models/camera.model.js";
 import trafficLightService from "./trafficLight.service.js";
 import { TrafficLightEnum } from "@/enums/trafficLight.enum.js";
 import { Detect } from "./violation.service.d.js";
+import { CarEnum } from "@/enums/car.enum.js";
 
 export default new (class ViolationService {
   async detectRedLightViolation(data: Detect) {
@@ -69,9 +70,9 @@ export default new (class ViolationService {
     const camera = await cameraModel.findById(camera_id);
 
     if (!camera) throw new Error("Not found camera!");
+    if (!camera.camera_lane_vehicles[0].includes(CarEnum.ANY)) return [];
+
     const detectionIds = detections.map((detection) => detection.id);
     const laneTrackPoint = camera.camera_lane_track_point;
-
-    if (!laneTrackPoint) return [];
   }
 })();

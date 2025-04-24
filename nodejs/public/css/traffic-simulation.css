@@ -1,0 +1,328 @@
+/* Traffic Simulation CSS */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body,
+html {
+  height: 100%;
+  width: 100%;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
+}
+
+.traffic-simulation-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background: #f0f2f5;
+}
+
+.simulation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background: #2c3e50;
+  color: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.control-buttons button {
+  margin-left: 10px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.btn {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.btn-primary {
+  background-color: #3498db;
+  color: white;
+}
+
+.btn-danger {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.btn-success {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.btn-warning {
+  background-color: #f39c12;
+  color: white;
+}
+
+.btn-info {
+  background-color: #1abc9c;
+  color: white;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.simulation-content {
+  display: flex;
+  height: calc(100vh - 120px);
+  width: 100%;
+  padding: 10px;
+}
+
+.control-panel {
+  width: 300px;
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  margin-right: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+}
+
+.panel-section {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.panel-section h3 {
+  margin-bottom: 15px;
+  color: #2c3e50;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+}
+
+.form-control {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.vehicle-presets {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.preset-vehicle {
+  width: 60px;
+  height: 30px;
+  object-fit: contain;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  padding: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-vehicle:hover {
+  border-color: #3498db;
+}
+
+.preset-vehicle.selected {
+  border-color: #3498db;
+  box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+}
+
+.simulation-area {
+  flex-grow: 1;
+  position: relative;
+  background: #34495e;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+#trafficCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.instructions {
+  position: absolute;
+  bottom: 15px;
+  left: 15px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 5px;
+  max-width: 350px;
+  font-size: 14px;
+}
+
+.instructions p {
+  margin: 5px 0;
+}
+
+.events-log {
+  height: 120px;
+  background: white;
+  border-top: 1px solid #ddd;
+  padding: 10px 15px;
+  overflow-y: auto;
+}
+
+.events-log h3 {
+  margin-bottom: 10px;
+  color: #2c3e50;
+  font-size: 16px;
+}
+
+#eventsContainer {
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.event-entry {
+  margin-bottom: 5px;
+  padding-bottom: 5px;
+  border-bottom: 1px dashed #eee;
+}
+
+.event-time {
+  color: #7f8c8d;
+  margin-right: 8px;
+}
+
+.event-message {
+  color: #2c3e50;
+}
+
+.event-warning {
+  color: #e67e22;
+}
+
+.event-error {
+  color: #e74c3c;
+}
+
+.traffic-light-preview {
+  display: flex;
+  flex-direction: column;
+  width: 40px;
+  background: #333;
+  border-radius: 10px;
+  padding: 5px;
+  margin: 0 auto 15px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.light {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  margin: 5px auto;
+  border: 2px solid #222;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s;
+}
+
+.red {
+  background-color: #850000;
+}
+
+.red.active {
+  background-color: #ff0000;
+  box-shadow: 0 0 15px #ff0000, inset 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.yellow {
+  background-color: #855900;
+}
+
+.yellow.active {
+  background-color: #ffaa00;
+  box-shadow: 0 0 15px #ffaa00, inset 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.green {
+  background-color: #005500;
+}
+
+.green.active {
+  background-color: #00ff00;
+  box-shadow: 0 0 15px #00ff00, inset 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.simulation-speed {
+  display: flex;
+  align-items: center;
+  margin-top: 15px;
+}
+
+.simulation-speed label {
+  margin-right: 10px;
+  font-weight: bold;
+  color: #555;
+}
+
+.simulation-speed input {
+  flex-grow: 1;
+}
+
+/* Drag and Drop styles */
+.traffic-light-draggable {
+  position: absolute;
+  cursor: move;
+  z-index: 10;
+  transform-origin: center bottom;
+}
+
+.vehicle-draggable {
+  position: absolute;
+  cursor: move;
+  z-index: 5;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 950px) {
+  .simulation-content {
+    flex-direction: column;
+  }
+
+  .control-panel {
+    width: 100%;
+    margin-bottom: 15px;
+    margin-right: 0;
+    max-height: 30vh;
+  }
+
+  .simulation-area {
+    height: 50vh;
+  }
+}

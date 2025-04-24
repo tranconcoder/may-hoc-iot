@@ -1,0 +1,119 @@
+<!-- Traffic Simulation Page - Mô phỏng tuyến đường và đèn giao thông -->
+<div class="traffic-simulation-container">
+  <header class="simulation-header">
+    <h1>Mô phỏng tuyến đường và đèn giao thông</h1>
+    <div class="control-buttons">
+      <button id="resetBtn" class="btn btn-danger">Đặt lại</button>
+      <button id="saveBtn" class="btn btn-primary">Lưu cấu hình</button>
+    </div>
+  </header>
+
+  <div class="simulation-content">
+    <!-- Panel điều khiển bên trái -->
+    <div class="control-panel">
+      <div class="panel-section">
+        <h3>Cấu hình làn đường</h3>
+        <div class="form-group">
+          <label for="laneCount">Số làn xe:</label>
+          <input
+            type="number"
+            id="laneCount"
+            min="1"
+            max="6"
+            value="3"
+            class="form-control"
+          />
+        </div>
+        <button id="applyLaneBtn" class="btn btn-success">Áp dụng</button>
+      </div>
+
+      <div class="panel-section">
+        <h3>Tải hình ảnh</h3>
+        <div class="form-group">
+          <label for="vehicleImage">Hình ảnh xe:</label>
+          <input
+            type="file"
+            id="vehicleImage"
+            class="form-control"
+            accept="image/*"
+          />
+        </div>
+        <div class="form-group">
+          <label>Hoặc chọn xe có sẵn:</label>
+          <div class="vehicle-presets">
+            <img
+              src="/public/images/vehicles/car1.png"
+              class="preset-vehicle"
+              data-vehicle="car1"
+            />
+            <img
+              src="/public/images/vehicles/car2.png"
+              class="preset-vehicle"
+              data-vehicle="car2"
+            />
+            <img
+              src="/public/images/vehicles/truck.png"
+              class="preset-vehicle"
+              data-vehicle="truck"
+            />
+          </div>
+        </div>
+        <button id="addVehicleBtn" class="btn btn-info">Thêm xe</button>
+      </div>
+
+      <div class="panel-section">
+        <h3>Đèn giao thông</h3>
+        <div class="traffic-light-preview">
+          <div class="light red active" data-color="red"></div>
+          <div class="light yellow" data-color="yellow"></div>
+          <div class="light green" data-color="green"></div>
+        </div>
+        <div class="form-group">
+          <label for="trafficLightCount">Số lượng đèn:</label>
+          <input
+            type="number"
+            id="trafficLightCount"
+            min="1"
+            max="5"
+            value="1"
+            class="form-control"
+          />
+        </div>
+        <button id="addTrafficLightBtn" class="btn btn-warning">Thêm đèn</button>
+      </div>
+
+      <div class="panel-section">
+        <h3>Mô phỏng</h3>
+        <button id="startSimulationBtn" class="btn btn-success">Bắt đầu</button>
+        <button
+          id="stopSimulationBtn"
+          class="btn btn-danger"
+          disabled
+        >Dừng</button>
+        <div class="simulation-speed">
+          <label for="simulationSpeed">Tốc độ:</label>
+          <input type="range" id="simulationSpeed" min="1" max="10" value="5" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Khu vực mô phỏng chính -->
+    <div class="simulation-area">
+      <canvas id="trafficCanvas"></canvas>
+      <div class="instructions">
+        <p>Kéo thả đèn giao thông vào vị trí mong muốn trên đường</p>
+        <p>Nhấn vào đèn để thay đổi trạng thái (đỏ, vàng, xanh)</p>
+        <p>Điều chỉnh số làn xe và thêm phương tiện để mô phỏng</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Danh sách cảnh báo và sự kiện -->
+  <div class="events-log">
+    <h3>Nhật ký sự kiện</h3>
+    <div id="eventsContainer"></div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="/public/css/traffic-simulation.css" />
+<script src="/public/scripts/traffic-simulation.js"></script>
