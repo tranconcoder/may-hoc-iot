@@ -12,12 +12,13 @@ export function runSocketIOService(server: HTTPsServer): SocketIOServer {
     /*                              Join room handler                             */
     /* -------------------------------------------------------------------------- */
 
-    /* ------------------ Setup 'join_camera' event handler ------------------- */
+    /* ------------------- Setup 'join_camera' event handler -------------------- */
     socket.on("join_camera", handleEvent("join_camera").bind(socket));
 
     /* ------------------ Setup 'join_all_camera' event handler ----------------- */
     socket.on("join_all_camera", handleEvent("join_all_camera").bind(socket));
 
+    /* ------------------ Setup 'leave_camera' event handler -------------------- */
     socket.on("leave_camera", handleEvent("leave_camera").bind(socket));
 
     /* -------------------------------------------------------------------------- */

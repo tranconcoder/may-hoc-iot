@@ -30,16 +30,22 @@ ENABLE_GPU = True
 SOCKETIO_SERVER_URL = 'wss://172.28.31.150:3000' 
 MAX_FPS = 90
 QUEUE_SIZE = 5 
-connected = False
 
-# Initialize Socket.IO client
-sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=5000, ssl_verify=False)
-print(f"Initializing Socket.IO client to connect to {SOCKETIO_SERVER_URL}")
+# Initialize Socket.IO client with reconnection settings
+sio = socketio.Client(
+    reconnection=True,
+    reconnection_attempts=0,  # Infinite retries
+    reconnection_delay=1,
+    reconnection_delay_max=5,
+    ssl_verify=False
+)
 
 # Global variables
 running = True
+connected = False
 last_processing_time = 0
-plate_queue = queue.Queue(maxsize=QUEUE_SIZE) 
+plate_queue = queue.Queue(maxsize=QUEUE_SIZE)
+connection_lock = threading.Lock()
 
 # Cached models (loaded once and reused)
 yolo_LP_detect = None
@@ -402,7 +408,6 @@ def detect_license_plate_from_car_event(vehicle_data):
 def connect():
     """Handler for connection event"""
     global connected
-
     connected = True
     print(f"Successfully connected to Socket.IO server: {SOCKETIO_SERVER_URL}")
     print("Waiting for 'violation_detect' events with vehicle images...")
@@ -410,11 +415,10 @@ def connect():
 @sio.event
 def disconnect():
     """Handler for disconnection event"""
-    global connected, running
+    global connected
     connected = False
-
     print("Disconnected from Socket.IO server")
-    running = False
+    print("Connection manager will attempt to reconnect...")
 
 @sio.on('violation_detect')
 def on_license_plate(data):
@@ -551,7 +555,11 @@ def maintain_connection():
             if not connected:
                 try:
                     print(f"Attempting to connect to Socket.IO server at {SOCKETIO_SERVER_URL}...")
-                    sio.connect(SOCKETIO_SERVER_URL, transports=['websocket'], wait=False)
+                    sio.connect(
+                        SOCKETIO_SERVER_URL,
+                        transports=['websocket'],
+                        wait=False
+                    )
                 except Exception as e:
                     print(f"Failed to connect: {e}")
                     time.sleep(5)  # Wait before retry
@@ -561,30 +569,35 @@ def maintain_connection():
             time.sleep(1)
 
 def main():
-    """Main function for running the script directly"""
-    global running, yolo_LP_detect, yolo_license_plate
-
-    # Load models
-    yolo_LP_detect, yolo_license_plate = load_models()
+    """Main function to run the license plate OCR service"""
+    global running
     
-    # Run in SocketIO mode
-    print("Starting license plate OCR service with SocketIO...")
-    
-    # Start the processing thread
-    processing_thread = threading.Thread(target=maintain_connection, daemon=True)
-    processing_thread.start()
-    print("License plate OCR thread started")
-    
-    # Keep the main thread running
     try:
+        # Start connection management thread
+        connection_thread = threading.Thread(target=maintain_connection, daemon=True)
+        connection_thread.start()
+        print("Connection management thread started")
+        
+        # Start processing thread
+        processing_thread = threading.Thread(target=process_license_plates_thread, daemon=True)
+        processing_thread.start()
+        print("License plate processing thread started")
+        
+        # Keep the main thread running
         while running:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("Interrupted by user. Shutting down...")
+            try:
+                time.sleep(1)
+            except KeyboardInterrupt:
+                break
+                
+    except Exception as e:
+        print(f"Error in main thread: {str(e)}")
+        
     finally:
+        running = False
         if sio.connected:
             sio.disconnect()
-        print("License plate OCR service stopped.")
+        print("License plate OCR service stopped")
 
 if __name__ == "__main__":
     main()
