@@ -153,6 +153,15 @@ window.addEventListener("load", () => {
     currentResolution.width = width;
     currentResolution.height = height;
     addLog(`Resolution set to: ${width}x${height}`);
+
+    // Update resolution info display
+    let quality = "HD";
+    if (width === 1920) quality = "Full HD";
+    else if (width === 640) quality = "SD";
+    else if (width === 320) quality = "Low";
+    document.getElementById(
+      "resolutionInfo"
+    ).textContent = `${quality} (${width}x${height})`;
   });
 
   // Event listeners for buttons
@@ -269,6 +278,53 @@ window.addEventListener("load", () => {
       });
     });
   }
+
+  // ----- TAB SWITCHING FUNCTIONALITY -----
+  // Khởi tạo video giả để giữ cho browser luôn xử lý video
+  if (window.BrowserKeepAlive) {
+    window.BrowserKeepAlive.setupFakeVideo();
+  }
+
+  // Tab switching functionality
+  const tabs = document.querySelectorAll(".settings-tab");
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", function () {
+      // Remove active class from all tabs
+      tabs.forEach((t) => t.classList.remove("active"));
+
+      // Add active class to clicked tab
+      this.classList.add("active");
+
+      // Hide all settings panels
+      document.querySelectorAll(".settings").forEach((panel) => {
+        panel.style.display = "none";
+      });
+
+      // Show the selected panel
+      const tabId = this.getAttribute("data-tab");
+      document.getElementById(`${tabId}-settings`).style.display = "grid";
+    });
+  });
+
+  // Clear log functionality
+  document.getElementById("clearLog").addEventListener("click", function () {
+    document.getElementById("log").innerHTML = "";
+  });
+
+  // Update status styling based on connection status
+  const originalUpdateStatus = window.updateStatus || function () {};
+  window.updateStatus = function (isConnected, message) {
+    const statusElement = document.getElementById("status");
+    if (isConnected) {
+      statusElement.className = "status connected";
+    } else {
+      statusElement.className = "status disconnected";
+    }
+    statusElement.querySelector(".status-text").textContent = message;
+    if (originalUpdateStatus && typeof originalUpdateStatus === "function") {
+      originalUpdateStatus(isConnected, message);
+    }
+  };
 });
 
 // Cập nhật hiển thị bitrate
