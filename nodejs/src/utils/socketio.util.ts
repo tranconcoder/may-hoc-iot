@@ -79,7 +79,6 @@ export async function handleImageEvent(
 ) {
   const socket = this;
 
-
   socket.broadcast.emit("image", {
     cameraId: data.cameraId,
     imageId: data.imageId,
@@ -134,41 +133,24 @@ export async function handleCarDetectedEvent(this: Socket, data: any) {
     // Parallel fetch camera and image buffer
     const [camera, imageBuffer] = await Promise.all([
       cameraModel.findById(data.camera_id),
-      cameraImageModel.findById(data.image_id)
+      cameraImageModel.findById(data.image_id),
     ]);
 
     if (!camera) throw new Error("Not found camera!");
     if (!imageBuffer) throw new Error("Not found image buffer!");
 
-    // Parallel processing of statistics, violations, and car detection
-    const [
-      statsResult,
-      redLightViolations,
-      laneViolations,
-      carDetectionResult
-    ] = await Promise.all([
-      // Process traffic statistics
-      trafficStatisticsService.saveStatistics({
-        camera_id: data.camera_id,
-        detections: data.detections,
-        created_at: data.created_at,
-      }).catch(error => {
-        console.error("[Traffic Statistics] Error saving statistics:", error);
-        return null;
-      }),
+    const redLightViolations = await violationService.detectRedLightViolation(
+      data,
+      camera
+    );
+    const laneViolations = await violationService.laneEncroachment(
+      data.detections,
+      data.image_dimensions,
+      camera
+    );
 
-      // Detect red light violations
-      violationService.detectRedLightViolation(data, camera),
-
-      // Detect lane encroachment
-      violationService.laneEncroachment(
-        data.detections,
-        data.image_dimensions,
-        camera
-      ),
-
-      // Create car detection record
-      carDetectionModel.create({
+    const carDetectionResult = await carDetectionModel
+      .create({
         camera_id: data.camera_id,
         image_id: data.image_id,
         created_at: data.created_at,
@@ -178,19 +160,19 @@ export async function handleCarDetectedEvent(this: Socket, data: any) {
         vehicle_count: data.vehicle_count,
         tracks: data.tracks,
         new_crossings: data.new_crossings,
-      }).catch(error => {
+      })
+      .catch((error) => {
         console.error("[Car Detection] Error creating record:", error);
         return null;
-      })
-    ]);
+      });
 
     // Process violations if any
     const violations = [
-      ...redLightViolations.map(id => ({
+      ...redLightViolations.map((id) => ({
         id,
         type: TrafficViolation.RED_LIGHT_VIOLATION,
       })),
-      ...laneViolations.map(id => ({
+      ...laneViolations.map((id) => ({
         id,
         type: TrafficViolation.LANE_ENCROACHMENT,
       })),
@@ -206,11 +188,10 @@ export async function handleCarDetectedEvent(this: Socket, data: any) {
       });
     }
 
-    // Log results
-    if (statsResult) console.log(`[Traffic Statistics] Saved statistics for camera ${data.camera_id}`);
-    if (carDetectionResult) console.log("[Car Detection] Record created successfully");
-    if (violations.length > 0) console.log(`[Violations] Detected ${violations.length} violations`);
-
+    if (carDetectionResult)
+      console.log("[Car Detection] Record created successfully");
+    if (violations.length > 0)
+      console.log(`[Violations] Detected ${violations.length} violations`);
   } catch (error: any) {
     console.error("[Car Detection] Error processing event:", error);
   }

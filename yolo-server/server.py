@@ -252,6 +252,18 @@ def process_frames_thread(camera_id):
             for track_id in list(vehicle_tracks.keys()):
                 if not vehicle_tracks[track_id] or current_time - vehicle_tracks[track_id][-1]['time'] > TRAIL_DURATION:
                     del vehicle_tracks[track_id]
+            
+            # Limit to 20 most recent vehicles
+            if len(vehicle_tracks) > 20:
+                # Sort vehicle tracks by the timestamp of their most recent position
+                sorted_tracks = sorted(
+                    vehicle_tracks.items(), 
+                    key=lambda x: x[1][-1]['time'] if x[1] else 0,
+                    reverse=True  # Newest first
+                )
+                
+                # Keep only the 20 most recent vehicles
+                vehicle_tracks = dict(sorted_tracks[:20])
                     
             # Prepare response with detection results
             response = {

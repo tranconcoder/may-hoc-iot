@@ -26,21 +26,20 @@ export default new (class ViolationService {
               violation_type: "$violation_type",
               violation_status: "$violation_status",
               created_at: "$createdAt",
-              updated_at: "$updatedAt"
-            }
-          }
-        }
+              updated_at: "$updatedAt",
+            },
+          },
+        },
       },
       {
         $project: {
           _id: 0,
           license_plate: 1,
-          violations: 1
-        }
-      }
+          violations: 1,
+        },
+      },
     ]);
   }
-
 
   async getImageBuffer(violation_id: string) {
     const violation = await violationModel.findById(violation_id);
@@ -73,32 +72,44 @@ export default new (class ViolationService {
   /*                                   Create                                   */
   /* -------------------------------------------------------------------------- */
   async saveViolation(data: ViolationLicensePlateDetect) {
-    const violationList = Object.entries(data.license_plates).flatMap(([id, license_plate]) => {
-      const vehicleViolation = data.violations.filter((violation) => violation.id === Number(id));
+    const violationList = Object.entries(data.license_plates).flatMap(
+      ([id, license_plate]) => {
+        const vehicleViolation = data.violations.filter(
+          (violation) => violation.id === Number(id)
+        );
 
-      return vehicleViolation.map((violation) => {
-        return {
-          license_plate: license_plate,
-          violation_type: violation.type,
-          violation_status: ViolationStatus.PENDING,
-        };
-      });
-    });
+        return vehicleViolation.map((violation) => {
+          return {
+            license_plate: license_plate,
+            violation_type: violation.type,
+            violation_status: ViolationStatus.PENDING,
+          };
+        });
+      }
+    );
 
-    await Promise.all(violationList.map(async (violation) => {
-      await violationModel.findOneAndUpdate({
-        license_plate: violation.license_plate,
-        camera_id: data.camera_id,
-        violation_type: violation.violation_type,
-        violation_status: ViolationStatus.PENDING,
-        created_at: { $gte: new Date(Date.now() - 1000 * 60) }, // Thời gian lưu không quá 1 phút so với hiện tại mongoose query
-      }, {
-        image_buffer: await cameraImageModel.findById(data.image_id).then(x => x?.image),
-      }, {
-        upsert: true,
-        new: true,
-      });
-    }));
+    await Promise.all(
+      violationList.map(async (violation) => {
+        await violationModel.findOneAndUpdate(
+          {
+            license_plate: violation.license_plate,
+            camera_id: data.camera_id,
+            violation_type: violation.violation_type,
+            violation_status: ViolationStatus.PENDING,
+            created_at: { $gte: new Date(Date.now() - 1000 * 60) }, // Thời gian lưu không quá 1 phút so với hiện tại mongoose query
+          },
+          {
+            image_buffer: await cameraImageModel
+              .findById(data.image_id)
+              .then((x) => x?.image),
+          },
+          {
+            upsert: true,
+            new: true,
+          }
+        );
+      })
+    );
   }
 
   /* -------------------------------------------------------------------------- */
@@ -108,8 +119,8 @@ export default new (class ViolationService {
     let { camera_id, detections, tracks, image_dimensions } = data;
 
     const detectionIds = detections.map((detection) => detection.id);
-    const track_line_y = camera.camera_track_line_y;
-
+    const scaledTrackLineY =
+      camera.camera_track_line_y * (image_dimensions.height / 100);
     tracks = tracks.filter((vehicle) => {
       return detectionIds.includes(vehicle.id);
     });
@@ -124,8 +135,7 @@ export default new (class ViolationService {
                 trafficStatus: await trafficLightService.getTrafficLightByTime(
                   time
                 ),
-                overcomeRedLightLine:
-                  y < track_line_y * (image_dimensions.height / 100), // Vượt qua đèn đỏ
+                overcomeRedLightLine: y < scaledTrackLineY, // Vượt qua đèn đỏ
               };
             })
           )
@@ -137,13 +147,6 @@ export default new (class ViolationService {
             trafficLightStatusList[i],
             trafficLightStatusList[i + 1],
           ];
-          // console.log();
-          // console.log("================ DETECT VIOLATION ==================")
-          // console.log("Vehicle id: ", vehicle.id);
-          // console.log("Traffic light status pair: ", trafficLightStatusPair.map((item) => item.trafficStatus));
-          // console.log("Overcome red light line: ", trafficLightStatusPair.map((item) => item.overcomeRedLightLine));
-          // console.log("================ DETECT VIOLATION ==================")
-          // console.log();
 
           if (
             trafficLightStatusPair[0].trafficStatus === TrafficLightEnum.RED &&
@@ -175,6 +178,7 @@ export default new (class ViolationService {
     const camera_lane_track_point = [...camera.camera_lane_track_point, 100];
 
     const vehicleViolationIds = [];
+    const scaledWidth = imageDimensions.width / 100;
 
     /* ------------------------ Detect lane encroachment ----------------------- */
     for (const detection of detections) {
@@ -183,12 +187,10 @@ export default new (class ViolationService {
 
       /* ------------------------ Get lane start and end index ----------------------- */
       const laneStartIndex = camera_lane_track_point.findIndex(
-        (item) =>
-          item * (imageDimensions.width / 100) > x1 * imageDimensions.width
+        (item) => item * scaledWidth > x1 * imageDimensions.width
       );
       const laneEndIndex = camera_lane_track_point.findIndex(
-        (item) =>
-          item * (imageDimensions.width / 100) > x2 * imageDimensions.width
+        (item) => item * scaledWidth > x2 * imageDimensions.width
       );
 
       const vehiclesInLane = camera_lane_vehicles.slice(

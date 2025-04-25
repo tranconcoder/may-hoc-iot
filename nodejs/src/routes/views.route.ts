@@ -7,9 +7,7 @@ viewsRouter.get("/", viewController.homePage);
 
 viewsRouter.get("/capture", viewController.capturePage);
 
-viewsRouter.get("/simulation", (req, res) => {
-  res.render("pages/traffic-simulation");
-});
+viewsRouter.get("/simulation", viewController.simulationPage);
 
 viewsRouter.get("/preview", viewController.cameraPreviewPage);
 
@@ -19,10 +17,8 @@ viewsRouter.get("/cameras/add", viewController.createCameraPage);
 
 viewsRouter.get("/cameras/:cameraId", viewController.viewCameraDetail);
 
-viewsRouter.get("/violations/review", viewController.violationReviewPage);
+viewsRouter.get("/demo", viewController.demoPage);
 
-viewsRouter.get("/demo", (req, res) => {
-  res.render("pages/demo");
-});
+viewsRouter.get("/violations/review", viewController.violationReviewPage);
 
 export default viewsRouter;

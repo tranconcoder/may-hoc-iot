@@ -95,10 +95,10 @@ function connectToServer() {
     socket.on("image", handleImageData);
 
     // Traffic sign detection handler
-    socket.on("dentinhieu", handleTrafficSignData);
+    socket.on("traffic_light", handleTrafficSignData);
 
     // Vehicle detection handler
-    socket.on("giaothong", handleVehicleData);
+    socket.on("car_detected", handleVehicleData);
 
     // Car image handler
     socket.on("car", handleCarImageData);
@@ -286,6 +286,10 @@ function handleCarImageData(data) {
 // Handle traffic sign detection data
 function handleTrafficSignData(data) {
   latestTrafficSignData = data;
+
+  console.log({
+    latestTrafficSignData,
+  });
 
   try {
     // Update UI with traffic sign data

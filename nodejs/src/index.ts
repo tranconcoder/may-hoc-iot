@@ -35,6 +35,9 @@ import HandleErrorService from "@/services/handleError.service.js";
 // Constants
 const { HOST, PORT } = envConfig;
 
+// Services
+import cronService from "./services/cron.service.js";
+
 // SSL Certificates
 const privateKey = fs.readFileSync(
   path.join(import.meta.dirname, "./assets/certificates/key.pem"),
@@ -152,5 +155,7 @@ httpsWs.listen(3001, HOST, () => {
     `Server (with WebSocket and Socket.IO) is running on https://${HOST}:3001`
   );
 });
+
+cronService.startAllJobs();
 
 export { wss, httpsServer, HOST, PORT, io };

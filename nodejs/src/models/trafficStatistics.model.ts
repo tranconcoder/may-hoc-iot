@@ -3,10 +3,10 @@ import mongoose, { Schema, Document } from "mongoose";
 export const TRAFFIC_STATISTICS_MODEL_NAME = "TrafficStatistics";
 export const TRAFFIC_STATISTICS_COLLECTION_NAME = "traffic_statistics";
 
-export interface ITrafficStatistics extends Document {
-  camera_id: string;
-  date: Date;  // Date only (YYYY-MM-DD)
-  minute_of_day: number;  // Minute of the day (0-1439)
+export interface ITrafficStatistics {
+  camera_id: mongoose.Types.ObjectId;
+  date: Date; // Date only (YYYY-MM-DD)
+  minute_of_day: number; // Minute of the day (0-1439)
   vehicle_count: number;
   vehicle_types: {
     car: number;
@@ -14,51 +14,29 @@ export interface ITrafficStatistics extends Document {
     bus: number;
     motorcycle: number;
   };
-  created_at: Date;
-  updated_at: Date;
 }
 
 const trafficStatisticsSchema = new Schema<ITrafficStatistics>(
   {
     camera_id: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
       required: true,
       index: true,
     },
-    date: {
-      type: Date,
-      required: true,
-      index: true,
-    },
+    date: { type: Date, required: true, index: true },
     minute_of_day: {
       type: Number,
       required: true,
       min: 0,
-      max: 1439,  // 24 hours * 60 minutes - 1
+      max: 1439, // 24 hours * 60 minutes - 1
       index: true,
     },
-    vehicle_count: {
-      type: Number,
-      required: true,
-      default: 0,
-    },
+    vehicle_count: { type: Number, required: true, default: 0 },
     vehicle_types: {
-      car: {
-        type: Number,
-        default: 0,
-      },
-      truck: {
-        type: Number,
-        default: 0,
-      },
-      bus: {
-        type: Number,
-        default: 0,
-      },
-      motorcycle: {
-        type: Number,
-        default: 0,
-      },
+      car: { type: Number, default: 0 },
+      truck: { type: Number, default: 0 },
+      bus: { type: Number, default: 0 },
+      motorcycle: { type: Number, default: 0 },
     },
   },
   {
@@ -77,4 +55,4 @@ trafficStatisticsSchema.index({ camera_id: 1, date: 1, minute_of_day: 1 });
 export default mongoose.model<ITrafficStatistics>(
   TRAFFIC_STATISTICS_MODEL_NAME,
   trafficStatisticsSchema
-); 
+);

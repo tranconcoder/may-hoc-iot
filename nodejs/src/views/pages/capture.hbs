@@ -156,13 +156,103 @@
           <div class="settings-group">
             <span class="settings-title"><i class="fas fa-image"></i>
               Chất lượng Hình ảnh</span>
-            <div>
-              <label for="quality">Chất lượng JPEG:</label>
+
+            <div class="video-quality-settings">
+              <div class="quality-option" data-quality="high">
+                <input
+                  type="radio"
+                  name="quality-preset"
+                  id="quality-high"
+                  class="quality-radio"
+                  value="0.85"
+                />
+                <div class="quality-details">
+                  <div class="quality-name">
+                    <i class="fas fa-chart-line quality-icon"></i>
+                    Chất lượng cao
+                    <span class="quality-badge high">HD+</span>
+                  </div>
+                  <div class="quality-description">
+                    Hình ảnh sắc nét, chi tiết cao, phù hợp với đường truyền tốt
+                  </div>
+                </div>
+              </div>
+
+              <div class="quality-option selected" data-quality="medium">
+                <input
+                  type="radio"
+                  name="quality-preset"
+                  id="quality-medium"
+                  class="quality-radio"
+                  value="0.7"
+                  checked
+                />
+                <div class="quality-details">
+                  <div class="quality-name">
+                    <i class="fas fa-balance-scale quality-icon"></i>
+                    Chất lượng trung bình
+                    <span class="quality-badge medium">Cân bằng</span>
+                  </div>
+                  <div class="quality-description">
+                    Cân bằng giữa chất lượng và hiệu suất, phù hợp hầu hết
+                    trường hợp
+                  </div>
+                </div>
+              </div>
+
+              <div class="quality-option" data-quality="low">
+                <input
+                  type="radio"
+                  name="quality-preset"
+                  id="quality-low"
+                  class="quality-radio"
+                  value="0.5"
+                />
+                <div class="quality-details">
+                  <div class="quality-name">
+                    <i class="fas fa-tachometer-alt quality-icon"></i>
+                    Chất lượng thấp
+                    <span class="quality-badge low">Tiết kiệm</span>
+                  </div>
+                  <div class="quality-description">
+                    Tối ưu cho băng thông thấp, giảm chi tiết để tăng hiệu suất
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bitrate-slider-container">
+              <label>
+                <span>Bitrate:</span>
+                <span class="bitrate-value" id="bitrateValue">1.0 Mbps</span>
+              </label>
+
+              <input
+                type="range"
+                min="0.2"
+                max="2.0"
+                step="0.1"
+                value="1.0"
+                class="bitrate-slider"
+                id="bitrateSlider"
+              />
+
+              <div class="bitrate-presets">
+                <button class="preset-button" data-bitrate="0.3">Tiết kiệm</button>
+                <button class="preset-button active" data-bitrate="1.0">Cân bằng</button>
+                <button class="preset-button" data-bitrate="1.5">Chất lượng</button>
+                <button class="preset-button" data-bitrate="2.0">Tối đa</button>
+              </div>
+            </div>
+
+            <div style="margin-top: 15px;">
+              <label for="quality">Chất lượng JPEG thủ công:</label>
               <select id="quality">
                 <option value="0.7" selected>Trung bình (70%)</option>
                 <option value="0.85">Cao (85%)</option>
                 <option value="1.0">Tối đa (100%)</option>
                 <option value="0.5">Thấp (50%)</option>
+                <option value="0.3">Rất thấp (30%)</option>
               </select>
             </div>
           </div>

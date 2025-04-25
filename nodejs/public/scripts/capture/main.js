@@ -19,6 +19,9 @@ let frameRateSelect,
   fpsLimitContainer;
 let sourceTypeSelect; // Biến cho việc chọn nguồn ghi hình
 let cameraSelect, apiKeyInput, websocketUrlInput, refreshCameraListBtn; // Biến cho các trường nhập kết nối
+// Biến cho tab chất lượng video
+let bitrateSlider, bitrateValue, bitratePresets, qualityOptions;
+let currentBitrate = 1.0; // Mặc định là 1.0 Mbps
 
 // Camera list
 let cameras = [];
@@ -179,7 +182,176 @@ window.addEventListener("load", () => {
 
   // Tạo video chạy ngầm để ngăn chặn browser throttling
   createNoSleepVideo();
+
+  // Khởi tạo các phần tử điều khiển chất lượng video mới
+  bitrateSlider = document.getElementById("bitrateSlider");
+  bitrateValue = document.getElementById("bitrateValue");
+  bitratePresets = document.querySelectorAll(".preset-button");
+  qualityOptions = document.querySelectorAll(".quality-option");
+
+  // Kiểm tra xem các phần tử có tồn tại không trước khi thêm sự kiện
+  if (bitrateSlider) {
+    bitrateSlider.addEventListener("input", updateBitrateDisplay);
+    bitrateSlider.addEventListener("change", applyBitrateSettings);
+    // Khởi tạo giá trị ban đầu
+    updateBitrateDisplay();
+  } else {
+    console.warn("Không tìm thấy phần tử bitrateSlider");
+  }
+
+  // Thiết lập sự kiện cho các preset bitrate
+  if (bitratePresets && bitratePresets.length > 0) {
+    bitratePresets.forEach((preset) => {
+      preset.addEventListener("click", function () {
+        // Xóa trạng thái active của tất cả các preset
+        bitratePresets.forEach((p) => p.classList.remove("active"));
+
+        // Thêm active vào preset hiện tại
+        this.classList.add("active");
+
+        // Cập nhật giá trị bitrate
+        const bitrateValue = parseFloat(this.dataset.bitrate);
+        if (bitrateSlider) {
+          bitrateSlider.value = bitrateValue;
+
+          // Áp dụng cài đặt
+          updateBitrateDisplay();
+          applyBitrateSettings();
+        }
+      });
+    });
+  } else {
+    console.warn("Không tìm thấy các phần tử preset-button");
+  }
+
+  // Thiết lập sự kiện cho các tùy chọn chất lượng
+  if (qualityOptions && qualityOptions.length > 0) {
+    qualityOptions.forEach((option) => {
+      option.addEventListener("click", function () {
+        // Xóa trạng thái selected của tất cả các tùy chọn
+        qualityOptions.forEach((o) => o.classList.remove("selected"));
+
+        // Thêm selected vào tùy chọn hiện tại
+        this.classList.add("selected");
+
+        // Chọn radio button tương ứng
+        const radio = this.querySelector('input[type="radio"]');
+        if (radio) {
+          radio.checked = true;
+
+          // Cập nhật dropdown chất lượng nếu tồn tại
+          if (qualitySelect) {
+            qualitySelect.value = radio.value;
+
+            // Áp dụng cài đặt chất lượng
+            updateQualitySettings();
+          }
+        }
+      });
+    });
+  } else {
+    console.warn("Không tìm thấy các phần tử quality-option");
+  }
+
+  // Thêm sự kiện cho các radio button chất lượng
+  const qualityRadios = document.querySelectorAll(
+    'input[name="quality-preset"]'
+  );
+  if (qualityRadios && qualityRadios.length > 0) {
+    qualityRadios.forEach((radio) => {
+      radio.addEventListener("change", function () {
+        const option = this.closest(".quality-option");
+        if (option) {
+          qualityOptions.forEach((o) => o.classList.remove("selected"));
+          option.classList.add("selected");
+          updateQualitySettings();
+        }
+      });
+    });
+  }
 });
+
+// Cập nhật hiển thị bitrate
+function updateBitrateDisplay() {
+  if (!bitrateSlider || !bitrateValue) return;
+
+  const value = parseFloat(bitrateSlider.value);
+  bitrateValue.textContent = value.toFixed(1) + " Mbps";
+  currentBitrate = value;
+
+  // Log để debug
+  console.log("Bitrate updated:", currentBitrate);
+}
+
+// Áp dụng cài đặt bitrate
+function applyBitrateSettings() {
+  if (!bitrateSlider || !qualitySelect) return;
+
+  addLog(`Đã cập nhật bitrate: ${currentBitrate} Mbps`);
+
+  // Tính toán chất lượng JPEG tương ứng với bitrate
+  // Bitrate càng cao thì chất lượng JPEG càng cao
+  const quality = 0.3 + (currentBitrate / 2.0) * 0.7; // Giữa 0.3 và 1.0
+
+  // Cập nhật dropdown chất lượng
+  qualitySelect.value = quality.toFixed(2);
+
+  // Nếu đang ghi hình, áp dụng ngay lập tức
+  if (isRecording && captureWorker) {
+    try {
+      captureWorker.postMessage({
+        command: "updateQuality",
+        quality: quality,
+      });
+    } catch (e) {
+      console.error("Lỗi khi cập nhật chất lượng:", e);
+    }
+  }
+}
+
+// Cập nhật cài đặt chất lượng từ tùy chọn radio
+function updateQualitySettings() {
+  if (
+    !qualityOptions ||
+    qualityOptions.length === 0 ||
+    !bitrateSlider ||
+    !bitratePresets
+  )
+    return;
+
+  const selectedOption = document.querySelector(".quality-option.selected");
+  if (selectedOption) {
+    const qualityLevel = selectedOption.dataset.quality;
+    let recommendedBitrate = 1.0; // Mặc định
+
+    switch (qualityLevel) {
+      case "high":
+        recommendedBitrate = 1.5;
+        break;
+      case "medium":
+        recommendedBitrate = 1.0;
+        break;
+      case "low":
+        recommendedBitrate = 0.5;
+        break;
+    }
+
+    // Cập nhật slider bitrate
+    bitrateSlider.value = recommendedBitrate;
+    updateBitrateDisplay();
+
+    // Cập nhật trạng thái các preset bitrate
+    bitratePresets.forEach((preset) => {
+      if (parseFloat(preset.dataset.bitrate) === recommendedBitrate) {
+        preset.classList.add("active");
+      } else {
+        preset.classList.remove("active");
+      }
+    });
+
+    addLog(`Đã áp dụng cài đặt chất lượng: ${qualityLevel}`);
+  }
+}
 
 // Hàm lấy danh sách camera từ API
 async function loadCameraList() {
