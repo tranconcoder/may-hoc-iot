@@ -69,14 +69,88 @@
     const statusFilter = document.getElementById('cameraStatusFilter');
     const locationFilter = document.getElementById('cameraLocationFilter');
     
+    // WebSocket connection
+    let socket;
+    let cameras = [];
+    
+    // Initialize WebSocket connection
+    function initializeWebSocket() {
+      // Check if socket.io client is available
+      if (typeof io === 'undefined') {
+        console.error('Socket.IO client not loaded');
+        return;
+      }
+      
+      // Connect to the server
+      socket = io();
+      
+      // Connection event
+      socket.on('connect', () => {
+        console.log('WebSocket connected');
+        
+        // Join all camera rooms on connection
+        socket.emit('join_all_camera');
+        console.log('Joined all camera rooms');
+      });
+      
+      // Disconnection event
+      socket.on('disconnect', () => {
+        console.log('WebSocket disconnected');
+      });
+      
+      // Listen for image events from any camera
+      socket.on('image', (data) => {
+        if (data && data.cameraId && data.buffer) {
+          updateCameraImage(data.cameraId, data.buffer);
+        }
+      });
+    }
+    
+    // Update camera thumbnail with received image
+    function updateCameraImage(cameraId, imageBuffer) {
+      const cameraCard = document.querySelector(`.camera-card[data-camera-id="${cameraId}"]`);
+      if (cameraCard) {
+        const imgElement = cameraCard.querySelector('.camera-preview img');
+        if (imgElement) {
+          // Convert buffer to base64 if needed
+          const imageData = typeof imageBuffer === 'string' 
+            ? imageBuffer 
+            : arrayBufferToBase64(imageBuffer);
+          
+          // Set the image source
+          imgElement.src = `data:image/jpeg;base64,${imageData}`;
+          
+          // Update camera status to active
+          const statusElement = cameraCard.querySelector('.camera-status');
+          if (statusElement) {
+            statusElement.classList.remove('inactive');
+            statusElement.classList.add('active');
+            statusElement.innerHTML = '<i class="fas fa-circle"></i><span>Đang hoạt động</span>';
+          }
+        }
+      }
+    }
+    
+    // Helper function to convert ArrayBuffer to base64
+    function arrayBufferToBase64(buffer) {
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return window.btoa(binary);
+    }
+    
     // Fetch and display cameras
     function fetchCameras() {
       fetch('/api/camera/all')
         .then(response => response.json())
         .then(data => {
           if (data.statusCode === 200 && Array.isArray(data.metadata)) {
-            renderCameras(data.metadata);
-            updateLocationFilter(data.metadata);
+            cameras = data.metadata; // Store cameras globally
+            renderCameras(cameras);
+            updateLocationFilter(cameras);
           } else {
             showNoCamerasMessage();
           }
@@ -171,7 +245,7 @@
       document.querySelectorAll('.btn-view').forEach(button => {
         button.addEventListener('click', function() {
           const cameraId = this.getAttribute('data-id');
-          window.location.href = `/views/dashboard/cameras/${cameraId}`;
+          window.location.href = `/views/cameras/${cameraId}`;
         });
       });
       
@@ -251,52 +325,48 @@
         }
         
         // Filter by location
-        if (locationValue !== 'all') {
-          const locationMatch = cameraLocation.includes(locationValue.toLowerCase());
-          if (!locationMatch) {
-            showCamera = false;
-          }
+        if (locationValue !== 'all' && !cameraLocation.includes(locationValue)) {
+          showCamera = false;
         }
         
-        // Show or hide camera
-        camera.style.display = showCamera ? '' : 'none';
-        if (showCamera) visibleCount++;
+        // Show/hide based on filters
+        camera.style.display = showCamera ? 'block' : 'none';
+        
+        if (showCamera) {
+          visibleCount++;
+        }
       });
       
-      // Show "no cameras" message if all are filtered out
-      if (visibleCount === 0 && cameras.length > 0) {
+      // Show no cameras message if no results
+      if (visibleCount === 0) {
         noCamerasMessage.style.display = 'flex';
-        noCamerasMessage.querySelector('p').textContent = 'Không tìm thấy camera nào phù hợp với bộ lọc';
+        noCamerasMessage.querySelector('p').textContent = 'Không tìm thấy camera phù hợp với bộ lọc';
+        noCamerasMessage.querySelector('button').style.display = 'none';
       } else {
-        noCamerasMessage.style.display = cameras.length === 0 ? 'flex' : 'none';
-        noCamerasMessage.querySelector('p').textContent = 'Không có camera nào được tìm thấy';
+        noCamerasMessage.style.display = 'none';
       }
     }
     
-    // Event listeners
-    if (btnAddCamera) {
-      btnAddCamera.addEventListener('click', function() {
-        window.location.href = '/views/cameras/add';
-      });
-    }
-    
-    if (btnAddFirstCamera) {
-      btnAddFirstCamera.addEventListener('click', function() {
-        window.location.href = '/views/cameras/add';
-      });
-    }
-    
-    if (btnRefreshCameras) {
-      btnRefreshCameras.addEventListener('click', function() {
-        fetchCameras();
-      });
-    }
-    
-    if (searchInput) searchInput.addEventListener('input', applyFilters);
-    if (statusFilter) statusFilter.addEventListener('change', applyFilters);
-    if (locationFilter) locationFilter.addEventListener('change', applyFilters);
-    
-    // Initial fetch
+    // Initialize WebSocket and fetch cameras
+    initializeWebSocket();
     fetchCameras();
+    
+    // Event Listeners
+    btnAddCamera.addEventListener('click', function() {
+      window.location.href = '/views/cameras/add';
+    });
+    
+    btnRefreshCameras.addEventListener('click', function() {
+      fetchCameras();
+    });
+    
+    btnAddFirstCamera.addEventListener('click', function() {
+      window.location.href = '/views/cameras/add';
+    });
+    
+    // Filter change events
+    searchInput.addEventListener('input', applyFilters);
+    statusFilter.addEventListener('change', applyFilters);
+    locationFilter.addEventListener('change', applyFilters);
   });
 </script>
