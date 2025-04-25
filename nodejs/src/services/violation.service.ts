@@ -5,7 +5,6 @@ import { Detect } from "./violation.service.d.js";
 import { CarEnum } from "@/enums/car.enum.js";
 import { ViolationLicensePlateDetect } from "@/utils/socketio.util.d.js";
 import { ViolationStatus } from "@/enums/trafficViolation.enum.js";
-import imagesModel from "@/models/images.model.js";
 import violationModel from "@/models/violation.model.js";
 import cameraImageModel from "@/models/cameraImage.model.js";
 

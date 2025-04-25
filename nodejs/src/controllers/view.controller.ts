@@ -9,6 +9,14 @@ export default new (class ViewController {
     });
   };
 
+  /* ----------------------------- Violation Review Page ----------------------------- */
+  violationReviewPage: RequestHandler = (req, res, next) => {
+    res.render("pages/violation-review", {
+      layout: "traffic-dashboard",
+      pageTitle: "Duyệt Vi Phạm Giao Thông",
+    });
+  };
+
   /* ----------------------------- Capture Page ----------------------------- */
   capturePage: RequestHandler = (req, res, next) => {
     res.render("pages/capture");

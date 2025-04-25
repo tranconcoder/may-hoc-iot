@@ -1,0 +1,423 @@
+{{!< ../layouts/traffic-dashboard}}
+
+<style>
+  /* Custom CSS for violation review page */
+  :root {
+    --primary-color: #4a6cf7;
+    --secondary-color: #6c757d;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --background-color: #f8f9fa;
+    --card-bg: #ffffff;
+    --text-color: #212529;
+    --border-color: #e9ecef;
+    --border-radius: 8px;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    --transition: all 0.3s ease;
+  }
+
+  .page-container {
+    padding: 2rem;
+    background-color: var(--background-color);
+  }
+
+  .page-title {
+    margin-bottom: 1.5rem;
+    color: var(--text-color);
+    font-size: 1.75rem;
+    font-weight: 600;
+  }
+
+  .card {
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: var(--text-color);
+  }
+
+  /* Table styles */
+  .table-wrapper {
+    overflow-x: auto;
+    border-radius: var(--border-radius);
+    margin-bottom: 1.5rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th, td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  th {
+    background-color: rgba(0, 0, 0, 0.03);
+    font-weight: 600;
+  }
+
+  tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+
+  /* Button styles */
+  .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    border: none;
+    transition: var(--transition);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .btn-info {
+    background-color: var(--primary-color);
+    color: white;
+  }
+
+  .btn-info:hover {
+    background-color: #3a5ad9;
+  }
+
+  .btn-success {
+    background-color: var(--success-color);
+    color: white;
+  }
+
+  .btn-success:hover {
+    background-color: #218838;
+  }
+
+  .btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+  }
+
+  .btn-danger:hover {
+    background-color: #c82333;
+  }
+
+  .btn-secondary {
+    background-color: var(--secondary-color);
+    color: white;
+  }
+
+  .btn-secondary:hover {
+    background-color: #5a6268;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  button:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  /* Badge styles */
+  .badge {
+    display: inline-block;
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+    color: white;
+  }
+
+  .bg-warning {
+    background-color: var(--warning-color);
+    color: #212529;
+  }
+
+  .bg-success {
+    background-color: var(--success-color);
+  }
+
+  .bg-danger {
+    background-color: var(--danger-color);
+  }
+
+  /* License plate section styles */
+  .license-plate-section {
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+  }
+
+  .license-header {
+    padding: 1rem 1.5rem;
+    background-color: rgba(0, 0, 0, 0.02);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .license-plate-number {
+    font-weight: 600;
+    font-size: 1.2rem;
+    color: var(--primary-color);
+  }
+
+  .violation-count {
+    display: inline-block;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    margin-left: 1rem;
+  }
+
+  .license-details {
+    padding: 1.5rem;
+  }
+
+  /* Text styles */
+  .center-text {
+    text-align: center;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--secondary-color);
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .page-container {
+      padding: 1rem;
+    }
+    
+    th, td {
+      padding: 0.75rem 0.5rem;
+    }
+    
+    .btn-group {
+      flex-direction: column;
+    }
+  }
+</style>
+
+<div class="page-container">
+  <h1 class="page-title">Traffic Violation Review</h1>
+
+  <div class="card">
+    <h2 class="card-title">License Plate Violations</h2>
+    
+    <div id="violationContainer">
+      <!-- License plate sections will be added here -->
+      <div class="empty-state" id="emptyState">Loading violations...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Fetch all violations
+    fetchViolations();
+
+    function fetchViolations() {
+      fetch('/api/violation/all')
+        .then(response => response.json())
+        .then(data => {
+          if (data.statusCode === 200) {
+            populateViolations(data.metadata);
+          } else {
+            showToast('error', 'Failed to fetch violations');
+            document.getElementById('emptyState').textContent = 'Failed to load violations.';
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching violations:', error);
+          showToast('error', 'Failed to fetch violations');
+          document.getElementById('emptyState').textContent = 'Failed to load violations.';
+        });
+    }
+
+    function populateViolations(data) {
+      const container = document.getElementById('violationContainer');
+      container.innerHTML = '';
+
+      if (data.length === 0) {
+        container.innerHTML = '<div class="empty-state">No violations found</div>';
+        return;
+      }
+
+      data.forEach(item => {
+        const section = createLicensePlateSection(item);
+        container.appendChild(section);
+      });
+    }
+
+    function createLicensePlateSection(item) {
+      const section = document.createElement('div');
+      section.className = 'license-plate-section';
+
+      // Create header
+      const header = document.createElement('div');
+      header.className = 'license-header';
+      
+      const plateInfo = document.createElement('div');
+      plateInfo.className = 'license-plate-number';
+      plateInfo.textContent = `License Plate: ${item.license_plate}`;
+      
+      const violationCount = document.createElement('span');
+      violationCount.className = 'violation-count';
+      violationCount.textContent = `${item.violations.length} violation(s)`;
+      
+      plateInfo.appendChild(violationCount);
+      header.appendChild(plateInfo);
+      
+      // Create details section
+      const details = document.createElement('div');
+      details.className = 'license-details';
+      details.innerHTML = createViolationTable(item.violations);
+      
+      section.appendChild(header);
+      section.appendChild(details);
+      
+      return section;
+    }
+
+    function createViolationTable(violations) {
+      if (violations.length === 0) {
+        return '<div class="empty-state">No violation details available</div>';
+      }
+      
+      let tableHTML = `
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Violation Type</th>
+                <th>Camera ID</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Image</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      violations.forEach(violation => {
+        const createdDate = violation.created_at ? new Date(violation.created_at).toLocaleString() : 'N/A';
+        const statusBadgeClass = getStatusBadgeClass(violation.violation_status);
+        const isDisabled = violation.violation_status !== 'PENDING' ? 'disabled' : '';
+        
+        tableHTML += `
+          <tr>
+            <td>${violation.violation_type}</td>
+            <td>${violation.camera_id}</td>
+            <td><span class="badge ${statusBadgeClass}">${violation.violation_status}</span></td>
+            <td>${createdDate}</td>
+            <td>
+              <a href="/api/violation/image/${violation._id}" target="_blank" class="btn btn-sm btn-secondary">
+                View Image
+              </a>
+            </td>
+            <td>
+              <div class="btn-group">
+                <button class="btn btn-sm btn-success approve-btn" data-id="${violation._id}" ${isDisabled}>
+                  Approve
+                </button>
+                <button class="btn btn-sm btn-danger reject-btn" data-id="${violation._id}" ${isDisabled}>
+                  Reject
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+      
+      tableHTML += `
+            </tbody>
+          </table>
+        </div>
+      `;
+      
+      return tableHTML;
+    }
+
+    // Event delegation for approve/reject buttons
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('approve-btn')) {
+        updateViolationStatus(e.target.dataset.id, 'APPROVED');
+      } 
+      else if (e.target.classList.contains('reject-btn')) {
+        updateViolationStatus(e.target.dataset.id, 'REJECTED');
+      }
+    });
+
+    function updateViolationStatus(violationId, status) {
+      fetch(`/api/violation/status/${violationId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.statusCode === 200) {
+          showToast('success', `Violation ${status.toLowerCase()} successfully`);
+          // Refresh the data
+          fetchViolations();
+        } else {
+          showToast('error', `Failed to ${status.toLowerCase()} violation`);
+        }
+      })
+      .catch(error => {
+        console.error(`Error ${status.toLowerCase()}ing violation:`, error);
+        showToast('error', `Failed to ${status.toLowerCase()} violation`);
+      });
+    }
+
+    function getStatusBadgeClass(status) {
+      switch (status) {
+        case 'PENDING':
+          return 'bg-warning';
+        case 'APPROVED':
+          return 'bg-success';
+        case 'REJECTED':
+          return 'bg-danger';
+        default:
+          return 'bg-secondary';
+      }
+    }
+    
+    function showToast(type, message) {
+      // Use toastr if it's available
+      if (typeof toastr !== 'undefined') {
+        toastr[type](message);
+      } else {
+        // Fallback to alert if toastr is not available
+        alert(message);
+      }
+    }
+  });
+</script> 

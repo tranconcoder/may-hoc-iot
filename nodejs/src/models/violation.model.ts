@@ -11,7 +11,7 @@ export interface ViolationLicensePlate {
 }
 
 export const VIOLATION_MODEL_NAME = 'ViolationLicensePlate';
-export const VIOLATION_COLLECTION_NAME = 'violationLicensePlate';
+export const VIOLATION_COLLECTION_NAME = 'violation_license_plate';
 
 export const violationLicensePlateSchema = new Schema({
     camera_id: {

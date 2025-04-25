@@ -19,6 +19,8 @@ viewsRouter.get("/cameras/add", viewController.createCameraPage);
 
 viewsRouter.get("/cameras/:cameraId", viewController.viewCameraDetail);
 
+viewsRouter.get("/violations/review", viewController.violationReviewPage);
+
 viewsRouter.get("/demo", (req, res) => {
   res.render("pages/demo");
 });

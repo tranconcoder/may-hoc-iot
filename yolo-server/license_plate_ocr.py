@@ -9,6 +9,7 @@ import socketio
 import time
 import threading
 import queue
+import re
 
 # ---------------------------------------------------------------------------- #
 #                               GLOBAL CONSTANTS                               #
@@ -511,12 +512,19 @@ def process_license_plates_thread():
             # Calculate inference time
             inference_time = (time.time() - start_time) * 1000  # ms
             
-            # # Prepare response with recognition results and include the original data
+            # Prepare response with recognition results and include the original data
+            plates = dict()
+            for key, value in license_plates.items():
+                # Kiểm tra định dạng biển số việt nam
+                vietnam_plate_regex = r'^[0-9]{2}[A-Z]{1,2}[0-9]{1,5}$'
+                if re.match(vietnam_plate_regex, value):
+                    plates[key] = value
+
             response = {
                 'camera_id': camera_id,
                 'image_id': image_id,
                 'inference_time': inference_time,
-                'license_plates': license_plates,
+                'license_plates': plates,
                 'violations': violations,
             }
 
