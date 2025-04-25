@@ -1,0 +1,10 @@
+export enum TrafficViolation {
+  RED_LIGHT_VIOLATION = "RED_LIGHT_VIOLATION",
+  LANE_ENCROACHMENT = "LANE_ENCROACHMENT",
+}
+
+export enum ViolationStatus {
+  PENDING = "PENDING",
+  CONFIRMED = "CONFIRMED",
+  REJECTED = "REJECTED",
+}

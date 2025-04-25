@@ -1,6 +1,6 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { Server as HTTPsServer } from "https";
-import handleEvent from "../utils/socketio.utils.js";
+import handleEvent from "../utils/socketio.util.js";
 
 export function runSocketIOService(server: HTTPsServer): SocketIOServer {
   const io = new SocketIOServer(server); // Store the instance
