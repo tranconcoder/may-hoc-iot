@@ -1,83 +1,36 @@
 import { RequestHandler } from "express";
 import trafficStatisticsService from "@/services/trafficStatistics.service.js";
+import cameraService from "@/services/camera.service.js";
+import cameraImageModel from "@/models/cameraImage.model.js";
 
 export default new (class ViewController {
-  /* ----------------------------- Home Page ----------------------------- */
-  homePage: RequestHandler = async (req, res, next) => {
+  /* ----------------------------- Statistics Home Page ----------------------------- */
+  statisticsHomePage: RequestHandler = async (req, res, next) => {
     try {
-      // Get current week statistics (last 7 days)
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - 7);
-
-      // Get previous week statistics for comparison
-      const prevEndDate = new Date(startDate);
-      prevEndDate.setDate(prevEndDate.getDate() - 1);
-      const prevStartDate = new Date(prevEndDate);
-      prevStartDate.setDate(prevStartDate.getDate() - 7);
-
-      const currentStats = await trafficStatisticsService.getTrafficStatistics(
-        startDate.toISOString().split('T')[0],
-        endDate.toISOString().split('T')[0]
-      );
-
-      const prevStats = await trafficStatisticsService.getTrafficStatistics(
-        prevStartDate.toISOString().split('T')[0],
-        prevEndDate.toISOString().split('T')[0]
-      );
-
-      // Calculate total vehicles for current week
-      const totalVehiclesCount = currentStats.reduce((sum: number, day: any) => {
-        return sum + day.totalVehicles;
-      }, 0);
-
-      // Calculate total vehicles for previous week
-      const prevTotalVehicles = prevStats.reduce((sum: number, day: any) => {
-        return sum + day.totalVehicles;
-      }, 0);
-
-      // Calculate percent change
-      let percentChange = 0;
-      if (prevTotalVehicles > 0) {
-        percentChange = Math.round(((totalVehiclesCount - prevTotalVehicles) / prevTotalVehicles) * 100);
-      }
-
-      res.render("pages/home-page", {
+      // Render the statistics dashboard page
+      res.render("pages/statistics-home", {
         layout: "traffic-dashboard",
-        isHome: true,
-        totalVehiclesCount,
-        percentChange,
-        data: {
-          startDate: startDate.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
-          statistics: currentStats
-        }
+        pageTitle: "Thống Kê Giao Thông"
       });
-    } catch (error: any) {
-      console.error("Error fetching statistics for home page:", error);
-      res.render("pages/home-page", {
+    } catch (error) {
+      console.error("Error rendering statistics home page:", error);
+      res.render("pages/statistics-home", {
         layout: "traffic-dashboard",
-        isHome: true,
-        error: error.message || "Không thể tải dữ liệu thống kê"
+        pageTitle: "Thống Kê Giao Thông",
+        error: "Không thể tải dữ liệu thống kê",
       });
     }
   };
-
-
 
   /* ----------------------------- Capture Page ----------------------------- */
   capturePage: RequestHandler = (req, res, next) => {
     res.render("pages/capture");
   };
 
-
-
   /* ----------------------------- Simulation Page ----------------------------- */
   simulationPage: RequestHandler = (req, res, next) => {
     res.render("pages/simulation");
   };
-
-
 
   /* ----------------------------- Create Camera Page ----------------------------- */
   createCameraPage: RequestHandler = (req, res, next) => {
@@ -86,8 +39,6 @@ export default new (class ViewController {
       pageTitle: "Thêm Camera Mới",
     });
   };
-
-
 
   /* ----------------------------- Camera Management Page ----------------------------- */
   cameraManagementPage: RequestHandler = (req, res, next) => {
@@ -100,8 +51,6 @@ export default new (class ViewController {
     });
   };
 
-
-
   /* ----------------------------- View Camera Detail Page ----------------------------- */
   viewCameraDetail: RequestHandler = (req, res, next) => {
     const { cameraId } = req.params;
@@ -112,8 +61,6 @@ export default new (class ViewController {
     });
   };
 
-
-
   /* ----------------------------- Camera Preview Page ----------------------------- */
   cameraPreviewPage: RequestHandler = (req, res, next) => {
     res.render("pages/camera-preview", {
@@ -123,14 +70,10 @@ export default new (class ViewController {
     });
   };
 
-
-
   /* ----------------------------- Demo Page ----------------------------- */
   demoPage: RequestHandler = (req, res, next) => {
     res.render("pages/demo");
   };
-
-
 
   /* ----------------------------- Violation Review Page ----------------------------- */
   violationReviewPage: RequestHandler = (req, res, next) => {

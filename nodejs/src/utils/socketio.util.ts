@@ -8,6 +8,7 @@ import cameraImageModel from "@/models/cameraImage.model.js";
 import { TrafficViolation } from "@/enums/trafficViolation.enum.js";
 import { ViolationLicensePlateDetect } from "./socketio.util.d.js";
 import imagesModel from "@/models/images.model.js";
+import licensePlateDetectedModel from "@/models/licensePlateDetected.model.js";
 
 /* -------------------------------------------------------------------------- */
 /*                            Use strategy pattern                            */
@@ -208,4 +209,31 @@ export async function handleViolationLicensePlateEvent(
 
   /* -------------------------- Handle save violation ------------------------- */
   violationService.saveViolation(data);
+
+  /* -------------------------- Handle save license plate ----------------------- */
+  const imageBuffer = await cameraImageModel.findById(data.image_id);
+  console.log({ imageBuffer, data });
+
+  if (!imageBuffer) {
+    console.error("Image buffer not found for the given image ID");
+    return;
+  }
+
+  await Promise.all(
+    Object.entries(data.license_plates).map(async ([_, license_plate]) => {
+      await licensePlateDetectedModel.findOneAndUpdate(
+        {
+          camera_id: data.camera_id,
+          license_plate: license_plate,
+        },
+        {
+          image_buffer: imageBuffer?.image,
+        },
+        {
+          upsert: true,
+          new: true,
+        }
+      );
+    })
+  );
 }

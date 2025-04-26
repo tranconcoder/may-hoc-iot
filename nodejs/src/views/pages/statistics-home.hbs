@@ -1,0 +1,178 @@
+{{#if error}}
+<div class="error-container">
+  <div class="alert alert-danger">
+    <i class="fas fa-exclamation-circle"></i> {{error}}
+  </div>
+</div>
+{{else}}
+<!-- CSS -->
+<link rel="stylesheet" href="/css/statistics-home.css">
+
+<div class="statistics-dashboard">
+  <!-- Page header with time period selection -->
+  <div class="dashboard-header">
+    <div class="header-title">
+      <h1><i class="fas fa-chart-line"></i> Thống Kê Giao Thông</h1>
+      <p class="last-updated">Cập nhật lần cuối: <span id="last-updated-time">-</span></p>
+    </div>
+    <div class="time-period-selector">
+      <div class="form-group">
+        <label for="time-period">Khoảng thời gian:</label>
+        <select id="time-period" class="form-control">
+          <option value="today">Hôm nay</option>
+          <option value="last-hour">Giờ gần đây</option>
+          <option value="last-30-minutes">30 phút gần đây</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary statistics cards -->
+  <div class="stats-cards">
+    <div class="stats-card" id="active-cameras">
+      <div class="stats-card-icon camera-icon">
+        <i class="fas fa-video"></i>
+      </div>
+      <div class="stats-card-content">
+        <div class="stats-card-title">Camera Hoạt Động</div>
+        <div class="stats-card-value"><span id="active-cameras-value">0</span>/<span id="total-cameras-value">0</span></div>
+      </div>
+    </div>
+
+    <div class="stats-card" id="today-vehicles">
+      <div class="stats-card-icon vehicle-icon">
+        <i class="fas fa-car"></i>
+      </div>
+      <div class="stats-card-content">
+        <div class="stats-card-title">Phương Tiện Hôm Nay</div>
+        <div class="stats-card-value"><span id="today-vehicles-value">0</span></div>
+      </div>
+    </div>
+
+    <div class="stats-card" id="alerts">
+      <div class="stats-card-icon alert-icon">
+        <i class="fas fa-exclamation-triangle"></i>
+      </div>
+      <div class="stats-card-content">
+        <div class="stats-card-title">Cảnh Báo Kẹt Xe</div>
+        <div class="stats-card-value"><span id="alerts-value">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content area -->
+  <div class="dashboard-content">
+    <!-- Traffic charts -->
+    <div class="dashboard-row">
+      <div class="dashboard-panel">
+        <div class="panel-header">
+          <h2>Biểu Đồ Phương Tiện</h2>
+          <div class="panel-controls">
+            <button id="btn-hourly" class="btn btn-sm btn-primary">Theo giờ</button>
+            <button id="btn-minute" class="btn btn-sm btn-outline-secondary">Theo phút</button>
+            <button id="btn-last-30" class="btn btn-sm btn-outline-secondary">30 phút gần đây</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="chart-container">
+            <canvas id="traffic-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-row">
+      <!-- Vehicle types breakdown -->
+      <div class="dashboard-panel vehicle-types-panel">
+        <div class="panel-header">
+          <h2>Phân Loại Phương Tiện</h2>
+        </div>
+        <div class="panel-body">
+          <div id="vehicle-types-container">
+            <div class="vehicle-type">
+              <div class="vehicle-icon car">
+                <i class="fas fa-car"></i>
+              </div>
+              <div class="vehicle-count">
+                <div class="vehicle-label">Xe Ô Tô</div>
+                <div class="vehicle-value" id="car-count">0</div>
+              </div>
+            </div>
+            <div class="vehicle-type">
+              <div class="vehicle-icon truck">
+                <i class="fas fa-truck"></i>
+              </div>
+              <div class="vehicle-count">
+                <div class="vehicle-label">Xe Tải</div>
+                <div class="vehicle-value" id="truck-count">0</div>
+              </div>
+            </div>
+            <div class="vehicle-type">
+              <div class="vehicle-icon bus">
+                <i class="fas fa-bus"></i>
+              </div>
+              <div class="vehicle-count">
+                <div class="vehicle-label">Xe Buýt</div>
+                <div class="vehicle-value" id="bus-count">0</div>
+              </div>
+            </div>
+            <div class="vehicle-type">
+              <div class="vehicle-icon motorcycle">
+                <i class="fas fa-motorcycle"></i>
+              </div>
+              <div class="vehicle-count">
+                <div class="vehicle-label">Xe Máy</div>
+                <div class="vehicle-value" id="motorcycle-count">0</div>
+              </div>
+            </div>
+            <div class="vehicle-type">
+              <div class="vehicle-icon bicycle">
+                <i class="fas fa-bicycle"></i>
+              </div>
+              <div class="vehicle-count">
+                <div class="vehicle-label">Xe Đạp</div>
+                <div class="vehicle-value" id="bicycle-count">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Traffic alerts -->
+      <div class="dashboard-panel alerts-panel">
+        <div class="panel-header">
+          <h2>Cảnh Báo Kẹt Xe</h2>
+        </div>
+        <div class="panel-body">
+          <div id="alerts-container">
+            <!-- Alerts will be added dynamically here -->
+            <div class="no-alerts-message">
+              <i class="fas fa-check-circle"></i> 
+              <span>Không có cảnh báo kẹt xe</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Camera Map -->
+    <div class="dashboard-row">
+      <div class="dashboard-panel map-panel">
+        <div class="panel-header">
+          <h2>Bản Đồ Camera</h2>
+        </div>
+        <div class="panel-body">
+          <div id="map-container">
+            <!-- The map will be rendered here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap" async defer></script>
+<script src="/scripts/statistics-home.js"></script>
+{{/if}}

@@ -238,7 +238,7 @@ def load_models():
     
     return yolo_LP_detect, yolo_license_plate
 
-def recognize_license_plate(image_path=None, image_array=None, detections=None, violations=None):
+def recognize_license_plate(image_path=None, image_array=None, detections=None):
     """
     Recognize license plates from either an image path or image array
     Args:
@@ -282,8 +282,11 @@ def recognize_license_plate(image_path=None, image_array=None, detections=None, 
     list_read_plates = dict()
     
     # Process each detected license plate
-    violation_ids = [violation.get("id") for violation in violations]
-    valid_areas = [detection for detection in detections if detection.get("id") in violation_ids]
+    detection_ids = [detection.get("id") for detection in detections]
+    valid_areas = [detection for detection in detections if detection.get("id") in detection_ids]
+
+    crop_images = dict()
+
 
     for plate in list_plates:
         # Only process if confidence is above threshold
@@ -329,9 +332,6 @@ def recognize_license_plate(image_path=None, image_array=None, detections=None, 
         # Crop the license plate
         crop_img = img[y:y+h, x:x+w]
         
-        # Draw rectangle around the license plate on the visualization image
-        cv2.rectangle(vis_img, (int(plate[0]), int(plate[1])), (int(plate[2]), int(plate[3])), color=(0, 0, 225), thickness=2)
-        
         # Save the cropped image (for debugging) - only if enabled
         if SAVE_CROPS:
             crop_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "crop.jpg")
@@ -342,8 +342,6 @@ def recognize_license_plate(image_path=None, image_array=None, detections=None, 
         lp = read_plate(yolo_license_plate, crop_img)
         if lp != "unknown":
             list_read_plates[vehicle_id] = lp
-            # Add confidence and position information to the plate
-            cv2.putText(vis_img, lp, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
             continue
         
         # If not successful, try deskew with fewer combinations for better speed
@@ -351,14 +349,12 @@ def recognize_license_plate(image_path=None, image_array=None, detections=None, 
             lp = read_plate(yolo_license_plate, deskew(crop_img, cc, 0))
             if lp != "unknown":
                 list_read_plates[vehicle_id] = lp
-                # Add the recognized text to the visualization
-                cv2.putText(vis_img, lp, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
                 flag = 1
                 break
             if flag == 1:
                 break
     
-    return list_read_plates, img
+    return list_read_plates
 
 
 def detect_license_plate_from_car_event(vehicle_data):
@@ -387,7 +383,7 @@ def detect_license_plate_from_car_event(vehicle_data):
                 return vehicle_data
             
             # Detect license plates
-            license_plates, _ = recognize_license_plate(image_array=frame)
+            license_plates = recognize_license_plate(image_array=frame)
             
             # Add license plate information to vehicle data
             if license_plates:
@@ -509,7 +505,7 @@ def process_license_plates_thread():
             start_time = time.time()
             
             # Use our optimized recognition with cached models
-            license_plates, marked_img = recognize_license_plate(image_array=img, detections=detections, violations=violations)
+            license_plates = recognize_license_plate(image_array=img, detections=detections)
 
             print(license_plates)
             

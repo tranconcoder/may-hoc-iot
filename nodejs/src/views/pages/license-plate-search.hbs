@@ -1,0 +1,229 @@
+{{! Link to external CSS file }}
+<link rel="stylesheet" href="/css/license-plate-search.css" />
+
+<div class="container-fluid mt-4">
+  <!-- Hero Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card text-white hero-section">
+        <div class="card-body p-4">
+          <div class="row align-items-center">
+            <div class="col-md-2 text-center mb-3 mb-md-0">
+              <div class="hero-icon">
+                <i class="fas fa-search fa-3x"></i>
+              </div>
+            </div>
+            <div class="col-md-10">
+              <h1 class="display-5 fw-bold">Hệ thống tìm kiếm biển số xe</h1>
+              <p class="fs-5 mb-0">Tra cứu nhanh chóng thông tin biển số xe đã
+                được ghi nhận bởi hệ thống camera</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Form - Simplified and Beautified -->
+  <div class="card mb-4 search-card">
+    <div class="card-body p-4 p-sm-5">
+      <form id="searchForm">
+        <div class="row justify-content-center">
+          <div class="col-lg-8 col-md-10">
+            <div class="input-group input-group-lg shadow-sm">
+              <span
+                class="input-group-text bg-primary text-white border-primary"
+              >
+                <i class="fas fa-car"></i>
+              </span>
+              <input
+                type="text"
+                class="form-control form-control-lg border-primary search-input"
+                id="licensePlate"
+                name="licensePlate"
+                placeholder="Nhập biển số xe cần tìm kiếm"
+                required
+              />
+              <button class="btn btn-primary px-4" id="searchButton">
+                <i class="fas fa-search me-2"></i>Tìm kiếm
+              </button>
+            </div>
+            <div class="text-center mt-2 text-muted small">
+              <i class="fas fa-info-circle me-1"></i>
+              Có thể nhập một phần hoặc toàn bộ biển số xe
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading indicator -->
+  <div id="loadingIndicator" class="text-center py-5 d-none">
+    <div
+      class="spinner-grow text-primary mb-3"
+      style="width: 3rem; height: 3rem;"
+      role="status"
+    >
+      <span class="visually-hidden">Đang tìm kiếm...</span>
+    </div>
+    <p class="lead text-primary">Đang tìm kiếm dữ liệu biển số xe...</p>
+  </div>
+
+  <!-- Results Section -->
+  <div id="resultsSection" class="d-none">
+    <div class="card">
+      <div
+        class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3"
+      >
+        <h5 class="mb-0">
+          <i class="fas fa-list me-2"></i>Kết quả tìm kiếm
+        </h5>
+        <span class="badge bg-light text-dark fs-6" id="resultCount">0 kết quả</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover table-striped mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="text-center">#</th>
+                <th>Biển số xe</th>
+                <th>Thời gian</th>
+                <th>Camera</th>
+                <th>Vị trí</th>
+                <th class="text-center">Hình ảnh</th>
+                <th class="text-center">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="resultsTable">
+              <!-- Results will be populated here via JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer bg-light py-3">
+        <nav aria-label="Page navigation">
+          <ul
+            class="pagination pagination-md justify-content-center mb-0"
+            id="pagination"
+          >
+            <!-- Pagination will be populated here via JavaScript -->
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Results Message -->
+  <div id="noResultsMessage" class="d-none">
+    <div class="card border-info">
+      <div class="card-body text-center py-5">
+        <i class="fas fa-search fa-4x text-info mb-3 opacity-50"></i>
+        <h4 class="text-info mb-3">Không tìm thấy kết quả</h4>
+        <p class="mb-1">Không tìm thấy biển số xe phù hợp với điều kiện tìm kiếm
+          của bạn.</p>
+        <p class="mb-0">Vui lòng thử lại với từ khóa khác.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- License Plate Modal -->
+  <div
+    class="modal fade detail-modal"
+    id="licensePlateModal"
+    tabindex="-1"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-id-card me-2"></i>Chi tiết biển số xe
+          </h5>
+          <button
+            type="button"
+            class="btn-close btn-close-white"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="row">
+            <div class="col-md-6 mb-4 mb-md-0">
+              <div class="text-center mb-3">
+                <div class="position-relative image-container">
+                  <div class="image-loading">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Đang tải...</span>
+                    </div>
+                  </div>
+                  <img
+                    id="modalImage"
+                    src=""
+                    class="img-fluid border rounded shadow-sm"
+                    alt="License Plate Image"
+                  />
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card bg-light mb-3">
+                <div class="card-body">
+                  <div class="plate-number-display">
+                    <span id="modalPlateNumber"></span>
+                  </div>
+
+                  <div class="info-item mb-3">
+                    <div class="d-flex align-items-center">
+                      <div class="icon-circle bg-primary text-white me-3">
+                        <i class="fas fa-calendar"></i>
+                      </div>
+                      <div>
+                        <div class="text-muted small">Thời gian phát hiện:</div>
+                        <div id="modalDateTime" class="fw-bold"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="info-item mb-3">
+                    <div class="d-flex align-items-center">
+                      <div class="icon-circle bg-primary text-white me-3">
+                        <i class="fas fa-video"></i>
+                      </div>
+                      <div>
+                        <div class="text-muted small">Camera:</div>
+                        <div id="modalCamera" class="fw-bold"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="d-flex align-items-center">
+                      <div class="icon-circle bg-primary text-white me-3">
+                        <i class="fas fa-map-marker-alt"></i>
+                      </div>
+                      <div>
+                        <div class="text-muted small">Vị trí:</div>
+                        <div id="modalLocation" class="fw-bold"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{! Link to external JS file }}
+<script src="/scripts/license-plate-search/main.js"></script>
