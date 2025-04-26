@@ -10,7 +10,7 @@ export default new (class ViewController {
       // Render the statistics dashboard page
       res.render("pages/statistics-home", {
         layout: "traffic-dashboard",
-        pageTitle: "Thống Kê Giao Thông"
+        pageTitle: "Thống Kê Giao Thông",
       });
     } catch (error) {
       console.error("Error rendering statistics home page:", error);

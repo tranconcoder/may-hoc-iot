@@ -9,26 +9,26 @@
  */
 async function getActiveCameras() {
   try {
-    const response = await fetch('/api/statistics/active-cameras');
+    const response = await fetch("/api/statistics/active-cameras");
     const data = await response.json();
-    
+
     if (data.success) {
       return {
         success: true,
-        data: data.data
+        data: data.data,
       };
     } else {
-      console.error('Lỗi khi lấy dữ liệu camera hoạt động:', data.message);
+      console.error("Lỗi khi lấy dữ liệu camera hoạt động:", data.message);
       return {
         success: false,
-        error: data.message
+        error: data.message,
       };
     }
   } catch (error) {
-    console.error('Lỗi khi gọi API camera hoạt động:', error);
+    console.error("Lỗi khi gọi API camera hoạt động:", error);
     return {
       success: false,
-      error: 'Không thể kết nối đến máy chủ'
+      error: "Không thể kết nối đến máy chủ",
     };
   }
 }
@@ -39,26 +39,29 @@ async function getActiveCameras() {
  */
 async function getTodayVehicleCount() {
   try {
-    const response = await fetch('/api/statistics/today-vehicles');
+    const response = await fetch("/api/statistics/today-vehicles");
     const data = await response.json();
-    
+
     if (data.success) {
       return {
         success: true,
-        data: data.data
+        data: data.data,
       };
     } else {
-      console.error('Lỗi khi lấy dữ liệu phương tiện trong ngày:', data.message);
+      console.error(
+        "Lỗi khi lấy dữ liệu phương tiện trong ngày:",
+        data.message
+      );
       return {
         success: false,
-        error: data.message
+        error: data.message,
       };
     }
   } catch (error) {
-    console.error('Lỗi khi gọi API phương tiện trong ngày:', error);
+    console.error("Lỗi khi gọi API phương tiện trong ngày:", error);
     return {
       success: false,
-      error: 'Không thể kết nối đến máy chủ'
+      error: "Không thể kết nối đến máy chủ",
     };
   }
 }
@@ -70,27 +73,29 @@ async function getTodayVehicleCount() {
  */
 async function getHourlyStats(date) {
   try {
-    const url = date ? `/api/statistics/hourly-stats?date=${date}` : '/api/statistics/hourly-stats';
+    const url = date
+      ? `/api/statistics/hourly-stats?date=${date}`
+      : "/api/statistics/hourly-stats";
     const response = await fetch(url);
     const data = await response.json();
-    
+
     if (data.success) {
       return {
         success: true,
-        data: data.data
+        data: data.data,
       };
     } else {
-      console.error('Lỗi khi lấy dữ liệu thống kê theo giờ:', data.message);
+      console.error("Lỗi khi lấy dữ liệu thống kê theo giờ:", data.message);
       return {
         success: false,
-        error: data.message
+        error: data.message,
       };
     }
   } catch (error) {
-    console.error('Lỗi khi gọi API thống kê theo giờ:', error);
+    console.error("Lỗi khi gọi API thống kê theo giờ:", error);
     return {
       success: false,
-      error: 'Không thể kết nối đến máy chủ'
+      error: "Không thể kết nối đến máy chủ",
     };
   }
 }
@@ -101,26 +106,26 @@ async function getHourlyStats(date) {
  */
 async function getTrafficAlerts() {
   try {
-    const response = await fetch('/api/statistics/traffic-alerts');
+    const response = await fetch("/api/statistics/traffic-alerts");
     const data = await response.json();
-    
+
     if (data.success) {
       return {
         success: true,
-        data: data.data
+        data: data.data,
       };
     } else {
-      console.error('Lỗi khi lấy dữ liệu cảnh báo kẹt xe:', data.message);
+      console.error("Lỗi khi lấy dữ liệu cảnh báo kẹt xe:", data.message);
       return {
         success: false,
-        error: data.message
+        error: data.message,
       };
     }
   } catch (error) {
-    console.error('Lỗi khi gọi API cảnh báo kẹt xe:', error);
+    console.error("Lỗi khi gọi API cảnh báo kẹt xe:", error);
     return {
       success: false,
-      error: 'Không thể kết nối đến máy chủ'
+      error: "Không thể kết nối đến máy chủ",
     };
   }
 }
@@ -131,26 +136,26 @@ async function getTrafficAlerts() {
  */
 async function getCameraLocations() {
   try {
-    const response = await fetch('/api/statistics/camera-locations');
+    const response = await fetch("/api/statistics/camera-locations");
     const data = await response.json();
-    
+
     if (data.success) {
       return {
         success: true,
-        data: data.data
+        data: data.data,
       };
     } else {
-      console.error('Lỗi khi lấy dữ liệu vị trí camera:', data.message);
+      console.error("Lỗi khi lấy dữ liệu vị trí camera:", data.message);
       return {
         success: false,
-        error: data.message
+        error: data.message,
       };
     }
   } catch (error) {
-    console.error('Lỗi khi gọi API vị trí camera:', error);
+    console.error("Lỗi khi gọi API vị trí camera:", error);
     return {
       success: false,
-      error: 'Không thể kết nối đến máy chủ'
+      error: "Không thể kết nối đến máy chủ",
     };
   }
 }
