@@ -5,6 +5,7 @@ import carDetectionModel from "@/models/carDetection.model.js";
 import trafficStatisticsModel from "@/models/trafficStatistics.model.js";
 import { Types } from "mongoose";
 import trafficStatisticsService from "@/services/trafficStatistics.service.js";
+import { privateEncrypt } from "crypto";
 
 export default new (class StatisticsApiController {
   /* -------------------------------------------------------------------------- */
@@ -73,14 +74,36 @@ export default new (class StatisticsApiController {
   /* -------------------------------------------------------------------------- */
   async getTodayVehicleCount(req: Request, res: Response) {
     try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Đảm bảo thời gian chính xác cho múi giờ Việt Nam (+7)
+      const UTC_OFFSET = 7 * 60 * 60 * 1000; // 7 giờ tính bằng milliseconds
 
-      // Lấy dữ liệu từ model trafficStatistics thay vì carDetection
+      // Lấy ngày hôm nay theo giờ Việt Nam
+      const nowLocal = new Date(Date.now() + UTC_OFFSET);
+      const todayLocal = new Date(nowLocal);
+      todayLocal.setHours(0, 0, 0, 0);
+
+      const tomorrowLocal = new Date(todayLocal);
+      tomorrowLocal.setDate(tomorrowLocal.getDate() + 1);
+
+      // Chuyển về UTC để truy vấn MongoDB
+      const todayUTC = new Date(todayLocal.getTime() - UTC_OFFSET);
+      const tomorrowUTC = new Date(tomorrowLocal.getTime() - UTC_OFFSET);
+
+      console.log(
+        `Getting today's vehicle count for local date: ${todayLocal.toLocaleDateString()}`
+      );
+      console.log(
+        `UTC date range for query: ${todayUTC.toISOString()} - ${tomorrowUTC.toISOString()}`
+      );
+
+      // QUAN TRỌNG: Sử dụng phạm vi ngày thay vì một ngày cụ thể
       const todayStats = await trafficStatisticsModel.aggregate([
         {
           $match: {
-            date: { $gte: today },
+            date: {
+              $gte: todayUTC,
+              $lt: tomorrowUTC,
+            },
           },
         },
         {
@@ -140,30 +163,45 @@ export default new (class StatisticsApiController {
   /* -------------------------------------------------------------------------- */
   async getHourlyStats(req: Request, res: Response) {
     try {
+      // Đảm bảo thời gian chính xác cho múi giờ Việt Nam (+7)
+      const UTC_OFFSET = 7 * 60 * 60 * 1000; // 7 giờ tính bằng milliseconds
       const { date } = req.query;
+
+      // Chuyển đổi ngày từ string sang Date object nếu có
       const targetDate = date ? new Date(date as string) : new Date();
 
-      // Get hourly traffic data
+      // Lấy ngày bắt đầu và kết thúc theo LOCAL để hiển thị
       const startOfDay = new Date(targetDate);
       startOfDay.setHours(0, 0, 0, 0);
 
       const endOfDay = new Date(targetDate);
       endOfDay.setHours(23, 59, 59, 999);
 
-      const hourlyData = await carDetectionModel.aggregate([
+      // Chuyển đổi về UTC để truy vấn
+      const startOfDayUTC = new Date(startOfDay.getTime() - UTC_OFFSET);
+      const endOfDayUTC = new Date(endOfDay.getTime() - UTC_OFFSET);
+
+      console.log(
+        `Getting hourly stats for local date: ${targetDate.toLocaleDateString()}`
+      );
+      console.log(
+        `UTC date range for query: ${startOfDayUTC.toISOString()} - ${endOfDayUTC.toISOString()}`
+      );
+
+      // QUAN TRỌNG: Truy vấn theo PHẠM VI NGÀY UTC thay vì một ngày cụ thể
+      const hourlyData = await trafficStatisticsModel.aggregate([
         {
           $match: {
-            created_at: { $gte: startOfDay, $lte: endOfDay },
+            date: {
+              $gte: startOfDayUTC,
+              $lte: endOfDayUTC,
+            },
           },
         },
         {
           $group: {
-            _id: { $hour: "$created_at" },
-            vehicleCount: {
-              $sum: {
-                $add: ["$vehicle_count.total_up", "$vehicle_count.total_down"],
-              },
-            },
+            _id: { $floor: { $divide: ["$minute_of_day", 60] } }, // Chuyển minute_of_day thành giờ
+            vehicleCount: { $sum: "$vehicle_count" },
           },
         },
         {
@@ -171,10 +209,17 @@ export default new (class StatisticsApiController {
         },
       ]);
 
-      // Format for Chart.js
+      console.log(`Found ${hourlyData.length} hourly records:`, hourlyData);
+
+      // Format for Chart.js với múi giờ +7
       const hours = Array.from({ length: 24 }, (_, i) => i);
       const chartData = hours.map((hour) => {
-        const hourData = hourlyData.find((data) => data._id === hour);
+        // Tìm dữ liệu cho giờ hiện tại
+        // Lưu ý: hour là giờ địa phương (UTC+7), trong khi _id trong hourlyData là giờ UTC
+        // Cần chuyển đổi hour sang giờ UTC để tìm dữ liệu chính xác
+        const utcHour = (hour - 7 + 24) % 24; // Chuyển giờ địa phương thành giờ UTC
+
+        const hourData = hourlyData.find((data) => data._id === utcHour);
         return hourData ? hourData.vehicleCount : 0;
       });
 
@@ -182,10 +227,10 @@ export default new (class StatisticsApiController {
         success: true,
         message: "Hourly statistics retrieved successfully",
         data: {
-          labels: hours.map((h) => `${h}:00`),
+          labels: hours.map((h) => `${h.toString().padStart(2, "0")}:00`),
           datasets: [
             {
-              label: "Số lượng phương tiện",
+              label: `Phương tiện theo giờ (${targetDate.toLocaleDateString()})`,
               data: chartData,
             },
           ],
@@ -205,55 +250,216 @@ export default new (class StatisticsApiController {
   /* -------------------------------------------------------------------------- */
   async getMinuteStats(req: Request, res: Response) {
     try {
-      const { hour } = req.query;
-      const currentHour = hour
-        ? parseInt(hour as string)
-        : new Date().getHours();
-      const today = new Date();
+      // Đảm bảo thời gian chính xác cho múi giờ Việt Nam (+7)
+      const UTC_OFFSET = 7 * 60 * 60 * 1000; // 7 giờ tính bằng milliseconds
+      const { period } = req.query;
 
-      const startOfHour = new Date(today);
-      startOfHour.setHours(currentHour, 0, 0, 0);
+      // Lấy thời gian hiện tại theo múi giờ Việt Nam
+      const now = new Date(Date.now() + UTC_OFFSET);
 
-      const endOfHour = new Date(today);
-      endOfHour.setHours(currentHour, 59, 59, 999);
+      // Chuyển đổi về UTC để truy vấn MongoDB
+      const nowUTC = new Date(now.getTime() - UTC_OFFSET);
 
-      const minuteData = await carDetectionModel.aggregate([
-        {
-          $match: {
-            created_at: { $gte: startOfHour, $lte: endOfHour },
+      let startTime: Date;
+      let endTime = new Date(now);
+      let startTimeUTC: Date;
+      let endTimeUTC = new Date(nowUTC);
+      let periodLabel: string;
+
+      // Xác định khoảng thời gian dựa trên period được truyền vào
+      if (period === "last-hour") {
+        // Dữ liệu của 1 giờ gần đây - giờ địa phương
+        startTime = new Date(now.getTime() - 60 * 60 * 1000);
+        // Chuyển sang UTC
+        startTimeUTC = new Date(startTime.getTime() - UTC_OFFSET);
+        periodLabel = "1 giờ gần đây";
+      } else if (period === "last-30-minutes") {
+        // Dữ liệu của 30 phút gần đây - giờ địa phương
+        startTime = new Date(now.getTime() - 30 * 60 * 1000);
+        // Chuyển sang UTC
+        startTimeUTC = new Date(startTime.getTime() - UTC_OFFSET);
+        periodLabel = "30 phút gần đây";
+      } else {
+        // Mặc định là dữ liệu của hôm nay - giờ địa phương
+        startTime = new Date(now);
+        startTime.setHours(0, 0, 0, 0);
+        // Chuyển sang UTC
+        startTimeUTC = new Date(startTime.getTime() - UTC_OFFSET);
+        periodLabel = "Hôm nay";
+      }
+
+      // Tính toán phút trong ngày (theo UTC)
+      const startMinuteOfDayUTC =
+        startTimeUTC.getHours() * 60 + startTimeUTC.getMinutes();
+      const endMinuteOfDayUTC =
+        endTimeUTC.getHours() * 60 + endTimeUTC.getMinutes();
+
+      console.log(
+        `Getting minute stats from ${startTime.toLocaleString()} to ${endTime.toLocaleString()} (${periodLabel}) - Local time`
+      );
+      console.log(
+        `UTC time: ${startTimeUTC.toISOString()} to ${endTimeUTC.toISOString()}`
+      );
+      console.log(
+        `UTC minute range: ${startMinuteOfDayUTC} - ${endMinuteOfDayUTC}`
+      );
+
+      // Lấy ngày UTC để truy vấn - phải dùng phạm vi ngày
+      const startDateUTC = new Date(startTimeUTC);
+      startDateUTC.setHours(0, 0, 0, 0);
+
+      const endDateUTC = new Date(endTimeUTC);
+      endDateUTC.setHours(0, 0, 0, 0);
+
+      // Nếu ngày kết thúc sau ngày bắt đầu (khác ngày)
+      const nextDayUTC = new Date(startDateUTC);
+      nextDayUTC.setDate(nextDayUTC.getDate() + 1);
+
+      // Chuẩn bị điều kiện truy vấn dựa trên khoảng thời gian
+      let matchCondition;
+
+      if (startDateUTC.getTime() === endDateUTC.getTime()) {
+        // Cùng một ngày UTC
+        matchCondition = {
+          date: {
+            $gte: startDateUTC,
+            $lt: new Date(startDateUTC.getTime() + 24 * 60 * 60 * 1000), // Đảm bảo lấy đủ dữ liệu của cả ngày
           },
-        },
-        {
-          $group: {
-            _id: { $minute: "$created_at" },
-            vehicleCount: {
-              $sum: {
-                $add: ["$vehicle_count.total_up", "$vehicle_count.total_down"],
+          minute_of_day: {
+            $gte: startMinuteOfDayUTC,
+            $lte: endMinuteOfDayUTC,
+          },
+        };
+      } else {
+        // Khác ngày UTC - cần dùng $or
+        matchCondition = {
+          $or: [
+            {
+              // Ngày đầu tiên, từ startMinuteOfDayUTC đến cuối ngày
+              date: {
+                $gte: startDateUTC,
+                $lt: nextDayUTC,
               },
+              minute_of_day: { $gte: startMinuteOfDayUTC },
             },
+            {
+              // Ngày thứ hai, từ đầu ngày đến endMinuteOfDayUTC
+              date: {
+                $gte: endDateUTC,
+                $lt: new Date(endDateUTC.getTime() + 24 * 60 * 60 * 1000),
+              },
+              minute_of_day: { $lte: endMinuteOfDayUTC },
+            },
+          ],
+        };
+      }
+
+      console.log("Match condition:", JSON.stringify(matchCondition, null, 2));
+
+      // Truy vấn dữ liệu từ trafficStatisticsModel
+      const minuteData = await trafficStatisticsModel.aggregate([
+        {
+          $match: matchCondition,
+        },
+        {
+          $project: {
+            minute_of_day: 1,
+            vehicle_count: 1,
+            date: 1,
+            vehicle_types: 1,
           },
         },
         {
-          $sort: { _id: 1 },
+          $sort: { date: 1, minute_of_day: 1 },
         },
       ]);
 
-      // Format for Chart.js
-      const minutes = Array.from({ length: 60 }, (_, i) => i);
-      const chartData = minutes.map((minute) => {
-        const minuteData = minuteData.find((data) => data._id === minute);
-        return minuteData ? minuteData.vehicleCount : 0;
+      console.log(`Found ${minuteData.length} minute records`);
+
+      // Log một số dữ liệu mẫu để kiểm tra
+      if (minuteData.length > 0) {
+        console.log("Sample data:", minuteData.slice(0, 3));
+      }
+
+      // Kiểm tra xem dữ liệu có đúng định dạng không
+      let dataHasError = false;
+      for (const item of minuteData) {
+        if (
+          typeof item.minute_of_day !== "number" ||
+          typeof item.vehicle_count !== "number"
+        ) {
+          console.error("Invalid data format:", item);
+          dataHasError = true;
+          break;
+        }
+      }
+
+      if (dataHasError) {
+        throw new Error("Invalid data format in database records");
+      }
+
+      // Tạo mảng thời gian cho từng phút trong khoảng thời gian - theo múi giờ LOCAL
+      const minuteLabels: string[] = [];
+      const minuteValues: number[] = [];
+      const minuteData_Map = new Map();
+
+      // Tạo một Map để tra cứu dữ liệu nhanh hơn
+      minuteData.forEach((item) => {
+        const itemDate = new Date(item.date);
+        itemDate.setHours(0, 0, 0, 0);
+        const key = `${itemDate.toISOString().split("T")[0]}-${
+          item.minute_of_day
+        }`;
+        minuteData_Map.set(key, item.vehicle_count);
       });
+
+      // Duyệt từng phút trong khoảng thời gian địa phương
+      let currentTime = new Date(startTime);
+      while (currentTime <= endTime) {
+        const hour = currentTime.getHours();
+        const minute = currentTime.getMinutes();
+        const timeString = `${hour.toString().padStart(2, "0")}:${minute
+          .toString()
+          .padStart(2, "0")}`;
+        minuteLabels.push(timeString);
+
+        // Chuyển đổi thời gian hiện tại sang UTC để tìm dữ liệu
+        const currentTimeUTC = new Date(currentTime.getTime() - UTC_OFFSET);
+        const utcHour = currentTimeUTC.getHours();
+        const utcMinute = currentTimeUTC.getMinutes();
+        const minuteOfDayUTC = utcHour * 60 + utcMinute;
+        const currentDateUTC = new Date(currentTimeUTC);
+        currentDateUTC.setHours(0, 0, 0, 0);
+
+        // Sử dụng Map để tìm kiếm nhanh hơn
+        const key = `${
+          currentDateUTC.toISOString().split("T")[0]
+        }-${minuteOfDayUTC}`;
+        const vehicleCount = minuteData_Map.get(key) || 0;
+        minuteValues.push(vehicleCount);
+
+        // Tăng lên 1 phút
+        currentTime.setMinutes(currentTime.getMinutes() + 1);
+      }
+
+      // Log một số thông tin để gỡ lỗi
+      console.log(`Generated ${minuteLabels.length} time labels`);
+      console.log(`Generated ${minuteValues.length} data points`);
+      if (minuteValues.some((v) => v > 0)) {
+        console.log("Found non-zero values in the data");
+      } else {
+        console.log("WARNING: All values are zero in the result");
+      }
 
       res.json({
         success: true,
         message: "Minute statistics retrieved successfully",
         data: {
-          labels: minutes.map((m) => `${m}`),
+          labels: minuteLabels,
           datasets: [
             {
-              label: "Số lượng phương tiện theo phút",
-              data: chartData,
+              label: `Số lượng phương tiện theo phút (${periodLabel})`,
+              data: minuteValues,
             },
           ],
         },
@@ -272,68 +478,133 @@ export default new (class StatisticsApiController {
   /* -------------------------------------------------------------------------- */
   async getLast30MinutesStats(req: Request, res: Response) {
     try {
+      // Constants for time conversion
+      const UTC_OFFSET = 7 * 60 * 60 * 1000; // UTC+7 for Vietnam in milliseconds
+
+      // Get current time in UTC
       const now = new Date();
-      const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+      console.log(`Current UTC time: ${now.toISOString()}`);
 
-      const trafficData = await carDetectionModel.aggregate([
-        {
-          $match: {
-            created_at: { $gte: thirtyMinutesAgo, $lte: now },
-          },
-        },
-        {
-          $group: {
-            _id: {
-              year: { $year: "$created_at" },
-              month: { $month: "$created_at" },
-              day: { $dayOfMonth: "$created_at" },
-              hour: { $hour: "$created_at" },
-              minute: { $minute: "$created_at" },
-            },
-            count: {
-              $sum: {
-                $add: ["$vehicle_count.total_up", "$vehicle_count.total_down"],
-              },
-            },
-          },
-        },
-        {
-          $sort: {
-            "_id.year": 1,
-            "_id.month": 1,
-            "_id.day": 1,
-            "_id.hour": 1,
-            "_id.minute": 1,
-          },
-        },
-      ]);
+      // Get current local time (UTC+7) for display purposes
+      const localNow = new Date(now.getTime() + UTC_OFFSET);
+      console.log(`Current local time: ${localNow.toLocaleString()}`);
 
-      // Generate minute labels for the last 30 minutes
+      // Generate 30 minute intervals for the chart (in local time)
       const minuteLabels = [];
-      const minuteData = [];
+      const minuteValues = Array(30).fill(0); // Initialize with zeros
 
-      // Fill in data for each minute of the last 30 minutes
+      // Pre-calculate minute labels in local time
       for (let i = 0; i < 30; i++) {
-        const time = new Date(now.getTime() - (29 - i) * 60 * 1000);
-        const hour = time.getHours();
-        const minute = time.getMinutes();
-        const timeString = `${hour.toString().padStart(2, "0")}:${minute
-          .toString()
-          .padStart(2, "0")}`;
-        minuteLabels.push(timeString);
-
-        // Find matching traffic data for this minute
-        const matchingData = trafficData.find(
-          (item) =>
-            item._id.hour === hour &&
-            item._id.minute === minute &&
-            item._id.day === time.getDate() &&
-            item._id.month === time.getMonth() + 1
-        );
-
-        minuteData.push(matchingData ? matchingData.count : 0);
+        const localTime = new Date(localNow.getTime() - (29 - i) * 60 * 1000);
+        const hour = localTime.getHours().toString().padStart(2, "0");
+        const minute = localTime.getMinutes().toString().padStart(2, "0");
+        minuteLabels.push(`${hour}:${minute}`);
       }
 
+      // Get midnight of today in UTC
+      const todayUTC = new Date(now);
+      todayUTC.setHours(0, 0, 0, 0);
+
+      // Get midnight of yesterday in UTC
+      const yesterdayUTC = new Date(todayUTC);
+      yesterdayUTC.setDate(todayUTC.getDate() - 1);
+
+      console.log(`Today UTC midnight: ${todayUTC.toISOString()}`);
+      console.log(`Yesterday UTC midnight: ${yesterdayUTC.toISOString()}`);
+
+      // Calculate minute ranges for today and yesterday
+      const currentMinuteOfDayUTC = now.getHours() * 60 + now.getMinutes();
+      console.log(`Current minute of day in UTC: ${currentMinuteOfDayUTC}`);
+
+      // Define a simpler approach - get all data for the current hour and previous hour
+      const currentHourUTC = now.getHours();
+      const previousHourUTC = (currentHourUTC - 1 + 24) % 24; // Handle wrapping around midnight
+
+      // Calculate minute ranges for filtering
+      const currentHourStartMinute = currentHourUTC * 60;
+      const currentHourEndMinute = currentHourStartMinute + 59;
+      const previousHourStartMinute = previousHourUTC * 60;
+      const previousHourEndMinute = previousHourStartMinute + 59;
+
+      console.log(
+        `Querying for minutes in ranges: ${previousHourStartMinute}-${previousHourEndMinute} and ${currentHourStartMinute}-${currentHourEndMinute}`
+      );
+
+      // Determine which day(s) to query based on the hour
+      let dayQuery = {
+        date: {
+          $gte: todayUTC,
+          $lt: new Date(todayUTC.getTime() + 24 * 60 * 60 * 1000),
+        },
+      };
+      if (currentHourUTC < 1) {
+        // If we're in the first hour of the day, we might need yesterday's data too
+        dayQuery = {
+          $or: [
+            { date: { $gte: yesterdayUTC, $lt: todayUTC } },
+            {
+              date: {
+                $gte: todayUTC,
+                $lt: new Date(todayUTC.getTime() + 24 * 60 * 60 * 1000),
+              },
+            },
+          ],
+        };
+      }
+
+      // Query for all relevant data
+      const query = {
+        ...dayQuery,
+        $or: [
+          {
+            minute_of_day: {
+              $gte: previousHourStartMinute,
+              $lte: previousHourEndMinute,
+            },
+          },
+          {
+            minute_of_day: {
+              $gte: currentHourStartMinute,
+              $lte: currentHourEndMinute,
+            },
+          },
+        ],
+      };
+
+      console.log("Database query:", JSON.stringify(query, null, 2));
+
+      const trafficData = await trafficStatisticsModel.find(query).lean();
+      console.log(`Found ${trafficData.length} relevant records`);
+
+      // Log some sample data if available
+      if (trafficData.length > 0) {
+        console.log("Sample records:", trafficData.slice(0, 2));
+      }
+
+      // Store minute data for fast lookup
+      const minuteDataMap = new Map();
+      trafficData.forEach((record) => {
+        minuteDataMap.set(record.minute_of_day, record.vehicle_count);
+      });
+
+      // Fill in the actual data by finding the corresponding UTC minute
+      for (let i = 0; i < 30; i++) {
+        // Calculate the exact UTC timestamp for this minute
+        const minuteTimeUTC = new Date(now.getTime() - (29 - i) * 60 * 1000);
+        const minuteOfDayUTC =
+          minuteTimeUTC.getHours() * 60 + minuteTimeUTC.getMinutes();
+
+        // Look up the data for this minute
+        if (minuteDataMap.has(minuteOfDayUTC)) {
+          minuteValues[i] = minuteDataMap.get(minuteOfDayUTC);
+        }
+      }
+
+      // Check if we found any data
+      const hasData = minuteValues.some((count) => count > 0);
+      console.log(`Data found for chart: ${hasData ? "YES" : "NO"}`);
+
+      // Return the data
       res.json({
         success: true,
         message: "Last 30 minutes statistics retrieved successfully",
@@ -342,7 +613,7 @@ export default new (class StatisticsApiController {
           datasets: [
             {
               label: "30 phút gần đây",
-              data: minuteData,
+              data: minuteValues,
             },
           ],
         },

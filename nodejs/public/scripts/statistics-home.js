@@ -4,6 +4,10 @@ document.addEventListener("DOMContentLoaded", function () {
   let currentChartMode = "hourly"; // Default chart mode
   let refreshInterval;
 
+  // Thêm hằng số múi giờ +7
+  const VIETNAM_TIMEZONE = "Asia/Ho_Chi_Minh";
+  const UTC_OFFSET = 7; // Việt Nam UTC+7
+
   // Initialize the dashboard
   initDashboard();
 
@@ -22,6 +26,16 @@ document.addEventListener("DOMContentLoaded", function () {
     document
       .getElementById("btn-last-30")
       .addEventListener("click", () => switchChartMode("last-30"));
+
+    // Thêm event listener cho dropdown time-period
+    document
+      .getElementById("time-period")
+      .addEventListener("change", function () {
+        // Nếu đang ở chế độ theo phút, cập nhật lại biểu đồ khi thay đổi thời gian
+        if (currentChartMode === "minute") {
+          fetchMinuteStats();
+        }
+      });
 
     // Initialize chart
     initChart();
@@ -53,7 +67,13 @@ document.addEventListener("DOMContentLoaded", function () {
   // Update the "last updated" timestamp
   function updateLastUpdatedTime() {
     const now = new Date();
-    const timeString = now.toLocaleTimeString();
+    // Hiển thị thời gian theo định dạng giờ Việt Nam
+    const timeString = now.toLocaleTimeString("vi-VN", {
+      timeZone: VIETNAM_TIMEZONE,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
     document.getElementById("last-updated-time").textContent = timeString;
   }
 
@@ -196,41 +216,80 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Fetch hourly statistics for chart
   function fetchHourlyStats() {
+    // Show loading indicator
+    const chartContainer = document.querySelector(".chart-container");
+    chartContainer.classList.add("loading");
+
     fetch("/api/statistics/hourly-stats")
       .then((response) => response.json())
       .then((data) => {
-        if (data.success) {
+        // Remove loading indicator
+        chartContainer.classList.remove("loading");
+
+        if (
+          data.success &&
+          data.data &&
+          data.data.labels &&
+          data.data.labels.length > 0
+        ) {
+          console.log(`Received ${data.data.labels.length} hourly data points`);
           updateChart(
             data.data.labels,
             data.data.datasets[0].data,
             "Phương tiện theo giờ"
           );
         } else {
-          console.error("Error fetching hourly stats:", data.message);
+          console.warn("No hourly stats data returned or empty data:", data);
+          updateEmptyChart("Không có dữ liệu theo giờ");
         }
       })
-      .catch((error) => console.error("Error fetching hourly stats:", error));
+      .catch((error) => {
+        console.error("Error fetching hourly stats:", error);
+        chartContainer.classList.remove("loading");
+        updateEmptyChart("Lỗi khi tải dữ liệu");
+      });
   }
 
   // Fetch minute statistics for chart
   function fetchMinuteStats() {
-    // Get current hour from system
-    const currentHour = new Date().getHours();
+    // Lấy giá trị period từ dropdown
+    const period = document.getElementById("time-period").value || "today";
 
-    fetch(`/api/statistics/minute-stats?hour=${currentHour}`)
+    console.log(`Fetching minute stats with period: ${period}`);
+
+    // Show loading indicator
+    const chartContainer = document.querySelector(".chart-container");
+    chartContainer.classList.add("loading");
+
+    fetch(`/api/statistics/minute-stats?period=${period}`)
       .then((response) => response.json())
       .then((data) => {
-        if (data.success) {
+        // Remove loading indicator
+        chartContainer.classList.remove("loading");
+
+        if (
+          data.success &&
+          data.data &&
+          data.data.labels &&
+          data.data.labels.length > 0
+        ) {
+          console.log(`Received ${data.data.labels.length} minute data points`);
           updateChart(
             data.data.labels,
             data.data.datasets[0].data,
-            `Phương tiện theo phút (Giờ ${currentHour}:00)`
+            data.data.datasets[0].label
           );
         } else {
-          console.error("Error fetching minute stats:", data.message);
+          console.warn("No minute stats data returned or empty data:", data);
+          // Display a message on the chart when no data is available
+          updateEmptyChart("Không có dữ liệu theo phút");
         }
       })
-      .catch((error) => console.error("Error fetching minute stats:", error));
+      .catch((error) => {
+        console.error("Error fetching minute stats:", error);
+        chartContainer.classList.remove("loading");
+        updateEmptyChart("Lỗi khi tải dữ liệu");
+      });
   }
 
   // Fetch last 30 minutes statistics for chart
@@ -295,9 +354,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const alertItem = document.createElement("div");
     alertItem.className = `alert-item ${alert.level}`;
 
-    // Format timestamp
+    // Format timestamp với múi giờ +7 (Việt Nam)
     const timestamp = new Date(alert.latestUpdate);
-    const formattedTime = timestamp.toLocaleTimeString();
+    const formattedTime = timestamp.toLocaleTimeString("vi-VN", {
+      timeZone: VIETNAM_TIMEZONE,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
 
     alertItem.innerHTML = `
       <div class="alert-icon">
@@ -328,6 +392,54 @@ document.addEventListener("DOMContentLoaded", function () {
     trafficChart.data.datasets[0].data = data;
     trafficChart.data.datasets[0].label = title;
     trafficChart.options.scales.x.title.text = title;
+    trafficChart.update();
+  }
+
+  // Update chart to show empty state with a message
+  function updateEmptyChart(message) {
+    // Clear existing data
+    trafficChart.data.labels = [];
+    trafficChart.data.datasets[0].data = [];
+
+    // Add a plugin to display the message in the middle of the chart
+    const originalPlugins = trafficChart.options.plugins || {};
+    trafficChart.options.plugins = {
+      ...originalPlugins,
+      // Add a custom plugin to draw the empty state message
+      emptyState: {
+        message: message,
+      },
+    };
+
+    // Setup the afterDraw hook if it doesn't exist yet
+    if (!Chart.plugins.getAll().find((p) => p.id === "emptyState")) {
+      Chart.register({
+        id: "emptyState",
+        afterDraw: (chart) => {
+          if (chart.data.labels.length === 0) {
+            // No data available
+            const ctx = chart.ctx;
+            const width = chart.width;
+            const height = chart.height;
+
+            chart.clear();
+
+            ctx.save();
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.font = "16px Arial";
+            ctx.fillStyle = "#666";
+            ctx.fillText(
+              chart.options.plugins.emptyState.message,
+              width / 2,
+              height / 2
+            );
+            ctx.restore();
+          }
+        },
+      });
+    }
+
     trafficChart.update();
   }
 
